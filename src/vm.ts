@@ -111,21 +111,23 @@ export class VM {
           this.push(obj.FALSE);
           break;
         case Opcode.BANG:
+          this.execUnaryLogicalNegation();
+          break;
         case Opcode.MINUS:
-          this.execUnaryOperation(op);
+          this.execUnaryArithmeticNegation();
           break;
         case Opcode.ADD:
         case Opcode.SUB:
         case Opcode.MUL:
         case Opcode.DIV:
         case Opcode.MOD:
-          this.execBinaryArithmeticOperation(op);
+          this.execBinaryArithmetic(op);
           break;
         case Opcode.EQ:
         case Opcode.NOT_EQ:
         case Opcode.GT:
         case Opcode.GTE:
-          this.execComparisonOperation(op);
+          this.execComparison(op);
           break;
       }
     }
@@ -133,44 +135,47 @@ export class VM {
 
   /**
    * Pops the last item off of the stack, performs a unary
-   * operation, and pushes its result onto the stack.
-   *
-   * @param op - Opcode byte
+   * arithmetic negation, and pushes its result onto the stack.
    */
-  execUnaryOperation(op: Opcode): void {
-    const right = this.stack[this.sp - 1];
-    this.sp--;
+  execUnaryArithmeticNegation(): void {
+    const right = this.pop();
 
     if (!right) {
       throw new Error(
-        'Cannot perform binary operation without a valid operands',
+        'Cannot perform unary operation without a valid operand',
       );
     }
 
     if (right instanceof obj.Int) {
-      switch (op) {
-        case Opcode.MINUS:
-          this.push(new obj.Int(-right.value));
-          break;
-        case Opcode.BANG:
-          this.push(obj.Bool.from(right.value !== 0));
-          break;
-        default:
-          throw new Error(
-            `Cannot perform operation ${op} on an integer`,
-          );
-      }
-      return;
-    }
-
-    if (right instanceof obj.Bool && op === Opcode.BANG) {
-      this.push(obj.Bool.from(!right.value));
+      this.push(new obj.Int(-right.value));
       return;
     }
 
     throw new Error(
-      `Cannot perform unary operation on ${right.type}`,
+      `Cannot perform unary arithmetic negation (-) operation on a non-integer`,
     );
+  }
+
+  /**
+   * Pops the last item off of the stack, performs a unary
+   * logical negation, and pushes its result onto the stack.
+   */
+  execUnaryLogicalNegation(): void {
+    const right = this.pop();
+
+    if (!right) {
+      throw new Error(
+        'Cannot perform unary operation without a valid operand',
+      );
+    }
+
+    if (right instanceof obj.Int) {
+      this.push(obj.Bool.from(right.value !== 0));
+    } else if (right === obj.NULL || right === obj.FALSE) {
+      this.push(obj.TRUE);
+    } else {
+      this.push(obj.FALSE);
+    }
   }
 
   /**
@@ -179,7 +184,7 @@ export class VM {
    *
    * @param op - Opcode byte
    */
-  execBinaryArithmeticOperation(op: Opcode): void {
+  execBinaryArithmetic(op: Opcode): void {
     const left = this.stack[this.sp - 2];
     const right = this.stack[this.sp - 1];
     this.sp -= 2;
@@ -191,7 +196,7 @@ export class VM {
     }
 
     if (left instanceof obj.Int && right instanceof obj.Int) {
-      this.execIntegerBinaryOperation(op, left, right);
+      this.execBinaryIntegerArithmetic(op, left, right);
       return;
     }
 
@@ -208,7 +213,7 @@ export class VM {
    * @param left - Left operand
    * @param right - Right operand
    */
-  execIntegerBinaryOperation(
+  execBinaryIntegerArithmetic(
     op: Opcode,
     left: obj.Int,
     right: obj.Int,
@@ -247,13 +252,13 @@ export class VM {
    *
    * @param op - Opcode byte
    */
-  execComparisonOperation(op: Opcode): void {
+  execComparison(op: Opcode): void {
     const left = this.stack[this.sp - 2];
     const right = this.stack[this.sp - 1];
     this.sp -= 2;
 
     if (left instanceof obj.Int && right instanceof obj.Int) {
-      this.execIntegerComparisonOperation(op, left, right);
+      this.execIntegerComparison(op, left, right);
       return;
     }
 
@@ -292,7 +297,7 @@ export class VM {
    * @param left - Left operand
    * @param right - Right operand
    */
-  execIntegerComparisonOperation(
+  execIntegerComparison(
     op: Opcode,
     left: obj.Int,
     right: obj.Int,
