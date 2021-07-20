@@ -38,7 +38,10 @@ describe('VM', () => {
     const inputs: [input: string, expected: number][] = [
       ['1', 1],
       ['2', 2],
+      ['-2', -2],
       ['1 + 2', 3],
+      ['1 + -2', -1],
+      ['-(1 + -2)', 1],
       ['1 - 2', -1],
       ['5 - 3', 2],
       ['5 * 3', 15],
@@ -67,7 +70,10 @@ describe('VM', () => {
     const inputs: [input: string, expected: boolean][] = [
       ['true', true],
       ['false', false],
+      ['!true', false],
+      ['!false', true],
       ['1 < 100', true],
+      ['!(1 < 100)', false],
       ['1 > 100', false],
       ['1 < 1', false],
       ['1 > 1', false],

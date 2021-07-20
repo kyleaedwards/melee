@@ -26,6 +26,18 @@ export class Compiler {
         this.compile(node.value);
       }
       this.emit(Opcode.POP);
+    } else if (node instanceof ast.PrefixExpression) {
+      if (node.right) {
+        this.compile(node.right);
+      }
+      switch (node.operator) {
+        case '-':
+          this.emit(Opcode.MINUS);
+          break;
+        case '!':
+          this.emit(Opcode.BANG);
+          break;
+      }
     } else if (node instanceof ast.InfixExpression) {
       if (node.operator === '<' || node.operator === '<=') {
         if (node.right) {

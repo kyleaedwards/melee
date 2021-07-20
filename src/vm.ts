@@ -110,6 +110,10 @@ export class VM {
         case Opcode.FALSE:
           this.push(obj.FALSE);
           break;
+        case Opcode.BANG:
+        case Opcode.MINUS:
+          this.execUnaryOperation(op);
+          break;
         case Opcode.ADD:
         case Opcode.SUB:
         case Opcode.MUL:
@@ -128,6 +132,48 @@ export class VM {
   }
 
   /**
+   * Pops the last item off of the stack, performs a unary
+   * operation, and pushes its result onto the stack.
+   *
+   * @param op - Opcode byte
+   */
+  execUnaryOperation(op: Opcode): void {
+    const right = this.stack[this.sp - 1];
+    this.sp--;
+
+    if (!right) {
+      throw new Error(
+        'Cannot perform binary operation without a valid operands',
+      );
+    }
+
+    if (right instanceof obj.Int) {
+      switch (op) {
+        case Opcode.MINUS:
+          this.push(new obj.Int(-right.value));
+          break;
+        case Opcode.BANG:
+          this.push(obj.Bool.from(right.value !== 0));
+          break;
+        default:
+          throw new Error(
+            `Cannot perform operation ${op} on an integer`,
+          );
+      }
+      return;
+    }
+
+    if (right instanceof obj.Bool && op === Opcode.BANG) {
+      this.push(obj.Bool.from(!right.value));
+      return;
+    }
+
+    throw new Error(
+      `Cannot perform unary operation on ${right.type}`,
+    );
+  }
+
+  /**
    * Pops the last two items off of the stack, performs a binary
    * operation, and pushes its result onto the stack.
    *
@@ -138,15 +184,15 @@ export class VM {
     const right = this.stack[this.sp - 1];
     this.sp -= 2;
 
-    if (left instanceof obj.Int && right instanceof obj.Int) {
-      this.execIntegerBinaryOperation(op, left, right);
-      return;
-    }
-
     if (!left || !right) {
       throw new Error(
         'Cannot perform binary operation without two operands',
       );
+    }
+
+    if (left instanceof obj.Int && right instanceof obj.Int) {
+      this.execIntegerBinaryOperation(op, left, right);
+      return;
     }
 
     throw new Error(

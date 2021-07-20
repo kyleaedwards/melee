@@ -13,6 +13,9 @@ export enum Opcode {
   DIV,
   MOD,
 
+  BANG,
+  MINUS,
+
   EQ,
   NOT_EQ,
   GT,
@@ -43,6 +46,8 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.MUL, 'MUL'],
     [Opcode.DIV, 'DIV'],
     [Opcode.MOD, 'MOD'],
+    [Opcode.BANG, 'BANG'],
+    [Opcode.MINUS, 'MINUS'],
     [Opcode.EQ, 'EQ'],
     [Opcode.NOT_EQ, 'NOT_EQ'],
     [Opcode.GT, 'GT'],

@@ -50,6 +50,18 @@ describe('Compiler.compile', () => {
         ],
       ],
       [
+        '-1; -99',
+        [1, 99],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.MINUS),
+          createInstruction(Opcode.POP),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.MINUS),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
         '3 + 4',
         [3, 4],
         [
@@ -160,6 +172,18 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.TRUE),
           createInstruction(Opcode.POP),
           createInstruction(Opcode.FALSE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '!true; !false',
+        [],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.BANG),
+          createInstruction(Opcode.POP),
+          createInstruction(Opcode.FALSE),
+          createInstruction(Opcode.BANG),
           createInstruction(Opcode.POP),
         ],
       ],
