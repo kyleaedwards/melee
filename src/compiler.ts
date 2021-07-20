@@ -27,6 +27,16 @@ export class Compiler {
       }
       this.emit(Opcode.POP);
     } else if (node instanceof ast.InfixExpression) {
+      if (node.operator === '<' || node.operator === '<=') {
+        if (node.right) {
+          this.compile(node.right);
+        }
+        if (node.left) {
+          this.compile(node.left);
+        }
+        this.emit(node.operator === '<' ? Opcode.GT : Opcode.GTE);
+        return;
+      }
       if (node.left) {
         this.compile(node.left);
       }
@@ -49,6 +59,18 @@ export class Compiler {
         case '%':
           this.emit(Opcode.MOD);
           break;
+        case '==':
+          this.emit(Opcode.EQ);
+          break;
+        case '!=':
+          this.emit(Opcode.NOT_EQ);
+          break;
+        case '>':
+          this.emit(Opcode.GT);
+          break;
+        case '>=':
+          this.emit(Opcode.GTE);
+          break;
       }
     } else if (node instanceof ast.IntegerLiteral) {
       // TODO: Why use constants for midi Ints, just bake them
@@ -58,7 +80,6 @@ export class Compiler {
     } else if (node instanceof ast.BooleanLiteral) {
       this.emit(node.value ? Opcode.TRUE : Opcode.FALSE);
     }
-    return;
   }
 
   /**

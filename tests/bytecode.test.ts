@@ -47,8 +47,6 @@ describe('createInstruction', () => {
         [Opcode.NOT_EQ, [], [Opcode.NOT_EQ]],
         [Opcode.GT, [], [Opcode.GT]],
         [Opcode.GTE, [], [Opcode.GTE]],
-        [Opcode.LT, [], [Opcode.LT]],
-        [Opcode.LTE, [], [Opcode.LTE]],
         [Opcode.NOT_IMPLEMENTED, [], []],
       ];
 
@@ -79,8 +77,6 @@ describe('disassemble', () => {
       ...[Opcode.NOT_EQ],
       ...[Opcode.GT],
       ...[Opcode.GTE],
-      ...[Opcode.LT],
-      ...[Opcode.LTE],
       ...[Opcode.HALT],
     ]);
     const expected = [
@@ -98,9 +94,7 @@ describe('disassemble', () => {
       '0015 NOT_EQ',
       '0016 GT',
       '0017 GTE',
-      '0018 LT',
-      '0019 LTE',
-      '0020 HALT',
+      '0018 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });

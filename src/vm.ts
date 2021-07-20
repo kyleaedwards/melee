@@ -104,18 +104,24 @@ export class VM {
           this.pop();
           break;
         }
-        case Opcode.ADD:
-        case Opcode.SUB:
-        case Opcode.MUL:
-        case Opcode.DIV:
-        case Opcode.MOD:
-          this.execBinaryOperation(op);
-          break;
         case Opcode.TRUE:
           this.push(obj.TRUE);
           break;
         case Opcode.FALSE:
           this.push(obj.FALSE);
+          break;
+        case Opcode.ADD:
+        case Opcode.SUB:
+        case Opcode.MUL:
+        case Opcode.DIV:
+        case Opcode.MOD:
+          this.execBinaryArithmeticOperation(op);
+          break;
+        case Opcode.EQ:
+        case Opcode.NOT_EQ:
+        case Opcode.GT:
+        case Opcode.GTE:
+          this.execComparisonOperation(op);
           break;
       }
     }
@@ -127,13 +133,13 @@ export class VM {
    *
    * @param op - Opcode byte
    */
-  execBinaryOperation(op: Opcode): void {
+  execBinaryArithmeticOperation(op: Opcode): void {
     const left = this.stack[this.sp - 2];
     const right = this.stack[this.sp - 1];
     this.sp -= 2;
 
     if (left instanceof obj.Int && right instanceof obj.Int) {
-      this.execBinaryIntegerOperation(op, left, right);
+      this.execIntegerBinaryOperation(op, left, right);
       return;
     }
 
@@ -156,7 +162,7 @@ export class VM {
    * @param left - Left operand
    * @param right - Right operand
    */
-  execBinaryIntegerOperation(
+  execIntegerBinaryOperation(
     op: Opcode,
     left: obj.Int,
     right: obj.Int,
@@ -187,5 +193,85 @@ export class VM {
     }
 
     this.push(new obj.Int(result));
+  }
+
+  /**
+   * Pops the last two items off of the stack, performs a comparison
+   * operation, and pushes its result onto the stack.
+   *
+   * @param op - Opcode byte
+   */
+  execComparisonOperation(op: Opcode): void {
+    const left = this.stack[this.sp - 2];
+    const right = this.stack[this.sp - 1];
+    this.sp -= 2;
+
+    if (left instanceof obj.Int && right instanceof obj.Int) {
+      this.execIntegerComparisonOperation(op, left, right);
+      return;
+    }
+
+    if (left instanceof obj.Bool && right instanceof obj.Bool) {
+      switch (op) {
+        case Opcode.EQ:
+          this.push(obj.Bool.from(left === right));
+          break;
+        case Opcode.NOT_EQ:
+          this.push(obj.Bool.from(left !== right));
+          break;
+        default:
+          throw new Error(
+            `Unhandled boolean comparison operator: ${op}`,
+          );
+      }
+      return;
+    }
+
+    if (!left || !right) {
+      throw new Error(
+        'Cannot perform comparison operation without two operands',
+      );
+    }
+
+    throw new Error(
+      `Cannot perform comparison operation between types ${left.type} and ${right.type}`,
+    );
+  }
+
+  /**
+   * Executes an integer comparison operation and pushes the result
+   * onto the stack.
+   *
+   * @param op - Opcode byte
+   * @param left - Left operand
+   * @param right - Right operand
+   */
+  execIntegerComparisonOperation(
+    op: Opcode,
+    left: obj.Int,
+    right: obj.Int,
+  ): void {
+    let result: boolean;
+
+    switch (op) {
+      case Opcode.EQ:
+        result = left.value === right.value;
+        break;
+      case Opcode.NOT_EQ:
+        result = left.value !== right.value;
+        break;
+      case Opcode.GT:
+        result = left.value > right.value;
+        break;
+      case Opcode.GTE:
+        result = left.value >= right.value;
+        break;
+      default:
+        throw new Error(
+          `Unhandled integer comparison operator: ${op}`,
+        );
+    }
+
+    this.push(obj.Bool.from(result));
   }
 }

@@ -17,8 +17,6 @@ export enum Opcode {
   NOT_EQ,
   GT,
   GTE,
-  LT,
-  LTE,
 
   POP = 253,
   NOT_IMPLEMENTED = 254,
@@ -49,8 +47,6 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.NOT_EQ, 'NOT_EQ'],
     [Opcode.GT, 'GT'],
     [Opcode.GTE, 'GTE'],
-    [Opcode.LT, 'LT'],
-    [Opcode.LTE, 'LTE'],
     [Opcode.POP, 'POP'],
   ];
 

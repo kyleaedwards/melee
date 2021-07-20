@@ -67,6 +67,19 @@ describe('VM', () => {
     const inputs: [input: string, expected: boolean][] = [
       ['true', true],
       ['false', false],
+      ['1 < 100', true],
+      ['1 > 100', false],
+      ['1 < 1', false],
+      ['1 > 1', false],
+      ['1 == 1', true],
+      ['1 != 1', false],
+      ['1 != 100', true],
+      ['1 == 100', false],
+      ['true == true', true],
+      ['true != true', false],
+      ['true == false', false],
+      ['true != false', true],
+      ['(1 > 2) == false', true],
     ];
 
     inputs.forEach(([input, expected]) => {

@@ -59,6 +59,56 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.POP),
         ],
       ],
+      [
+        '4 > 3',
+        [4, 3],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.GT),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '4 < 3',
+        [3, 4],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.GT),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '4 >= 3',
+        [4, 3],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.GTE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '4 <= 3',
+        [3, 4],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.GTE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '3 != 4',
+        [3, 4],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.NOT_EQ),
+          createInstruction(Opcode.POP),
+        ],
+      ],
     ];
 
     inputs.forEach(([input, constants, instructions]) => {
@@ -110,6 +160,16 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.TRUE),
           createInstruction(Opcode.POP),
           createInstruction(Opcode.FALSE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        'true != false',
+        [],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.FALSE),
+          createInstruction(Opcode.NOT_EQ),
           createInstruction(Opcode.POP),
         ],
       ],
