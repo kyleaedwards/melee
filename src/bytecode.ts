@@ -6,6 +6,7 @@ export enum Opcode {
 
   TRUE,
   FALSE,
+  NULL,
 
   ADD,
   SUB,
@@ -20,6 +21,9 @@ export enum Opcode {
   NOT_EQ,
   GT,
   GTE,
+
+  JMP = 251,
+  JMP_IF_NOT = 252,
 
   POP = 253,
   NOT_IMPLEMENTED = 254,
@@ -41,6 +45,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.HALT, 'HALT'],
     [Opcode.TRUE, 'TRUE'],
     [Opcode.FALSE, 'FALSE'],
+    [Opcode.NULL, 'NULL'],
     [Opcode.ADD, 'ADD'],
     [Opcode.SUB, 'SUB'],
     [Opcode.MUL, 'MUL'],
@@ -52,6 +57,8 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.NOT_EQ, 'NOT_EQ'],
     [Opcode.GT, 'GT'],
     [Opcode.GTE, 'GTE'],
+    [Opcode.JMP, 'JMP', [2]],
+    [Opcode.JMP_IF_NOT, 'JMP_IF_NOT', [2]],
     [Opcode.POP, 'POP'],
   ];
 

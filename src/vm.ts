@@ -82,6 +82,21 @@ export class VM {
   }
 
   /**
+   * Jumps to next instruction specified by the next two instruction
+   * bytes.
+   *
+   * @internal
+   */
+  jump(): void {
+    const destination = unpackBigEndian(
+      this.instructions,
+      this.ip + 1,
+      2,
+    );
+    this.ip = destination - 1;
+  }
+
+  /**
    * Iterates over the compiler instructions item-by-item, using the
    * stack to hold values and perform operations.
    */
@@ -110,6 +125,9 @@ export class VM {
         case Opcode.FALSE:
           this.push(obj.FALSE);
           break;
+        case Opcode.NULL:
+          this.push(obj.NULL);
+          break;
         case Opcode.BANG:
           this.execUnaryLogicalNegation();
           break;
@@ -128,6 +146,16 @@ export class VM {
         case Opcode.GT:
         case Opcode.GTE:
           this.execComparison(op);
+          break;
+        case Opcode.JMP:
+          this.jump();
+          break;
+        case Opcode.JMP_IF_NOT:
+          if (!obj.isTruthy(this.pop())) {
+            this.jump();
+          } else {
+            this.ip += 2;
+          }
           break;
       }
     }

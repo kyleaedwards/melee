@@ -32,13 +32,59 @@ function assertObjectType<T extends obj.BaseObject>(
   }
 }
 
+type CompilerTestCase = [
+  input: string,
+  constants: (number | string)[],
+  instructions: Instruction[],
+];
+
+/**
+ * Runs a set of test cases and asserts the expected results.
+ *
+ * @param inputs - Expected test cases
+ *
+ * @internal
+ */
+function testCompilerResult(inputs: CompilerTestCase[]): void {
+  inputs.forEach(([input, constants, instructions]) => {
+    const lexer = new Lexer(input);
+    const parser = new Parser(lexer);
+    const program = parser.parse();
+    const compiler = new Compiler();
+    compiler.compile(program);
+
+    expect(compiler.constants.length).toEqual(constants.length);
+    for (let i = 0; i < constants.length; i++) {
+      const expected = constants[i];
+      const actual = compiler.constants[i];
+      if (typeof expected === 'number') {
+        assertObjectType(actual, obj.Int);
+        expect(actual.value).toEqual(expected);
+      }
+    }
+
+    const actualBytecode = compiler.instructions;
+    const bytecodeLength = instructions.reduce(
+      (acc, cur) => acc + cur.length,
+      0,
+    );
+    const expectedBytecode = new Uint8Array(bytecodeLength);
+    let offset = 0;
+    instructions.forEach((inst) => {
+      expectedBytecode.set(inst, offset);
+      offset += inst.length;
+    });
+
+    expect(actualBytecode.length).toEqual(bytecodeLength);
+    for (let i = 0; i < bytecodeLength; i++) {
+      expect(actualBytecode[i]).toEqual(expectedBytecode[i]);
+    }
+  });
+}
+
 describe('Compiler.compile', () => {
   test('should compile integer expressions', () => {
-    const inputs: [
-      input: string,
-      constants: (number | string)[],
-      instructions: Instruction[],
-    ][] = [
+    const inputs: CompilerTestCase[] = [
       [
         '1; 99',
         [1, 99],
@@ -123,48 +169,11 @@ describe('Compiler.compile', () => {
       ],
     ];
 
-    inputs.forEach(([input, constants, instructions]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      expect(compiler.constants.length).toEqual(constants.length);
-      for (let i = 0; i < constants.length; i++) {
-        const expected = constants[i];
-        const actual = compiler.constants[i];
-        if (typeof expected === 'number') {
-          assertObjectType(actual, obj.Int);
-          expect(actual.value).toEqual(expected);
-        }
-      }
-
-      const actualBytecode = compiler.instructions;
-      const bytecodeLength = instructions.reduce(
-        (acc, cur) => acc + cur.length,
-        0,
-      );
-      const expectedBytecode = new Uint8Array(bytecodeLength);
-      let offset = 0;
-      instructions.forEach((inst) => {
-        expectedBytecode.set(inst, offset);
-        offset += inst.length;
-      });
-
-      expect(actualBytecode.length).toEqual(bytecodeLength);
-      for (let i = 0; i < bytecodeLength; i++) {
-        expect(actualBytecode[i]).toEqual(expectedBytecode[i]);
-      }
-    });
+    testCompilerResult(inputs);
   });
 
   test('should compile boolean expressions', () => {
-    const inputs: [
-      input: string,
-      constants: (number | string)[],
-      instructions: Instruction[],
-    ][] = [
+    const inputs: CompilerTestCase[] = [
       [
         'true; false',
         [],
@@ -199,39 +208,41 @@ describe('Compiler.compile', () => {
       ],
     ];
 
-    inputs.forEach(([input, constants, instructions]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
+    testCompilerResult(inputs);
+  });
 
-      expect(compiler.constants.length).toEqual(constants.length);
-      for (let i = 0; i < constants.length; i++) {
-        const expected = constants[i];
-        const actual = compiler.constants[i];
-        if (typeof expected === 'number') {
-          assertObjectType(actual, obj.Int);
-          expect(actual.value).toEqual(expected);
-        }
-      }
+  test('should compile conditional expressions', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        'if (true) { 100; } 1;',
+        [100, 1],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.JMP_IF_NOT, 10),
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.JMP, 11),
+          createInstruction(Opcode.NULL),
+          createInstruction(Opcode.POP),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        'if (true) { 100; } else { 200; } 1;',
+        [100, 200, 1],
+        [
+          createInstruction(Opcode.TRUE), // 0000
+          createInstruction(Opcode.JMP_IF_NOT, 10), // 0001
+          createInstruction(Opcode.CONST, 0), // 0004
+          createInstruction(Opcode.JMP, 13), // 0007
+          createInstruction(Opcode.CONST, 1), // 0010
+          createInstruction(Opcode.POP), // 0013
+          createInstruction(Opcode.CONST, 2), // 0014
+          createInstruction(Opcode.POP), // 0017
+        ],
+      ],
+    ];
 
-      const actualBytecode = compiler.instructions;
-      const bytecodeLength = instructions.reduce(
-        (acc, cur) => acc + cur.length,
-        0,
-      );
-      const expectedBytecode = new Uint8Array(bytecodeLength);
-      let offset = 0;
-      instructions.forEach((inst) => {
-        expectedBytecode.set(inst, offset);
-        offset += inst.length;
-      });
-
-      expect(actualBytecode.length).toEqual(bytecodeLength);
-      for (let i = 0; i < bytecodeLength; i++) {
-        expect(actualBytecode[i]).toEqual(expectedBytecode[i]);
-      }
-    });
+    testCompilerResult(inputs);
   });
 });

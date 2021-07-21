@@ -236,3 +236,18 @@ export class Environment {
 export const NULL = new Null();
 export const TRUE = new Bool(true);
 export const FALSE = new Bool(false);
+
+/* Utilities */
+
+/**
+ * Returns false if 0, null, or false, otherwise true.
+ *
+ * @param obj - Any object
+ * @returns True if a truthy object
+ */
+export function isTruthy(obj: BaseObject | undefined): boolean {
+  if (obj instanceof Int) {
+    return obj.value !== 0;
+  }
+  return !(!obj || obj === NULL || obj === FALSE);
+}

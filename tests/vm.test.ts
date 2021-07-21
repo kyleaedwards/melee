@@ -3,6 +3,7 @@ import {
   Opcode,
   createInstruction,
   Instruction,
+  disassemble,
 } from '../src/bytecode';
 import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
@@ -72,6 +73,7 @@ describe('VM', () => {
       ['false', false],
       ['!true', false],
       ['!false', true],
+      ['!(if (false) { 5; })', true],
       ['1 < 100', true],
       ['!(1 < 100)', false],
       ['1 > 100', false],
@@ -100,6 +102,40 @@ describe('VM', () => {
       const result = vm.lastElement();
       assertObjectType(result, obj.Bool);
       expect(result.value).toEqual(expected);
+    });
+  });
+
+  test('should run conditional operations through the virtual machine', () => {
+    const inputs: [input: string, expected: number | null][] = [
+      ['if (true) { 50 }', 50],
+      ['if (false) { 50 }', null],
+      ['if (true) { 50 } else { 51 }', 50],
+      ['if (false) { 50 } else { 51 }', 51],
+      ['if (0) { 50 } else { 51 }', 51],
+      ['if (1) { 50 } else { 51 }', 50],
+      ['if (true) { 50; 49 } else { 51 }', 49],
+      ['if ((if (false) { 1 })) { 50 } else { 51 }', 51],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else {
+        assertObjectType(result, obj.Null);
+        expect(result).toEqual(obj.NULL);
+      }
     });
   });
 });
