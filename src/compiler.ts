@@ -1,21 +1,47 @@
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
 import { BaseObject, Int } from './object';
+import { SymbolTable } from './symbols';
 
+/**
+ * Instruction occurence at a given position in the bytecode.
+ */
 interface CompiledInstruction {
+  /**
+   * Opcode value
+   */
   opcode: Opcode;
+
+  /**
+   * Index within bytecode array
+   */
   position: number;
 }
 
+/**
+ * Compiles AST into serial bytecode instructions.
+ */
 export class Compiler {
   public instructions: Bytecode;
-  public constants: BaseObject[];
+
+  /**
+   * Saved instruction to backtrack or remove previous items from the bytecode.
+   * This is primarily used to support implicit returns from block statements.
+   */
   private lastInstruction: CompiledInstruction;
+
+  /**
+   * Saved instruction to backtrack or remove previous items from the bytecode.
+   * This is primarily used to support implicit returns from block statements.
+   */
   private previousInstruction: CompiledInstruction;
 
-  constructor() {
+  constructor(
+    public symbolTable: SymbolTable = new SymbolTable(),
+    public constants: BaseObject[] = [],
+  ) {
     this.instructions = new Uint8Array(0);
-    this.constants = [];
+
     this.lastInstruction = {
       opcode: Opcode.NOT_IMPLEMENTED,
       position: -1,
@@ -44,6 +70,20 @@ export class Compiler {
         this.compile(node.value);
       }
       this.emit(Opcode.POP);
+    } else if (node instanceof ast.DeclareStatement) {
+      if (node.value) {
+        this.compile(node.value);
+      }
+      const index = this.symbolTable.add(node.name.value);
+      this.emit(Opcode.SET, index);
+    } else if (node instanceof ast.Identifier) {
+      const index = this.symbolTable.getIndex(node.value);
+      if (typeof index === 'undefined') {
+        throw new Error(
+          `Attempting to use undefined variable ${node.value}`,
+        );
+      }
+      this.emit(Opcode.GET, index);
     } else if (node instanceof ast.PrefixExpression) {
       if (node.right) {
         this.compile(node.right);

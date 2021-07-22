@@ -50,8 +50,10 @@ describe('createInstruction', () => {
         [Opcode.NOT_EQ, [], [Opcode.NOT_EQ]],
         [Opcode.GT, [], [Opcode.GT]],
         [Opcode.GTE, [], [Opcode.GTE]],
-        [Opcode.JMP, [65533], [Opcode.JMP, 0xff, 0xfd]],
-        [Opcode.JMP_IF_NOT, [2], [Opcode.JMP_IF_NOT, 0x00, 0x02]],
+        [Opcode.SET, [65533], [Opcode.SET, 0xff, 0xfd]],
+        [Opcode.GET, [2], [Opcode.GET, 0x00, 0x02]],
+        [Opcode.JMP, [65532], [Opcode.JMP, 0xff, 0xfc]],
+        [Opcode.JMP_IF_NOT, [3], [Opcode.JMP_IF_NOT, 0x00, 0x03]],
         [Opcode.NOT_IMPLEMENTED, [], []],
       ];
 
@@ -84,8 +86,10 @@ describe('disassemble', () => {
       ...[Opcode.NOT_EQ],
       ...[Opcode.GT],
       ...[Opcode.GTE],
-      ...[Opcode.JMP, 0xff, 0xfd],
-      ...[Opcode.JMP_IF_NOT, 0x00, 0x02],
+      ...[Opcode.SET, 0xff, 0xfd],
+      ...[Opcode.GET, 0x00, 0x02],
+      ...[Opcode.JMP, 0xff, 0xfc],
+      ...[Opcode.JMP_IF_NOT, 0x00, 0x03],
       ...[Opcode.NULL],
       ...[Opcode.HALT],
     ]);
@@ -106,10 +110,12 @@ describe('disassemble', () => {
       '0017 NOT_EQ',
       '0018 GT',
       '0019 GTE',
-      '0020 JMP (65533)',
-      '0023 JMP_IF_NOT (2)',
-      '0026 NULL',
-      '0027 HALT',
+      '0020 SET (65533)',
+      '0023 GET (2)',
+      '0026 JMP (65532)',
+      '0029 JMP_IF_NOT (3)',
+      '0032 NULL',
+      '0033 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });

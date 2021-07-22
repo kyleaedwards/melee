@@ -3,6 +3,7 @@ import {
   Opcode,
   createInstruction,
   Instruction,
+  disassemble,
 } from '../src/bytecode';
 import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
@@ -239,6 +240,38 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.POP), // 0013
           createInstruction(Opcode.CONST, 2), // 0014
           createInstruction(Opcode.POP), // 0017
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
+  test('should compile expressions declaring and using variables', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `x := 5;
+         y := 6;
+         x;
+         y;
+         z := x + y;
+         z;`,
+        [5, 6],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.SET, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.SET, 1),
+          createInstruction(Opcode.GET, 0),
+          createInstruction(Opcode.POP),
+          createInstruction(Opcode.GET, 1),
+          createInstruction(Opcode.POP),
+          createInstruction(Opcode.GET, 0),
+          createInstruction(Opcode.GET, 1),
+          createInstruction(Opcode.ADD),
+          createInstruction(Opcode.SET, 2),
+          createInstruction(Opcode.GET, 2),
+          createInstruction(Opcode.POP),
         ],
       ],
     ];

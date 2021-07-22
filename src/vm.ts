@@ -6,6 +6,7 @@ import * as obj from './object';
  * Constants
  */
 const MAXIMUM_STACK_SIZE = 1024;
+const MAXIMUM_VARIABLES = 65536;
 
 /**
  * Virtual stack machine for executing instructions.
@@ -13,6 +14,7 @@ const MAXIMUM_STACK_SIZE = 1024;
 export class VM {
   public instructions: Bytecode;
   public constants: obj.BaseObject[];
+  public variables: (obj.BaseObject | undefined)[];
   public stack: (obj.BaseObject | undefined)[];
   public sp: number;
   public ip: number;
@@ -27,6 +29,9 @@ export class VM {
     this.constants = compiler.constants;
     this.stack = new Array<obj.BaseObject | undefined>(
       MAXIMUM_STACK_SIZE,
+    );
+    this.variables = new Array<obj.BaseObject | undefined>(
+      MAXIMUM_VARIABLES,
     );
     this.sp = 0;
     this.ip = 0;
@@ -97,6 +102,23 @@ export class VM {
   }
 
   /**
+   * Reads operand at offset.
+   *
+   * @param offset - Number of bytes into instruction
+   * @param width - Byte width of operand
+   * @internal
+   */
+  readOperand(offset: number, width: number): number {
+    const operand = unpackBigEndian(
+      this.instructions,
+      this.ip + offset,
+      width,
+    );
+    this.ip += width;
+    return operand;
+  }
+
+  /**
    * Iterates over the compiler instructions item-by-item, using the
    * stack to hold values and perform operations.
    */
@@ -106,12 +128,7 @@ export class VM {
 
       switch (op) {
         case Opcode.CONST: {
-          const idx = unpackBigEndian(
-            this.instructions,
-            this.ip + 1,
-            2,
-          );
-          this.ip += 2;
+          const idx = this.readOperand(1, 2);
           this.push(this.constants[idx]);
           break;
         }
@@ -128,6 +145,22 @@ export class VM {
         case Opcode.NULL:
           this.push(obj.NULL);
           break;
+        case Opcode.SET: {
+          const index = this.readOperand(1, 2);
+          this.variables[index] = this.pop();
+          break;
+        }
+        case Opcode.GET: {
+          const index = this.readOperand(1, 2);
+          const value = this.variables[index];
+          if (value === undefined) {
+            throw new Error(
+              'Attempting to access undeclared variable space. This is an error in the compiler.',
+            );
+          }
+          this.push(value);
+          break;
+        }
         case Opcode.BANG:
           this.execUnaryLogicalNegation();
           break;

@@ -138,4 +138,39 @@ describe('VM', () => {
       }
     });
   });
+
+  test('should run declare and variable statements through the virtual machine', () => {
+    const inputs: [input: string, expected: number | null][] = [
+      [
+        `x := 5;
+         y := 6;
+         x;
+         y;
+         z := x + y;
+         z;`,
+        11,
+      ],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else {
+        assertObjectType(result, obj.Null);
+        expect(result).toEqual(obj.NULL);
+      }
+    });
+  });
 });

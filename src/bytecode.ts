@@ -33,6 +33,9 @@ export enum Opcode {
   GT,
   GTE,
 
+  SET = 249,
+  GET = 250,
+
   JMP = 251,
   JMP_IF_NOT = 252,
 
@@ -71,6 +74,8 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.NOT_EQ, 'NOT_EQ'],
     [Opcode.GT, 'GT'],
     [Opcode.GTE, 'GTE'],
+    [Opcode.SET, 'SET', [2]],
+    [Opcode.GET, 'GET', [2]],
     [Opcode.JMP, 'JMP', [2]],
     [Opcode.JMP_IF_NOT, 'JMP_IF_NOT', [2]],
     [Opcode.POP, 'POP'],
