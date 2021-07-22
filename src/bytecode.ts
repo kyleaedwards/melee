@@ -85,7 +85,7 @@ operations.forEach(([op, name, operands]) => {
 });
 
 /**
- * Packs a value of given bytes at the offset within an instruction array.
+ * Packs operand value of given bytes at an offset within an instruction array.
  *
  * @param arr - Instruction bytes
  * @param offset - Bytes into instruction
@@ -105,6 +105,15 @@ export function packBigEndian(
   }
 }
 
+/**
+ * Retrieves operand value of the given bytes at an offset within an
+ * instruction array.
+ *
+ * @param arr - Instruction bytes
+ * @param offset - Bytes into instruction
+ * @param size - Byte width of operand
+ * @returns Integer value at offset
+ */
 export function unpackBigEndian(
   arr: Instruction,
   offset: number,
@@ -117,6 +126,13 @@ export function unpackBigEndian(
   return n;
 }
 
+/**
+ * Create new instruction, packing operands in big-endian byte order.
+ *
+ * @param op - Opcode value
+ * @param args - Additional operands
+ * @returns Packed instruction bytes
+ */
 export function createInstruction(
   op: Opcode,
   ...args: number[]
@@ -147,6 +163,12 @@ export function createInstruction(
   return instruction;
 }
 
+/**
+ * Disassemble a bytecode into a more human-readable format.
+ *
+ * @param bytecode - Series of instruction bytes
+ * @returns Stringified bytecode
+ */
 export function disassemble(bytecode: Bytecode): string {
   let pos = 0;
   let output = '';
