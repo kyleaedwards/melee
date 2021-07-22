@@ -1,6 +1,17 @@
+/**
+ * A flatted series of instruction bytes.
+ */
 export type Bytecode = Uint8Array;
+
+/**
+ * A small byte array representative of single instruction within a full
+ * bytecode array.
+ */
 export type Instruction = Uint8Array;
 
+/**
+ * Byte value enumeration of an instruction's opcode (its first byte).
+ */
 export enum Opcode {
   CONST = 1,
 
@@ -30,6 +41,9 @@ export enum Opcode {
   HALT = 255,
 }
 
+/**
+ * Instruction operation and its byte payload signature.
+ */
 export interface Operation {
   name: string;
   operands?: number[];
@@ -70,6 +84,14 @@ operations.forEach(([op, name, operands]) => {
   };
 });
 
+/**
+ * Packs a value of given bytes at the offset within an instruction array.
+ *
+ * @param arr - Instruction bytes
+ * @param offset - Bytes into instruction
+ * @param size - Byte width of operand
+ * @param value - Value inserted into instruction at offset
+ */
 export function packBigEndian(
   arr: Instruction,
   offset: number,
