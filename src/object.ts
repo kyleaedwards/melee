@@ -92,7 +92,8 @@ export class Bool implements BaseObject {
 
 export class Arr implements BaseObject {
   type: Type = 'array';
-  items: BaseObject[] = [];
+
+  constructor(public items: BaseObject[] = []) {}
 
   inspectObject(): string {
     return `[${this.items

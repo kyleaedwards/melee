@@ -173,4 +173,34 @@ describe('VM', () => {
       }
     });
   });
+
+  test('should run array statements through the virtual machine', () => {
+    const inputs: [input: string, expected: number[]][] = [
+      [`[]`, []],
+      [`[2, 3, 5, 8]`, [2, 3, 5, 8]],
+      [`[2 + 3, 5 * 8]`, [5, 40]],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      assertObjectType(result, obj.Arr);
+      expect(result.items.length).toEqual(expected.length);
+
+      expected.forEach((exp, i) => {
+        const res = result.items[i];
+        assertObjectType(res, obj.Int);
+        expect(res.value).toEqual(exp);
+      });
+    });
+  });
 });

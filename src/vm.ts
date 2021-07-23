@@ -1,3 +1,4 @@
+import { AssertionError } from 'assert';
 import { Bytecode, Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import * as obj from './object';
@@ -7,6 +8,44 @@ import * as obj from './object';
  */
 const MAXIMUM_STACK_SIZE = 1024;
 const MAXIMUM_VARIABLES = 65536;
+
+/**
+ * Asserts stack object is defined.
+ *
+ * @param obj - Object to be compared
+ *
+ * @internal
+ */
+function assertStackObject(
+  obj: obj.BaseObject | undefined,
+): asserts obj is obj.BaseObject {
+  if (typeof obj === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    throw new AssertionError({
+      message:
+        'Attempting to access undeclared stack space. This is an error in the compiler.',
+    });
+  }
+}
+
+/**
+ * Asserts variable object is defined.
+ *
+ * @param obj - Object to be compared
+ *
+ * @internal
+ */
+function assertVariableObject(
+  obj: obj.BaseObject | undefined,
+): asserts obj is obj.BaseObject {
+  if (typeof obj === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    throw new AssertionError({
+      message:
+        'Attempting to access undeclared variable space. This is an error in the compiler.',
+    });
+  }
+}
 
 /**
  * Virtual stack machine for executing instructions.
@@ -132,6 +171,19 @@ export class VM {
           this.push(this.constants[idx]);
           break;
         }
+        case Opcode.ARRAY: {
+          const size = this.readOperand(1, 2);
+          const arr = new obj.Arr(new Array(size));
+          const start = this.sp - size;
+          for (let i = start; i < this.sp; i++) {
+            const element = this.stack[i];
+            assertStackObject(element);
+            arr.items[i - start] = element;
+          }
+          this.sp -= size;
+          this.push(arr);
+          break;
+        }
         case Opcode.POP: {
           this.pop();
           break;
@@ -153,11 +205,7 @@ export class VM {
         case Opcode.GET: {
           const index = this.readOperand(1, 2);
           const value = this.variables[index];
-          if (value === undefined) {
-            throw new Error(
-              'Attempting to access undeclared variable space. This is an error in the compiler.',
-            );
-          }
+          assertVariableObject(value);
           this.push(value);
           break;
         }

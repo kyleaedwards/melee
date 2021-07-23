@@ -247,6 +247,47 @@ describe('Compiler.compile', () => {
     testCompilerResult(inputs);
   });
 
+  test('should compile array expressions', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        '[]',
+        [],
+        [
+          createInstruction(Opcode.ARRAY, 0),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '[2, 3, 5, 8]',
+        [2, 3, 5, 8],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CONST, 3),
+          createInstruction(Opcode.ARRAY, 4),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '[2 + 3, 5 * 8]',
+        [2, 3, 5, 8],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.ADD),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CONST, 3),
+          createInstruction(Opcode.MUL),
+          createInstruction(Opcode.ARRAY, 2),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
   test('should compile expressions declaring and using variables', () => {
     const inputs: CompilerTestCase[] = [
       [

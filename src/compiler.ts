@@ -170,6 +170,9 @@ export class Compiler {
       this.emit(Opcode.CONST, this.addConstant(obj));
     } else if (node instanceof ast.BooleanLiteral) {
       this.emit(node.value ? Opcode.TRUE : Opcode.FALSE);
+    } else if (node instanceof ast.ArrayLiteral) {
+      node.values.forEach(this.compile.bind(this));
+      this.emit(Opcode.ARRAY, node.values.length);
     }
   }
 
