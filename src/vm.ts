@@ -64,7 +64,7 @@ export class VM {
    * @param compiler - Compiler instance
    */
   constructor(compiler: Compiler) {
-    this.instructions = compiler.instructions;
+    this.instructions = compiler.instructions();
     this.constants = compiler.constants;
     this.stack = new Array<obj.BaseObject | undefined>(
       MAXIMUM_STACK_SIZE,

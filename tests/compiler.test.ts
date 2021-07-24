@@ -64,7 +64,7 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
       }
     }
 
-    const actualBytecode = compiler.instructions;
+    const actualBytecode = compiler.instructions();
     const bytecodeLength = instructions.reduce(
       (acc, cur) => acc + cur.length,
       0,

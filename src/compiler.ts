@@ -19,37 +19,70 @@ interface CompiledInstruction {
 }
 
 /**
+ * Scoped instruction set for
+ */
+interface CompilerScope {
+  /**
+   * Serial bytecode instructions representing a program or function body.
+   */
+  instructions: Bytecode;
+
+  /**
+   * Saved instruction to backtrack or remove previous items from the bytecode.
+   * This is primarily used to support implicit returns from block statements.
+   */
+  lastInstruction: CompiledInstruction;
+
+  /**
+   * Saved instruction to backtrack or remove previous items from the bytecode.
+   * This is primarily used to support implicit returns from block statements.
+   */
+  previousInstruction: CompiledInstruction;
+}
+
+/**
  * Compiles AST into serial bytecode instructions.
  */
 export class Compiler {
-  public instructions: Bytecode;
-
-  /**
-   * Saved instruction to backtrack or remove previous items from the bytecode.
-   * This is primarily used to support implicit returns from block statements.
-   */
-  private lastInstruction: CompiledInstruction;
-
-  /**
-   * Saved instruction to backtrack or remove previous items from the bytecode.
-   * This is primarily used to support implicit returns from block statements.
-   */
-  private previousInstruction: CompiledInstruction;
+  public scopes: CompilerScope[];
+  public scopeIndex: number;
 
   constructor(
     public symbolTable: SymbolTable = new SymbolTable(),
     public constants: BaseObject[] = [],
   ) {
-    this.instructions = new Uint8Array(0);
+    const globalScope = {
+      instructions: new Uint8Array(0),
+      lastInstruction: {
+        opcode: Opcode.NOT_IMPLEMENTED,
+        position: -1,
+      },
+      previousInstruction: {
+        opcode: Opcode.NOT_IMPLEMENTED,
+        position: -1,
+      },
+    };
 
-    this.lastInstruction = {
-      opcode: Opcode.NOT_IMPLEMENTED,
-      position: -1,
-    };
-    this.previousInstruction = {
-      opcode: Opcode.NOT_IMPLEMENTED,
-      position: -1,
-    };
+    this.scopeIndex = 0;
+    this.scopes = [globalScope];
+  }
+
+  /**
+   * Gets the current scope. (Can't use getters in ES3.)
+   *
+   * @returns Current scope
+   */
+  scope(): CompilerScope {
+    return this.scopes[this.scopeIndex];
+  }
+
+  /**
+   * Gets the current scope's instructions. (Can't use getters in ES3.)
+   *
+   * @returns Instruction bytecode
+   */
+  instructions(): Bytecode {
+    return this.scopes[this.scopeIndex].instructions;
   }
 
   /**
@@ -153,7 +186,7 @@ export class Compiler {
 
       const jumpOut = this.emit(Opcode.JMP, 0xffff);
 
-      this.replaceInstruction(jumpToElse, this.instructions.length);
+      this.replaceInstruction(jumpToElse, this.instructions().length);
 
       if (node.alternative) {
         this.compile(node.alternative);
@@ -162,7 +195,7 @@ export class Compiler {
         this.emit(Opcode.NULL);
       }
 
-      this.replaceInstruction(jumpOut, this.instructions.length);
+      this.replaceInstruction(jumpOut, this.instructions().length);
     } else if (node instanceof ast.IntegerLiteral) {
       // TODO: Why use constants for MIDI Ints, could we just bake them
       // into the bytecode instead?
@@ -199,13 +232,15 @@ export class Compiler {
    * @internal
    */
   removeInstruction(): void {
-    const position = this.lastInstruction.position;
-    this.lastInstruction.opcode = this.previousInstruction.opcode;
-    this.lastInstruction.position = this.previousInstruction.position;
+    const position = this.scope().lastInstruction.position;
+    this.scope().lastInstruction.opcode =
+      this.scope().previousInstruction.opcode;
+    this.scope().lastInstruction.position =
+      this.scope().previousInstruction.position;
 
     const temp = new Uint8Array(position);
-    temp.set(this.instructions.slice(0, position));
-    this.instructions = temp;
+    temp.set(this.instructions().slice(0, position));
+    this.scope().instructions = temp;
   }
 
   /**
@@ -217,7 +252,7 @@ export class Compiler {
    * @internal
    */
   removeInstructionIf(op: Opcode): void {
-    if (this.lastInstruction.opcode === op) {
+    if (this.scope().lastInstruction.opcode === op) {
       this.removeInstruction();
     }
   }
@@ -231,8 +266,8 @@ export class Compiler {
    * @internal
    */
   replaceInstruction(position: number, ...operands: number[]): void {
-    const op: Opcode = this.instructions[position];
-    this.instructions.set(
+    const op: Opcode = this.instructions()[position];
+    this.instructions().set(
       createInstruction(op, ...operands),
       position,
     );
@@ -249,15 +284,17 @@ export class Compiler {
    */
   emit(op: Opcode, ...operands: number[]): number {
     const instruction = createInstruction(op, ...operands);
-    const position = this.instructions.length;
+    const position = this.instructions().length;
     const temp = new Uint8Array(position + instruction.length);
-    temp.set(this.instructions);
+    temp.set(this.instructions());
     temp.set(instruction, position);
-    this.instructions = temp;
-    this.previousInstruction.opcode = this.lastInstruction.opcode;
-    this.previousInstruction.position = this.lastInstruction.position;
-    this.lastInstruction.opcode = op;
-    this.lastInstruction.position = position;
+    this.scope().instructions = temp;
+    this.scope().previousInstruction.opcode =
+      this.scope().lastInstruction.opcode;
+    this.scope().previousInstruction.position =
+      this.scope().lastInstruction.position;
+    this.scope().lastInstruction.opcode = op;
+    this.scope().lastInstruction.position = position;
     return position;
   }
 }
