@@ -13,20 +13,21 @@ type infixParseFn = (
  */
 enum precedence {
   NIL = 1,
-  EQ = 2,
-  CMP = 3,
-  ADD = 4,
-  MUL = 5,
-  PRF = 6,
-  CALL = 7,
+  EQL,
+  CMP,
+  ADD,
+  MUL,
+  PRF,
+  FNC,
+  IDX,
 }
 
 /**
  * Assigns precedence values to tokens.
  */
 const PRECEDENCE_MAP: Record<string, precedence> = {
-  eq: precedence.EQ,
-  noteq: precedence.EQ,
+  eq: precedence.EQL,
+  noteq: precedence.EQL,
   lt: precedence.CMP,
   lte: precedence.CMP,
   gt: precedence.CMP,
@@ -36,7 +37,8 @@ const PRECEDENCE_MAP: Record<string, precedence> = {
   asterisk: precedence.MUL,
   rslash: precedence.MUL,
   percent: precedence.MUL,
-  lparen: precedence.CALL,
+  lparen: precedence.FNC,
+  lbracket: precedence.IDX,
 };
 
 class Parser {
@@ -81,6 +83,7 @@ class Parser {
       gt: this.parseInfixExpression.bind(this),
       gte: this.parseInfixExpression.bind(this),
       lparen: this.parseCallExpression.bind(this),
+      lbracket: this.parseIndexExpression.bind(this),
     };
 
     this.curr = this.lexer.nextToken();
@@ -273,6 +276,22 @@ class Parser {
     const right = this.parseExpression(leftPrecedence);
 
     return new ast.InfixExpression(token, left, operator, right);
+  }
+
+  parseIndexExpression(
+    collection?: ast.Expression,
+  ): ast.Expression | undefined {
+    const token = this.curr;
+
+    if (!collection) return;
+
+    this.nextToken();
+    const index = this.parseExpression(precedence.NIL);
+    if (!index) return;
+
+    if (!this.expectPeek('rbracket')) return;
+
+    return new ast.IndexExpression(token, collection, index);
   }
 
   parseNoteExpression(): ast.NoteExpression {

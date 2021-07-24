@@ -315,6 +315,22 @@ class NextLiteral implements Expression {
   }
 }
 
+class IndexExpression implements Expression {
+  nodeType: 'expression';
+
+  constructor(
+    public token: Token,
+    public collection: Expression,
+    public index: Expression,
+  ) {
+    this.nodeType = 'expression';
+  }
+
+  toString(): string {
+    return `${this.collection.toString()}[${this.index.toString()}]`;
+  }
+}
+
 class CallExpression implements Expression {
   nodeType: 'expression';
 
@@ -405,6 +421,7 @@ export {
   FunctionLiteral,
   GeneratorLiteral,
   NextLiteral,
+  IndexExpression,
   CallExpression,
   NoteExpression,
   SkipExpression,

@@ -175,9 +175,15 @@ describe('VM', () => {
   });
 
   test('should run array statements through the virtual machine', () => {
-    const inputs: [input: string, expected: number[]][] = [
+    const inputs: [
+      input: string,
+      expected: number[] | number | null,
+    ][] = [
       [`[]`, []],
+      [`[][0]`, null],
       [`[2, 3, 5, 8]`, [2, 3, 5, 8]],
+      [`[2, 3, 5, 8][2]`, 5],
+      [`[2, 3, 5, 8][1 + 2]`, 8],
       [`[2 + 3, 5 * 8]`, [5, 40]],
     ];
 
@@ -193,14 +199,21 @@ describe('VM', () => {
 
       const result = vm.lastElement();
 
-      assertObjectType(result, obj.Arr);
-      expect(result.items.length).toEqual(expected.length);
+      if (expected instanceof Array) {
+        assertObjectType(result, obj.Arr);
+        expect(result.items.length).toEqual(expected.length);
 
-      expected.forEach((exp, i) => {
-        const res = result.items[i];
-        assertObjectType(res, obj.Int);
-        expect(res.value).toEqual(exp);
-      });
+        expected.forEach((exp, i) => {
+          const res = result.items[i];
+          assertObjectType(res, obj.Int);
+          expect(res.value).toEqual(exp);
+        });
+      } else if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else if (expected === null) {
+        expect(result).toEqual(obj.NULL);
+      }
     });
   });
 });

@@ -270,6 +270,36 @@ describe('Compiler.compile', () => {
         ],
       ],
       [
+        '[2, 3, 5, 8][2]',
+        [2, 3, 5, 8, 2],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CONST, 3),
+          createInstruction(Opcode.ARRAY, 4),
+          createInstruction(Opcode.CONST, 4),
+          createInstruction(Opcode.INDEX),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        '[2, 3, 5, 8][1 + 2]',
+        [2, 3, 5, 8, 1, 2],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CONST, 3),
+          createInstruction(Opcode.ARRAY, 4),
+          createInstruction(Opcode.CONST, 4),
+          createInstruction(Opcode.CONST, 5),
+          createInstruction(Opcode.ADD),
+          createInstruction(Opcode.INDEX),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
         '[2 + 3, 5 * 8]',
         [2, 3, 5, 8],
         [

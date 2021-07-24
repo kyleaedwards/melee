@@ -173,6 +173,10 @@ export class Compiler {
     } else if (node instanceof ast.ArrayLiteral) {
       node.values.forEach(this.compile.bind(this));
       this.emit(Opcode.ARRAY, node.values.length);
+    } else if (node instanceof ast.IndexExpression) {
+      this.compile(node.collection);
+      this.compile(node.index);
+      this.emit(Opcode.INDEX);
     }
   }
 

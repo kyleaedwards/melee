@@ -184,6 +184,20 @@ export class VM {
           this.push(arr);
           break;
         }
+        case Opcode.INDEX: {
+          const index = this.pop();
+          if (!(index instanceof obj.Int)) {
+            throw new Error('Array index must be an integer');
+          }
+          const collection = this.pop();
+          if (!(collection instanceof obj.Arr)) {
+            throw new Error(
+              'Cannot retrieve an element from a non-array',
+            );
+          }
+          this.push(collection.items[index.value] ?? obj.NULL);
+          break;
+        }
         case Opcode.POP: {
           this.pop();
           break;
