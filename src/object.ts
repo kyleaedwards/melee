@@ -1,4 +1,5 @@
 import { BlockStatement, Identifier } from './ast';
+import { Bytecode } from './bytecode';
 
 export type Type =
   | 'null'
@@ -105,16 +106,10 @@ export class Arr implements BaseObject {
 export class Func implements BaseObject {
   type: Type = 'function';
 
-  constructor(
-    public parameters: Identifier[],
-    public body: BlockStatement,
-    public environment: Environment,
-  ) {}
+  constructor(public instructions: Bytecode, public repr: string) {}
 
   inspectObject(): string {
-    return `fn(${this.parameters
-      .map((i) => i.toString())
-      .join(',')}) {\n${this.body.toString()}\n}`;
+    return this.repr;
   }
 }
 

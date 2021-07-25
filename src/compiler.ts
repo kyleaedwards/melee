@@ -1,6 +1,6 @@
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
-import { BaseObject, Int } from './object';
+import { BaseObject, Int, Func } from './object';
 import { SymbolTable } from './symbols';
 
 /**
@@ -51,20 +51,9 @@ export class Compiler {
     public symbolTable: SymbolTable = new SymbolTable(),
     public constants: BaseObject[] = [],
   ) {
-    const globalScope = {
-      instructions: new Uint8Array(0),
-      lastInstruction: {
-        opcode: Opcode.NOT_IMPLEMENTED,
-        position: -1,
-      },
-      previousInstruction: {
-        opcode: Opcode.NOT_IMPLEMENTED,
-        position: -1,
-      },
-    };
-
-    this.scopeIndex = 0;
-    this.scopes = [globalScope];
+    this.scopeIndex = -1;
+    this.scopes = [];
+    this.pushScope();
   }
 
   /**
@@ -210,7 +199,56 @@ export class Compiler {
       this.compile(node.collection);
       this.compile(node.index);
       this.emit(Opcode.INDEX);
+    } else if (node instanceof ast.FunctionLiteral) {
+      this.pushScope();
+      this.compile(node.body);
+      const instructions = this.popScope();
+      if (!instructions) {
+        throw new Error('Error compiling function');
+      }
+      const repr = node.toString();
+      const fn = new Func(instructions, repr);
+      this.emit(Opcode.CONST, this.addConstant(fn));
+    } else if (node instanceof ast.ReturnStatement) {
+      if (node.value) {
+        this.compile(node.value);
+      } else {
+        this.emit(Opcode.NULL);
+      }
+      this.emit(Opcode.RET);
     }
+  }
+
+  /**
+   * Add a new scope item onto the stack.
+   *
+   * @internal
+   */
+  pushScope(): void {
+    this.scopeIndex++;
+    this.scopes.push({
+      instructions: new Uint8Array(0),
+      lastInstruction: {
+        opcode: Opcode.NOT_IMPLEMENTED,
+        position: -1,
+      },
+      previousInstruction: {
+        opcode: Opcode.NOT_IMPLEMENTED,
+        position: -1,
+      },
+    });
+  }
+
+  /**
+   * Remove the topmost scope object and return its instructions.
+   *
+   * @returns Instructions from popped scope
+   *
+   * @internal
+   */
+  popScope(): Bytecode | undefined {
+    this.scopeIndex--;
+    return this.scopes.pop()?.instructions;
   }
 
   /**

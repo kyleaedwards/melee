@@ -3,7 +3,7 @@ import {
   Opcode,
   createInstruction,
   Instruction,
-  disassemble,
+  Bytecode,
 } from '../src/bytecode';
 import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
@@ -35,7 +35,7 @@ function assertObjectType<T extends obj.BaseObject>(
 
 type CompilerTestCase = [
   input: string,
-  constants: (number | string)[],
+  constants: (number | string | Bytecode)[],
   instructions: Instruction[],
 ];
 
@@ -61,6 +61,12 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
       if (typeof expected === 'number') {
         assertObjectType(actual, obj.Int);
         expect(actual.value).toEqual(expected);
+      } else if (expected instanceof Uint8Array) {
+        assertObjectType(actual, obj.Func);
+        expect(actual.instructions.length).toEqual(expected.length);
+        expected.forEach((inst, i) => {
+          expect(actual.instructions[i]).toEqual(inst);
+        });
       }
     }
 
@@ -342,6 +348,34 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.ADD),
           createInstruction(Opcode.SET, 2),
           createInstruction(Opcode.GET, 2),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
+  test('should compile function expressions', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        'fn () { return 1 + 2; }',
+        [
+          1,
+          2,
+          new Uint8Array([
+            Opcode.CONST,
+            0,
+            0,
+            Opcode.CONST,
+            0,
+            1,
+            Opcode.ADD,
+            Opcode.RET,
+          ]),
+        ],
+        [
+          createInstruction(Opcode.CONST, 2),
           createInstruction(Opcode.POP),
         ],
       ],
