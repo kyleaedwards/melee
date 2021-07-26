@@ -1,4 +1,3 @@
-import { BlockStatement, Identifier } from './ast';
 import { Bytecode } from './bytecode';
 
 export type Type =
@@ -116,16 +115,10 @@ export class Func implements BaseObject {
 export class Gen implements BaseObject {
   type: Type = 'generator';
 
-  constructor(
-    public parameters: Identifier[],
-    public body: BlockStatement,
-    public environment: Environment,
-  ) {}
+  constructor(public instructions: Bytecode, public repr: string) {}
 
   inspectObject(): string {
-    return `gen(${this.parameters
-      .map((i) => i.toString())
-      .join(',')}) ${this.body.toString()}`;
+    return this.repr;
   }
 }
 

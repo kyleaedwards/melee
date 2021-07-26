@@ -1,13 +1,15 @@
 import { AssertionError } from 'assert';
-import { Bytecode, Opcode, unpackBigEndian } from './bytecode';
+import { Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
+import { Frame } from './frame';
 import * as obj from './object';
 
 /**
  * Constants
  */
-const MAXIMUM_STACK_SIZE = 1024;
-const MAXIMUM_VARIABLES = 65536;
+const MAX_FRAME_SIZE = 1024;
+const MAX_STACK_SIZE = 1024;
+const MAX_VARIABLES = 65536;
 
 /**
  * Asserts stack object is defined.
@@ -51,12 +53,14 @@ function assertVariableObject(
  * Virtual stack machine for executing instructions.
  */
 export class VM {
-  public instructions: Bytecode;
   public constants: obj.BaseObject[];
   public variables: (obj.BaseObject | undefined)[];
+
   public stack: (obj.BaseObject | undefined)[];
   public sp: number;
-  public ip: number;
+
+  public frames: Frame[];
+  public fp: number;
 
   /**
    * Constructs a new VM instance.
@@ -64,16 +68,31 @@ export class VM {
    * @param compiler - Compiler instance
    */
   constructor(compiler: Compiler) {
-    this.instructions = compiler.instructions();
     this.constants = compiler.constants;
+    this.frames = new Array<Frame>(MAX_FRAME_SIZE);
     this.stack = new Array<obj.BaseObject | undefined>(
-      MAXIMUM_STACK_SIZE,
+      MAX_STACK_SIZE,
     );
     this.variables = new Array<obj.BaseObject | undefined>(
-      MAXIMUM_VARIABLES,
+      MAX_VARIABLES,
     );
+    this.fp = 1;
     this.sp = 0;
-    this.ip = 0;
+
+    this.frames[0] = new Frame(
+      new obj.Func(compiler.instructions(), '<MAIN>'),
+    );
+  }
+
+  /**
+   * Returns the current frame object.
+   *
+   * @returns Current frame
+   *
+   * @internal
+   */
+  frame(): Frame {
+    return this.frames[this.fp - 1];
   }
 
   /**
@@ -106,7 +125,7 @@ export class VM {
    * @param o - New object
    */
   push(o: obj.BaseObject): void {
-    if (this.sp >= MAXIMUM_STACK_SIZE) {
+    if (this.sp >= MAX_STACK_SIZE) {
       throw new Error('Maximum stack size exceeded');
     }
     this.stack[this.sp] = o;
@@ -132,12 +151,13 @@ export class VM {
    * @internal
    */
   jump(): void {
+    const frame = this.frame();
     const destination = unpackBigEndian(
-      this.instructions,
-      this.ip + 1,
+      frame.instructions(),
+      frame.ip + 1,
       2,
     );
-    this.ip = destination - 1;
+    frame.ip = destination - 1;
   }
 
   /**
@@ -148,12 +168,13 @@ export class VM {
    * @internal
    */
   readOperand(offset: number, width: number): number {
+    const frame = this.frame();
     const operand = unpackBigEndian(
-      this.instructions,
-      this.ip + offset,
+      frame.instructions(),
+      frame.ip + offset,
       width,
     );
-    this.ip += width;
+    frame.ip += width;
     return operand;
   }
 
@@ -162,8 +183,12 @@ export class VM {
    * stack to hold values and perform operations.
    */
   run(): void {
-    for (; this.ip < this.instructions.length; this.ip++) {
-      const op = this.instructions[this.ip];
+    const frame = this.frame();
+    const inst = frame.instructions();
+    while (frame.ip <= inst.length) {
+      frame.ip++;
+      const ip = frame.ip;
+      const op = inst[ip];
 
       switch (op) {
         case Opcode.CONST: {
@@ -249,7 +274,7 @@ export class VM {
           if (!obj.isTruthy(this.pop())) {
             this.jump();
           } else {
-            this.ip += 2;
+            frame.ip += 2;
           }
           break;
       }
