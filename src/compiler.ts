@@ -202,6 +202,10 @@ export class Compiler {
     } else if (node instanceof ast.FunctionLiteral) {
       this.pushScope();
       this.compile(node.body);
+      if (this.scope().lastInstruction.opcode !== Opcode.RET) {
+        this.emit(Opcode.NULL);
+        this.emit(Opcode.RET);
+      }
       const instructions = this.popScope();
       if (!instructions) {
         throw new Error('Error compiling function');
@@ -209,6 +213,12 @@ export class Compiler {
       const repr = node.toString();
       const fn = new Func(instructions, repr);
       this.emit(Opcode.CONST, this.addConstant(fn));
+    } else if (node instanceof ast.CallExpression) {
+      if (!node.func) {
+        throw new Error('Invalid call expression');
+      }
+      this.compile(node.func);
+      this.emit(Opcode.CALL);
     } else if (node instanceof ast.ReturnStatement) {
       if (node.value) {
         this.compile(node.value);

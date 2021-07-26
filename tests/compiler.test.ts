@@ -379,6 +379,44 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.POP),
         ],
       ],
+      [
+        'fn () { 0; }',
+        [
+          0,
+          new Uint8Array([
+            Opcode.CONST,
+            0,
+            0,
+            Opcode.POP,
+            Opcode.NULL,
+            Opcode.RET,
+          ]),
+        ],
+        [
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        'fn () { return 0; }()',
+        [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
+        [
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CALL),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        'f := fn () { return 0; }; f()',
+        [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
+        [
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.SET, 0),
+          createInstruction(Opcode.GET, 0),
+          createInstruction(Opcode.CALL),
+          createInstruction(Opcode.POP),
+        ],
+      ],
     ];
 
     testCompilerResult(inputs);

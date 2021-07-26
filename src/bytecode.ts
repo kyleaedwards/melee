@@ -35,10 +35,11 @@ export enum Opcode {
   GT,
   GTE,
 
-  SET = 248,
-  GET = 249,
+  SET = 247,
+  GET = 248,
 
-  RET = 250,
+  RET = 249,
+  CALL = 250,
 
   JMP = 251,
   JMP_IF_NOT = 252,
@@ -86,6 +87,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.JMP_IF_NOT, 'JMP_IF_NOT', [2]],
     [Opcode.POP, 'POP'],
     [Opcode.RET, 'RET'],
+    [Opcode.CALL, 'CALL'],
   ];
 
 operations.forEach(([op, name, operands]) => {
