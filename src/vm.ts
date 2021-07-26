@@ -280,7 +280,7 @@ export class VM {
         case Opcode.CALL: {
           const fn = this.pop();
           assertStackObject(fn);
-          if (!(fn instanceof obj.Func)) {
+          if (!(fn instanceof obj.Callable)) {
             throw new Error(
               'Cannot perform opcode CALL on a non-callable stack element',
             );

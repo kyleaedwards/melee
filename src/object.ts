@@ -10,6 +10,7 @@ export type Type =
   | 'integer'
   | 'boolean'
   | 'array'
+  | 'callable'
   | 'function'
   | 'sequence'
   | 'generator';
@@ -102,8 +103,8 @@ export class Arr implements BaseObject {
   }
 }
 
-export class Func implements BaseObject {
-  type: Type = 'function';
+export class Callable implements BaseObject {
+  type: Type = 'callable';
 
   constructor(public instructions: Bytecode, public repr: string) {}
 
@@ -112,14 +113,12 @@ export class Func implements BaseObject {
   }
 }
 
-export class Gen implements BaseObject {
-  type: Type = 'generator';
+export class Func extends Callable {
+  type: Type = 'function';
+}
 
-  constructor(public instructions: Bytecode, public repr: string) {}
-
-  inspectObject(): string {
-    return this.repr;
-  }
+export class Gen extends Callable {
+  type: Type = 'function';
 }
 
 export class Seq implements BaseObject {

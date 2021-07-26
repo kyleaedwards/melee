@@ -1,5 +1,5 @@
 import { Bytecode } from './bytecode';
-import { Func, Gen } from './object';
+import { Callable } from './object';
 
 /**
  * Call "stack" frame (might not be in the call stack) representing
@@ -11,7 +11,7 @@ export class Frame {
    */
   public ip: number;
 
-  constructor(public callable: Func | Gen) {
+  constructor(public callable: Callable) {
     this.ip = -1;
   }
 
