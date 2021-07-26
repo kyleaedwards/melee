@@ -183,8 +183,8 @@ export class VM {
    * stack to hold values and perform operations.
    */
   run(): void {
-    const frame = this.frame();
-    const inst = frame.instructions();
+    let frame = this.frame();
+    let inst = frame.instructions();
     while (frame.ip <= inst.length) {
       frame.ip++;
       const ip = frame.ip;
@@ -277,6 +277,26 @@ export class VM {
             frame.ip += 2;
           }
           break;
+        case Opcode.CALL: {
+          const fn = this.pop();
+          assertStackObject(fn);
+          if (!(fn instanceof obj.Func)) {
+            throw new Error(
+              'Cannot perform opcode CALL on a non-callable stack element',
+            );
+          }
+          frame = new Frame(fn);
+          inst = frame.instructions();
+          this.frames[this.fp] = frame;
+          this.fp++;
+          break;
+        }
+        case Opcode.RET: {
+          this.fp--;
+          frame = this.frame();
+          inst = frame.instructions();
+          break;
+        }
       }
     }
   }

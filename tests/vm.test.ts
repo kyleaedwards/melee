@@ -1,10 +1,4 @@
 import { AssertionError } from 'assert';
-import {
-  Opcode,
-  createInstruction,
-  Instruction,
-  disassemble,
-} from '../src/bytecode';
 import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
 import { Compiler } from '../src/compiler';
@@ -185,6 +179,51 @@ describe('VM', () => {
       [`[2, 3, 5, 8][2]`, 5],
       [`[2, 3, 5, 8][1 + 2]`, 8],
       [`[2 + 3, 5 * 8]`, [5, 40]],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      if (expected instanceof Array) {
+        assertObjectType(result, obj.Arr);
+        expect(result.items.length).toEqual(expected.length);
+
+        expected.forEach((exp, i) => {
+          const res = result.items[i];
+          assertObjectType(res, obj.Int);
+          expect(res.value).toEqual(exp);
+        });
+      } else if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else if (expected === null) {
+        expect(result).toEqual(obj.NULL);
+      }
+    });
+  });
+
+  test('should support function calls through the virtual machine', () => {
+    const inputs: [
+      input: string,
+      expected: number[] | number | null,
+    ][] = [
+      [`fn () { return 1; }()`, 1],
+      [`fn () { return 1 + 2; }()`, 3],
+      [`fn () { 1 + 2; }()`, null],
+      [`f := fn () { return 1 + 2; }; f()`, 3],
+      [
+        `f := fn () { return 1 + 2; }; g := fn () { return f(); }; g()`,
+        3,
+      ],
     ];
 
     inputs.forEach(([input, expected]) => {
