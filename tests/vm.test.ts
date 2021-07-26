@@ -221,9 +221,10 @@ describe('VM', () => {
       [`fn () { 1 + 2; }()`, null],
       [`f := fn () { return 1 + 2; }; f()`, 3],
       [
-        `f := fn () { return 1 + 2; }; g := fn () { return f(); }; g()`,
-        3,
+        `f := fn () { return 1 + 2; }; g := fn () { return f() + 3; }; g()`,
+        6,
       ],
+      [`fn () { return 5; return 1; }()`, 5],
     ];
 
     inputs.forEach(([input, expected]) => {
