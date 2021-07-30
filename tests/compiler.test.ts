@@ -4,6 +4,7 @@ import {
   createInstruction,
   Instruction,
   Bytecode,
+  disassemble,
 } from '../src/bytecode';
 import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
@@ -415,6 +416,39 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.GET, 0),
           createInstruction(Opcode.CALL),
           createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
+  test('should compile functions with scoped variables', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `a := 3;
+        f := fn () {
+          b := 4;
+          return a + b;
+        }
+        `,
+        [
+          3,
+          4,
+          new Uint8Array([
+            ...createInstruction(Opcode.CONST, 1),
+            ...createInstruction(Opcode.SET, 0),
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.ADD),
+            ...createInstruction(Opcode.RET),
+          ]),
+        ],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.SET, 0),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.SET, 1),
         ],
       ],
     ];

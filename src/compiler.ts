@@ -247,6 +247,7 @@ export class Compiler {
         position: -1,
       },
     });
+    this.symbolTable = new SymbolTable(this.symbolTable);
   }
 
   /**
@@ -257,6 +258,10 @@ export class Compiler {
    * @internal
    */
   popScope(): Bytecode | undefined {
+    if (!this.scopeIndex || !this.symbolTable.parent) {
+      return;
+    }
+    this.symbolTable = this.symbolTable.parent;
     this.scopeIndex--;
     return this.scopes.pop()?.instructions;
   }

@@ -19,9 +19,9 @@ export interface SymbolIdentifier {
  */
 export class SymbolTable {
   private symbols: Record<string, SymbolIdentifier>;
-  private numSymbols: number;
+  public numSymbols: number;
 
-  constructor() {
+  constructor(public parent?: SymbolTable) {
     this.symbols = {};
     this.numSymbols = 0;
   }
@@ -43,12 +43,26 @@ export class SymbolTable {
   }
 
   /**
+   * Look up a symbol in the table. If not found, it recurses
+   * up its parent scope.
+   *
+   * @param label - Variable name
+   * @returns Symbol
+   */
+  get(label: string): SymbolIdentifier | undefined {
+    if (!this.symbols[label] && this.parent) {
+      return this.parent.get(label);
+    }
+    return this.symbols[label];
+  }
+
+  /**
    * Look up a symbol in the table and return its unique index.
    *
    * @param label - Variable name
    * @returns Index of symbol
    */
   getIndex(label: string): number | undefined {
-    return this.symbols[label]?.index;
+    return this.get(label)?.index;
   }
 }
