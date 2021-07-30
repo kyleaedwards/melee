@@ -46,9 +46,9 @@ interface CompilerScope {
 export class Compiler {
   public scopes: CompilerScope[];
   public scopeIndex: number;
+  public symbolTable!: SymbolTable;
 
   constructor(
-    public symbolTable: SymbolTable = new SymbolTable(),
     public constants: BaseObject[] = [],
   ) {
     this.scopeIndex = -1;
@@ -97,15 +97,15 @@ export class Compiler {
         this.compile(node.value);
       }
       const index = this.symbolTable.add(node.name.value);
-      this.emit(Opcode.SET, index);
+      this.emit(this.symbolTable.parent ? Opcode.SET : Opcode.SETG, index);
     } else if (node instanceof ast.Identifier) {
-      const index = this.symbolTable.getIndex(node.value);
-      if (typeof index === 'undefined') {
+      const sym = this.symbolTable.get(node.value);
+      if (typeof sym === 'undefined') {
         throw new Error(
           `Attempting to use undefined variable ${node.value}`,
         );
       }
-      this.emit(Opcode.GET, index);
+      this.emit(sym.depth ? Opcode.GET : Opcode.GETG, sym.index);
     } else if (node instanceof ast.PrefixExpression) {
       if (node.right) {
         this.compile(node.right);

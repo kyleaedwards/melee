@@ -55,37 +55,47 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
     const compiler = new Compiler();
     compiler.compile(program);
 
-    expect(compiler.constants.length).toEqual(constants.length);
-    for (let i = 0; i < constants.length; i++) {
-      const expected = constants[i];
-      const actual = compiler.constants[i];
-      if (typeof expected === 'number') {
-        assertObjectType(actual, obj.Int);
-        expect(actual.value).toEqual(expected);
-      } else if (expected instanceof Uint8Array) {
-        assertObjectType(actual, obj.Func);
-        expect(actual.instructions.length).toEqual(expected.length);
-        expected.forEach((inst, i) => {
-          expect(actual.instructions[i]).toEqual(inst);
-        });
+    try {
+      expect(compiler.constants.length).toEqual(constants.length);
+      for (let i = 0; i < constants.length; i++) {
+        const expected = constants[i];
+        const actual = compiler.constants[i];
+        if (typeof expected === 'number') {
+          assertObjectType(actual, obj.Int);
+          expect(actual.value).toEqual(expected);
+        } else if (expected instanceof Uint8Array) {
+          assertObjectType(actual, obj.Func);
+          expect(actual.instructions.length).toEqual(expected.length);
+          expected.forEach((inst, i) => {
+            expect(actual.instructions[i]).toEqual(inst);
+          });
+        }
       }
-    }
 
-    const actualBytecode = compiler.instructions();
-    const bytecodeLength = instructions.reduce(
-      (acc, cur) => acc + cur.length,
-      0,
-    );
-    const expectedBytecode = new Uint8Array(bytecodeLength);
-    let offset = 0;
-    instructions.forEach((inst) => {
-      expectedBytecode.set(inst, offset);
-      offset += inst.length;
-    });
+      const actualBytecode = compiler.instructions();
+      const bytecodeLength = instructions.reduce(
+        (acc, cur) => acc + cur.length,
+        0,
+      );
+      const expectedBytecode = new Uint8Array(bytecodeLength);
+      let offset = 0;
+      instructions.forEach((inst) => {
+        expectedBytecode.set(inst, offset);
+        offset += inst.length;
+      });
 
-    expect(actualBytecode.length).toEqual(bytecodeLength);
-    for (let i = 0; i < bytecodeLength; i++) {
-      expect(actualBytecode[i]).toEqual(expectedBytecode[i]);
+      expect(actualBytecode.length).toEqual(bytecodeLength);
+      for (let i = 0; i < bytecodeLength; i++) {
+        expect(actualBytecode[i]).toEqual(expectedBytecode[i]);
+      }
+    } catch (e) {
+      console.log(disassemble(compiler.instructions()));
+      compiler.constants.forEach((c) => {
+        if (c instanceof obj.Func) {
+          console.log(disassemble(c.instructions));
+        }
+      });
+      throw e;
     }
   });
 }
@@ -337,18 +347,18 @@ describe('Compiler.compile', () => {
         [5, 6],
         [
           createInstruction(Opcode.CONST, 0),
-          createInstruction(Opcode.SET, 0),
+          createInstruction(Opcode.SETG, 0),
           createInstruction(Opcode.CONST, 1),
-          createInstruction(Opcode.SET, 1),
-          createInstruction(Opcode.GET, 0),
+          createInstruction(Opcode.SETG, 1),
+          createInstruction(Opcode.GETG, 0),
           createInstruction(Opcode.POP),
-          createInstruction(Opcode.GET, 1),
+          createInstruction(Opcode.GETG, 1),
           createInstruction(Opcode.POP),
-          createInstruction(Opcode.GET, 0),
-          createInstruction(Opcode.GET, 1),
+          createInstruction(Opcode.GETG, 0),
+          createInstruction(Opcode.GETG, 1),
           createInstruction(Opcode.ADD),
-          createInstruction(Opcode.SET, 2),
-          createInstruction(Opcode.GET, 2),
+          createInstruction(Opcode.SETG, 2),
+          createInstruction(Opcode.GETG, 2),
           createInstruction(Opcode.POP),
         ],
       ],
@@ -412,8 +422,8 @@ describe('Compiler.compile', () => {
         [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
         [
           createInstruction(Opcode.CONST, 1),
-          createInstruction(Opcode.SET, 0),
-          createInstruction(Opcode.GET, 0),
+          createInstruction(Opcode.SETG, 0),
+          createInstruction(Opcode.GETG, 0),
           createInstruction(Opcode.CALL),
           createInstruction(Opcode.POP),
         ],
@@ -438,7 +448,7 @@ describe('Compiler.compile', () => {
           new Uint8Array([
             ...createInstruction(Opcode.CONST, 1),
             ...createInstruction(Opcode.SET, 0),
-            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.GETG, 0),
             ...createInstruction(Opcode.GET, 0),
             ...createInstruction(Opcode.ADD),
             ...createInstruction(Opcode.RET),
@@ -446,9 +456,9 @@ describe('Compiler.compile', () => {
         ],
         [
           createInstruction(Opcode.CONST, 0),
-          createInstruction(Opcode.SET, 0),
+          createInstruction(Opcode.SETG, 0),
           createInstruction(Opcode.CONST, 2),
-          createInstruction(Opcode.SET, 1),
+          createInstruction(Opcode.SETG, 1),
         ],
       ],
     ];

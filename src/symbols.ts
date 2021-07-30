@@ -11,6 +11,11 @@ export interface SymbolIdentifier {
    * Index within symbol table
    */
   index: number;
+
+  /**
+   * Depth of owning symbol table
+   */
+  depth: number;
 }
 
 /**
@@ -20,10 +25,12 @@ export interface SymbolIdentifier {
 export class SymbolTable {
   private symbols: Record<string, SymbolIdentifier>;
   public numSymbols: number;
+  public depth: number;
 
   constructor(public parent?: SymbolTable) {
     this.symbols = {};
     this.numSymbols = 0;
+    this.depth = parent ? parent.depth + 1 : 0;
   }
 
   /**
@@ -36,6 +43,7 @@ export class SymbolTable {
     const sym = {
       label,
       index: this.numSymbols,
+      depth: this.depth,
     };
     this.numSymbols++;
     this.symbols[label] = sym;
