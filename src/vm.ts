@@ -81,6 +81,7 @@ export class VM {
 
     this.frames[0] = new Frame(
       new obj.Func(compiler.instructions(), '<MAIN>'),
+      0,
     );
   }
 
@@ -236,14 +237,26 @@ export class VM {
         case Opcode.NULL:
           this.push(obj.NULL);
           break;
-        case Opcode.SET: {
+        case Opcode.SETG: {
           const index = this.readOperand(1, 2);
           this.variables[index] = this.pop();
           break;
         }
-        case Opcode.GET: {
+        case Opcode.GETG: {
           const index = this.readOperand(1, 2);
           const value = this.variables[index];
+          assertVariableObject(value);
+          this.push(value);
+          break;
+        }
+        case Opcode.SET: {
+          const index = this.readOperand(1, 1);
+          this.stack[this.frame().base + index] = this.pop();
+          break;
+        }
+        case Opcode.GET: {
+          const index = this.readOperand(1, 1);
+          const value = this.stack[this.frame().base + index];
           assertVariableObject(value);
           this.push(value);
           break;
@@ -285,16 +298,23 @@ export class VM {
               'Cannot perform opcode CALL on a non-callable stack element',
             );
           }
-          frame = new Frame(fn);
+          frame = new Frame(fn, this.sp);
+          this.sp += fn.numLocals;
           inst = frame.instructions();
           this.frames[this.fp] = frame;
           this.fp++;
           break;
         }
         case Opcode.RET: {
+          const value = this.pop();
+          if (!value) {
+            throw new Error('Functions must return an explicit value or an implicit null');
+          }
           this.fp--;
           frame = this.frame();
           inst = frame.instructions();
+          this.sp = frame.base - 1;
+          this.push(value);
           break;
         }
       }

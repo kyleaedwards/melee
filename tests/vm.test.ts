@@ -17,13 +17,16 @@ type Constructor<T> = new (...args: any[]) => T;
  * @internal
  */
 function assertObjectType<T extends obj.BaseObject>(
-  obj: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+  o: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   constructor: Constructor<T>,
-): asserts obj is T {
-  if (!(obj instanceof constructor)) {
+): asserts o is T {
+  if (!(o instanceof constructor)) {
+    const name = constructor.name as string;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const debug = o ? o.toString() as string : 'undefined';
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     throw new AssertionError({
-      message: 'Object is not correct type',
+      message: `Object ${debug} is not type ${name}`,
     });
   }
 }
@@ -225,6 +228,52 @@ describe('VM', () => {
         6,
       ],
       [`fn () { return 5; return 1; }()`, 5],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      if (expected instanceof Array) {
+        assertObjectType(result, obj.Arr);
+        expect(result.items.length).toEqual(expected.length);
+
+        expected.forEach((exp, i) => {
+          const res = result.items[i];
+          assertObjectType(res, obj.Int);
+          expect(res.value).toEqual(exp);
+        });
+      } else if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else if (expected === null) {
+        expect(result).toEqual(obj.NULL);
+      }
+    });
+  });
+
+  test('should support scoped variables through function calls', () => {
+    const inputs: [
+      input: string,
+      expected: number[] | number | null,
+    ][] = [
+      [
+        `a := 3;
+        f := fn () {
+          b := 5;
+          return a + b; };
+        };
+        f()`,
+        8,
+      ],
     ];
 
     inputs.forEach(([input, expected]) => {

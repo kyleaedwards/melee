@@ -202,6 +202,7 @@ export class Compiler {
     } else if (node instanceof ast.FunctionLiteral) {
       this.pushScope();
       this.compile(node.body);
+      const numLocals = this.symbolTable.numSymbols;
       if (this.scope().lastInstruction.opcode !== Opcode.RET) {
         this.emit(Opcode.NULL);
         this.emit(Opcode.RET);
@@ -211,7 +212,7 @@ export class Compiler {
         throw new Error('Error compiling function');
       }
       const repr = node.toString();
-      const fn = new Func(instructions, repr);
+      const fn = new Func(instructions, repr, numLocals);
       this.emit(Opcode.CONST, this.addConstant(fn));
     } else if (node instanceof ast.CallExpression) {
       if (!node.func) {

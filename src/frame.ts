@@ -11,7 +11,7 @@ export class Frame {
    */
   public ip: number;
 
-  constructor(public callable: Callable) {
+  constructor(public callable: Callable, public base: number) {
     this.ip = -1;
   }
 

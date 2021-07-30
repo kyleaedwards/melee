@@ -106,7 +106,11 @@ export class Arr implements BaseObject {
 export class Callable implements BaseObject {
   type: Type = 'callable';
 
-  constructor(public instructions: Bytecode, public repr: string) {}
+  constructor(
+    public instructions: Bytecode,
+    public repr: string,
+    public numLocals: number = 0,
+  ) {}
 
   inspectObject(): string {
     return this.repr;
