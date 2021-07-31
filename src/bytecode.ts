@@ -92,7 +92,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.JMP_IF_NOT, 'JMP_IF_NOT', [2]],
     [Opcode.POP, 'POP'],
     [Opcode.RET, 'RET'],
-    [Opcode.CALL, 'CALL'],
+    [Opcode.CALL, 'CALL', [1]],
   ];
 
 operations.forEach(([op, name, operands]) => {

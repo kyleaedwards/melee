@@ -292,6 +292,7 @@ export class VM {
           break;
         case Opcode.CALL: {
           const fn = this.pop();
+          this.frame().ip++;
           assertStackObject(fn);
           if (!(fn instanceof obj.Callable)) {
             throw new Error(

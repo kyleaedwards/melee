@@ -201,6 +201,9 @@ export class Compiler {
       this.emit(Opcode.INDEX);
     } else if (node instanceof ast.FunctionLiteral) {
       this.pushScope();
+      node.parameters.forEach((param) => {
+        this.symbolTable.add(param.value);
+      });
       this.compile(node.body);
       const numLocals = this.symbolTable.numSymbols;
       if (this.scope().lastInstruction.opcode !== Opcode.RET) {
@@ -219,7 +222,8 @@ export class Compiler {
         throw new Error('Invalid call expression');
       }
       this.compile(node.func);
-      this.emit(Opcode.CALL);
+      node.args.forEach(this.compile.bind(this));
+      this.emit(Opcode.CALL, node.args.length);
     } else if (node instanceof ast.ReturnStatement) {
       if (node.value) {
         this.compile(node.value);

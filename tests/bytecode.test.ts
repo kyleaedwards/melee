@@ -59,7 +59,7 @@ describe('createInstruction', () => {
         [Opcode.ARRAY, [3], [Opcode.ARRAY, 0x00, 0x03]],
         [Opcode.INDEX, [], [Opcode.INDEX]],
         [Opcode.RET, [], [Opcode.RET]],
-        [Opcode.CALL, [], [Opcode.CALL]],
+        [Opcode.CALL, [1], [Opcode.CALL, 0x01]],
         [Opcode.NOT_IMPLEMENTED, [], []],
       ];
 
@@ -102,7 +102,7 @@ describe('disassemble', () => {
       ...[Opcode.ARRAY, 0x00, 0x03],
       ...[Opcode.INDEX],
       ...[Opcode.RET],
-      ...[Opcode.CALL],
+      ...[Opcode.CALL, 0x01],
       ...[Opcode.HALT],
     ]);
     const expected = [
@@ -132,8 +132,8 @@ describe('disassemble', () => {
       '0037 ARRAY (3)',
       '0040 INDEX',
       '0041 RET',
-      '0042 CALL',
-      '0043 HALT',
+      '0042 CALL (1)',
+      '0044 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });
