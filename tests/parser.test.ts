@@ -506,7 +506,7 @@ describe('Parser', () => {
         const expr = stmt.value;
         assertNodeType(expr, ast.CallExpression);
 
-        testLiteral(expr.func, name);
+        testLiteral(expr.fn, name);
 
         expect(expr.args).toHaveLength(args.length);
         args.forEach((expected, i) => {

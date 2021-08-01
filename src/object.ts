@@ -12,6 +12,7 @@ export type Type =
   | 'array'
   | 'callable'
   | 'function'
+  | 'native'
   | 'sequence'
   | 'generator';
 
@@ -118,12 +119,16 @@ export class Callable implements BaseObject {
   }
 }
 
-export class Func extends Callable {
+export class Fn extends Callable {
   type: Type = 'function';
 }
 
 export class Gen extends Callable {
-  type: Type = 'function';
+  type: Type = 'generator';
+}
+
+export class NativeFn extends Callable {
+  type: Type = 'native';
 }
 
 export class Seq implements BaseObject {

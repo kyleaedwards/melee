@@ -64,7 +64,7 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
           assertObjectType(actual, obj.Int);
           expect(actual.value).toEqual(expected);
         } else if (expected instanceof Uint8Array) {
-          assertObjectType(actual, obj.Func);
+          assertObjectType(actual, obj.Fn);
           expect(actual.instructions.length).toEqual(expected.length);
           expected.forEach((inst, i) => {
             expect(actual.instructions[i]).toEqual(inst);
@@ -91,7 +91,7 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
     } catch (e) {
       console.log(disassemble(compiler.instructions()));
       compiler.constants.forEach((c) => {
-        if (c instanceof obj.Func) {
+        if (c instanceof obj.Fn) {
           console.log(disassemble(c.instructions));
         }
       });

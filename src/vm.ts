@@ -80,7 +80,7 @@ export class VM {
     this.sp = 0;
 
     this.frames[0] = new Frame(
-      new obj.Func(compiler.instructions(), '<MAIN>'),
+      new obj.Fn(compiler.instructions(), '<MAIN>'),
       0,
     );
   }

@@ -1,6 +1,6 @@
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
-import { BaseObject, Int, Func } from './object';
+import { BaseObject, Int, Fn } from './object';
 import { SymbolTable } from './symbols';
 
 /**
@@ -215,13 +215,13 @@ export class Compiler {
         throw new Error('Error compiling function');
       }
       const repr = node.toString();
-      const fn = new Func(instructions, repr, numLocals, node.parameters.length);
+      const fn = new Fn(instructions, repr, numLocals, node.parameters.length);
       this.emit(Opcode.CONST, this.addConstant(fn));
     } else if (node instanceof ast.CallExpression) {
-      if (!node.func) {
+      if (!node.fn) {
         throw new Error('Invalid call expression');
       }
-      this.compile(node.func);
+      this.compile(node.fn);
       node.args.forEach(this.compile.bind(this));
       this.emit(Opcode.CALL, node.args.length);
     } else if (node instanceof ast.ReturnStatement) {

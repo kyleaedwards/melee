@@ -336,7 +336,7 @@ class CallExpression implements Expression {
 
   constructor(
     public token: Token,
-    public func: Expression | undefined,
+    public fn: Expression | undefined,
     public args: Expression[],
   ) {
     this.nodeType = 'expression';
@@ -344,7 +344,7 @@ class CallExpression implements Expression {
 
   toString(): string {
     const args = this.args.map((p) => p.toString()).join(', ');
-    return `${this.func ? this.func.toString() : ''}(${args})`;
+    return `${this.fn ? this.fn.toString() : ''}(${args})`;
   }
 }
 
