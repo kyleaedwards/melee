@@ -5,6 +5,9 @@ import { Compiler } from '../src/compiler';
 import { VM } from '../src/vm';
 import * as obj from '../src/object';
 
+type TestScalar = number | boolean | null;
+type VMTestCase = [input: string, expected: TestScalar | TestScalar[]];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -31,9 +34,47 @@ function assertObjectType<T extends obj.BaseObject>(
   }
 }
 
+function testScalar(result: obj.BaseObject, expected: number | boolean | null): void {
+  if (typeof expected === 'number') {
+    assertObjectType(result, obj.Int);
+    expect(result.value).toEqual(expected);
+  } else if (typeof expected === 'boolean') {
+    assertObjectType(result, obj.Bool);
+    expect(result.value).toEqual(expected);
+  } else if (expected === null) {
+    expect(result).toEqual(obj.NULL);
+  }
+}
+
+function testInputs(inputs: VMTestCase[]): void {
+  inputs.forEach(([input, expected]) => {
+    const lexer = new Lexer(input);
+    const parser = new Parser(lexer);
+    const program = parser.parse();
+    const compiler = new Compiler();
+    compiler.compile(program);
+
+    const vm = new VM(compiler);
+    vm.run();
+
+    const result = vm.lastElement();
+
+    if (expected instanceof Array) {
+      assertObjectType(result, obj.Arr);
+      expect(result.items.length).toEqual(expected.length);
+
+      expected.forEach((exp, i) => {
+        testScalar(result.items[i], exp);
+      });
+    } else {
+      testScalar(result, expected);
+    }
+  });
+}
+
 describe('VM', () => {
   test('should run integer operations through the virtual machine', () => {
-    const inputs: [input: string, expected: number][] = [
+    testInputs([
       ['1', 1],
       ['2', 2],
       ['-2', -2],
@@ -47,25 +88,11 @@ describe('VM', () => {
       ['5 / 3', 1],
       ['6 % 3', 0],
       ['5 % 3', 2],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-      assertObjectType(result, obj.Int);
-      expect(result.value).toEqual(expected);
-    });
+    ]);
   });
 
   test('should run boolean operations through the virtual machine', () => {
-    const inputs: [input: string, expected: boolean][] = [
+    testInputs([
       ['true', true],
       ['false', false],
       ['!true', false],
@@ -85,25 +112,11 @@ describe('VM', () => {
       ['true == false', false],
       ['true != false', true],
       ['(1 > 2) == false', true],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-      assertObjectType(result, obj.Bool);
-      expect(result.value).toEqual(expected);
-    });
+    ]);
   });
 
   test('should run conditional operations through the virtual machine', () => {
-    const inputs: [input: string, expected: number | null][] = [
+    testInputs([
       ['if (true) { 50 }', 50],
       ['if (false) { 50 }', null],
       ['if (true) { 50 } else { 51 }', 50],
@@ -112,32 +125,11 @@ describe('VM', () => {
       ['if (1) { 50 } else { 51 }', 50],
       ['if (true) { 50; 49 } else { 51 }', 49],
       ['if ((if (false) { 1 })) { 50 } else { 51 }', 51],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else {
-        assertObjectType(result, obj.Null);
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 
   test('should run declare and variable statements through the virtual machine', () => {
-    const inputs: [input: string, expected: number | null][] = [
+    testInputs([
       [
         `x := 5;
          y := 6;
@@ -147,78 +139,22 @@ describe('VM', () => {
          z;`,
         11,
       ],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else {
-        assertObjectType(result, obj.Null);
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 
   test('should run array statements through the virtual machine', () => {
-    const inputs: [
-      input: string,
-      expected: number[] | number | null,
-    ][] = [
+    testInputs([
       [`[]`, []],
       [`[][0]`, null],
       [`[2, 3, 5, 8]`, [2, 3, 5, 8]],
       [`[2, 3, 5, 8][2]`, 5],
       [`[2, 3, 5, 8][1 + 2]`, 8],
       [`[2 + 3, 5 * 8]`, [5, 40]],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (expected instanceof Array) {
-        assertObjectType(result, obj.Arr);
-        expect(result.items.length).toEqual(expected.length);
-
-        expected.forEach((exp, i) => {
-          const res = result.items[i];
-          assertObjectType(res, obj.Int);
-          expect(res.value).toEqual(exp);
-        });
-      } else if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else if (expected === null) {
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 
   test('should support function calls through the virtual machine', () => {
-    const inputs: [
-      input: string,
-      expected: number[] | number | null,
-    ][] = [
+    testInputs([
       [`fn () { return 1; }()`, 1],
       [`fn () { return 1 + 2; }()`, 3],
       [`fn () { 1 + 2; }()`, null],
@@ -229,43 +165,11 @@ describe('VM', () => {
       ],
       [`fn () { return 5; return 1; }()`, 5],
       [`fn (a, b) { return a + b + 1 }(3, 4)`, 8],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (expected instanceof Array) {
-        assertObjectType(result, obj.Arr);
-        expect(result.items.length).toEqual(expected.length);
-
-        expected.forEach((exp, i) => {
-          const res = result.items[i];
-          assertObjectType(res, obj.Int);
-          expect(res.value).toEqual(exp);
-        });
-      } else if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else if (expected === null) {
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 
   test('should support scoped variables through function calls', () => {
-    const inputs: [
-      input: string,
-      expected: number[] | number | null,
-    ][] = [
+    testInputs([
       [
         `a := 3;
         f := fn () {
@@ -298,43 +202,11 @@ describe('VM', () => {
         f(2)`,
         10,
       ],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (expected instanceof Array) {
-        assertObjectType(result, obj.Arr);
-        expect(result.items.length).toEqual(expected.length);
-
-        expected.forEach((exp, i) => {
-          const res = result.items[i];
-          assertObjectType(res, obj.Int);
-          expect(res.value).toEqual(exp);
-        });
-      } else if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else if (expected === null) {
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 
   test('should support implicit null arguments if not supplied', () => {
-    const inputs: [
-      input: string,
-      expected: number[] | number | null,
-    ][] = [
+    testInputs([
       [
         `
         f := fn (g) {
@@ -343,43 +215,11 @@ describe('VM', () => {
         f()`,
         null,
       ],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (expected instanceof Array) {
-        assertObjectType(result, obj.Arr);
-        expect(result.items.length).toEqual(expected.length);
-
-        expected.forEach((exp, i) => {
-          const res = result.items[i];
-          assertObjectType(res, obj.Int);
-          expect(res.value).toEqual(exp);
-        });
-      } else if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else if (expected === null) {
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 
   test('should ignore additional arguments', () => {
-    const inputs: [
-      input: string,
-      expected: number[] | number | null,
-    ][] = [
+    testInputs([
       [
         `
         f := fn (g) {
@@ -388,35 +228,6 @@ describe('VM', () => {
         f(5, 6)`,
         5,
       ],
-    ];
-
-    inputs.forEach(([input, expected]) => {
-      const lexer = new Lexer(input);
-      const parser = new Parser(lexer);
-      const program = parser.parse();
-      const compiler = new Compiler();
-      compiler.compile(program);
-
-      const vm = new VM(compiler);
-      vm.run();
-
-      const result = vm.lastElement();
-
-      if (expected instanceof Array) {
-        assertObjectType(result, obj.Arr);
-        expect(result.items.length).toEqual(expected.length);
-
-        expected.forEach((exp, i) => {
-          const res = result.items[i];
-          assertObjectType(res, obj.Int);
-          expect(res.value).toEqual(exp);
-        });
-      } else if (typeof expected === 'number') {
-        assertObjectType(result, obj.Int);
-        expect(result.value).toEqual(expected);
-      } else if (expected === null) {
-        expect(result).toEqual(obj.NULL);
-      }
-    });
+    ]);
   });
 });
