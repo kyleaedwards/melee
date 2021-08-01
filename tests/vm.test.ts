@@ -228,6 +228,7 @@ describe('VM', () => {
         6,
       ],
       [`fn () { return 5; return 1; }()`, 5],
+      [`fn (a, b) { return a + b + 1 }(3, 4)`, 8],
     ];
 
     inputs.forEach(([input, expected]) => {
@@ -273,6 +274,29 @@ describe('VM', () => {
         };
         f()`,
         8,
+      ],
+      [
+        `a := 3;
+        f := fn (c) {
+          b := 5;
+          d := a + b + c;
+          return d; };
+        };
+        f(2)`,
+        10,
+      ],
+      [
+        `a := 3;
+        g := fn (x, y, z) {
+          return x + y + z;
+        }
+        f := fn (c) {
+          b := 5;
+          d := g(a, b, c);
+          return d; };
+        };
+        f(2)`,
+        10,
       ],
     ];
 
