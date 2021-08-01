@@ -215,7 +215,7 @@ export class Compiler {
         throw new Error('Error compiling function');
       }
       const repr = node.toString();
-      const fn = new Func(instructions, repr, numLocals);
+      const fn = new Func(instructions, repr, numLocals, node.parameters.length);
       this.emit(Opcode.CONST, this.addConstant(fn));
     } else if (node instanceof ast.CallExpression) {
       if (!node.func) {

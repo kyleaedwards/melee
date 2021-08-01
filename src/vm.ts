@@ -291,13 +291,21 @@ export class VM {
           }
           break;
         case Opcode.CALL: {
-          const numArgs = this.readOperand(1, 1);
+          let numArgs = this.readOperand(1, 1);
           const fn = this.stack[this.sp - 1 - numArgs];
           assertStackObject(fn);
           if (!(fn instanceof obj.Callable)) {
             throw new Error(
               'Cannot perform opcode CALL on a non-callable stack element',
             );
+          }
+          while (numArgs > fn.numParams) {
+            this.pop();
+            numArgs--;
+          }
+          while (numArgs < fn.numParams) {
+            this.push(obj.NULL);
+            numArgs++;
           }
           frame = new Frame(fn, this.sp - numArgs);
           this.sp += fn.numLocals;

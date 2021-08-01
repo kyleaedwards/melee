@@ -329,4 +329,94 @@ describe('VM', () => {
       }
     });
   });
+
+  test('should support implicit null arguments if not supplied', () => {
+    const inputs: [
+      input: string,
+      expected: number[] | number | null,
+    ][] = [
+      [
+        `
+        f := fn (g) {
+          return g; };
+        };
+        f()`,
+        null,
+      ],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      if (expected instanceof Array) {
+        assertObjectType(result, obj.Arr);
+        expect(result.items.length).toEqual(expected.length);
+
+        expected.forEach((exp, i) => {
+          const res = result.items[i];
+          assertObjectType(res, obj.Int);
+          expect(res.value).toEqual(exp);
+        });
+      } else if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else if (expected === null) {
+        expect(result).toEqual(obj.NULL);
+      }
+    });
+  });
+
+  test('should ignore additional arguments', () => {
+    const inputs: [
+      input: string,
+      expected: number[] | number | null,
+    ][] = [
+      [
+        `
+        f := fn (g) {
+          return g; };
+        };
+        f(5, 6)`,
+        5,
+      ],
+    ];
+
+    inputs.forEach(([input, expected]) => {
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      const program = parser.parse();
+      const compiler = new Compiler();
+      compiler.compile(program);
+
+      const vm = new VM(compiler);
+      vm.run();
+
+      const result = vm.lastElement();
+
+      if (expected instanceof Array) {
+        assertObjectType(result, obj.Arr);
+        expect(result.items.length).toEqual(expected.length);
+
+        expected.forEach((exp, i) => {
+          const res = result.items[i];
+          assertObjectType(res, obj.Int);
+          expect(res.value).toEqual(exp);
+        });
+      } else if (typeof expected === 'number') {
+        assertObjectType(result, obj.Int);
+        expect(result.value).toEqual(expected);
+      } else if (expected === null) {
+        expect(result).toEqual(obj.NULL);
+      }
+    });
+  });
 });

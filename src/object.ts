@@ -110,6 +110,7 @@ export class Callable implements BaseObject {
     public instructions: Bytecode,
     public repr: string,
     public numLocals: number = 0,
+    public numParams: number = 0,
   ) {}
 
   inspectObject(): string {
