@@ -478,4 +478,21 @@ describe('Compiler.compile', () => {
 
     testCompilerResult(inputs);
   });
+
+  test('should compile native built-in functions', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `len([])`,
+        [],
+        [
+          createInstruction(Opcode.GETN, 0),
+          createInstruction(Opcode.ARRAY, 0),
+          createInstruction(Opcode.CALL, 1),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
 });

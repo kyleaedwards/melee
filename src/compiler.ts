@@ -1,7 +1,8 @@
+import { obj } from '.';
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
 import { BaseObject, Int, Fn } from './object';
-import { SymbolTable } from './symbols';
+import { ScopeType, SymbolTable } from './symbols';
 
 /**
  * Instruction occurence at a given position in the bytecode.
@@ -53,6 +54,13 @@ export class Compiler {
   ) {
     this.scopeIndex = -1;
     this.scopes = [];
+
+    // Create native symbol table for built-in functions and values.
+    this.symbolTable = new SymbolTable(ScopeType.NATIVE);
+    obj.NATIVE_FNS.forEach((fn) => {
+      this.symbolTable.add(fn.label);
+    });
+
     this.pushScope();
   }
 
@@ -97,7 +105,7 @@ export class Compiler {
         this.compile(node.value);
       }
       const index = this.symbolTable.add(node.name.value);
-      this.emit(this.symbolTable.parent ? Opcode.SET : Opcode.SETG, index);
+      this.emit(this.symbolTable.type === ScopeType.GLOBAL ? Opcode.SETG : Opcode.SET, index);
     } else if (node instanceof ast.Identifier) {
       const sym = this.symbolTable.get(node.value);
       if (typeof sym === 'undefined') {
@@ -105,7 +113,18 @@ export class Compiler {
           `Attempting to use undefined variable ${node.value}`,
         );
       }
-      this.emit(sym.depth ? Opcode.GET : Opcode.GETG, sym.index);
+      let opcode: Opcode;
+      switch (sym.type) {
+        case ScopeType.NATIVE:
+          opcode = Opcode.GETN;
+          break;
+        case ScopeType.GLOBAL:
+          opcode = Opcode.GETG;
+          break;
+        default:
+          opcode = Opcode.GET;
+      }
+      this.emit(opcode, sym.index);
     } else if (node instanceof ast.PrefixExpression) {
       if (node.right) {
         this.compile(node.right);
@@ -252,7 +271,8 @@ export class Compiler {
         position: -1,
       },
     });
-    this.symbolTable = new SymbolTable(this.symbolTable);
+    const type = this.symbolTable.type === ScopeType.NATIVE ? ScopeType.GLOBAL : ScopeType.LOCAL;
+    this.symbolTable = new SymbolTable(type, this.symbolTable);
   }
 
   /**

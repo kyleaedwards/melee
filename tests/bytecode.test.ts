@@ -103,6 +103,7 @@ describe('disassemble', () => {
       ...[Opcode.INDEX],
       ...[Opcode.RET],
       ...[Opcode.CALL, 0x01],
+      ...[Opcode.GETN, 0x33],
       ...[Opcode.HALT],
     ]);
     const expected = [
@@ -133,7 +134,8 @@ describe('disassemble', () => {
       '0040 INDEX',
       '0041 RET',
       '0042 CALL (1)',
-      '0044 HALT',
+      '0044 GETN (51)',
+      '0046 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });

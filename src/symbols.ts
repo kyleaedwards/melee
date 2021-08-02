@@ -1,4 +1,13 @@
 /**
+ * Label defining level of variable scope.
+ */
+export enum ScopeType {
+  NATIVE,
+  GLOBAL,
+  LOCAL,
+}
+
+/**
  * Symbol representing a scoped variable.
  */
 export interface SymbolIdentifier {
@@ -16,6 +25,11 @@ export interface SymbolIdentifier {
    * Depth of owning symbol table
    */
   depth: number;
+
+  /**
+   * Type of owning symbol table
+   */
+  type: ScopeType;
 }
 
 /**
@@ -27,10 +41,10 @@ export class SymbolTable {
   public numSymbols: number;
   public depth: number;
 
-  constructor(public parent?: SymbolTable) {
+  constructor(public type: ScopeType, public parent?: SymbolTable) {
     this.symbols = {};
     this.numSymbols = 0;
-    this.depth = parent ? parent.depth + 1 : 0;
+    this.depth = parent ? parent.depth + 1 : -1;
   }
 
   /**
@@ -44,6 +58,7 @@ export class SymbolTable {
       label,
       index: this.numSymbols,
       depth: this.depth,
+      type: this.type,
     };
     this.numSymbols++;
     this.symbols[label] = sym;

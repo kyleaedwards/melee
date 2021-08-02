@@ -30,6 +30,11 @@ export interface MidiObject {
   midiValue: () => MidiValue;
 }
 
+export interface NativeFnPair {
+    label: string;
+    fn: (...args: BaseObject[]) => BaseObject;
+}
+
 export class Null implements BaseObject {
   type: Type = 'null';
 
@@ -249,3 +254,48 @@ export function isTruthy(obj: BaseObject | undefined): boolean {
   }
   return !(!obj || obj === NULL || obj === FALSE);
 }
+
+export const NATIVE_FNS: NativeFnPair[] = [
+  {
+    label: 'len',
+    fn: (...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      if (args.length !== 1 || !(arr instanceof Arr)) {
+        throw new Error('Function `len` takes a single array argument');
+      }
+      return new Int(arr.items.length);
+    },
+  },
+  {
+    label: 'push',
+    fn: (...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      const next = args[1] || NULL;
+      if (args.length !== 2 || !(arr instanceof Arr)) {
+        throw new Error('Function `push` takes an array and an item to push');
+      }
+      arr.items.push(next);
+      return arr;
+    },
+  },
+  {
+    label: 'pop',
+    fn: (...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      if (args.length !== 1 || !(arr instanceof Arr)) {
+        throw new Error('Function `pop` takes a single array argument');
+      }
+      return arr.items.pop() || NULL;
+    },
+  },
+  {
+    label: 'shift',
+    fn: (...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      if (args.length !== 1 || !(arr instanceof Arr)) {
+        throw new Error('Function `shift` takes a single array argument');
+      }
+      return arr.items.shift() || NULL;
+    },
+  },
+];

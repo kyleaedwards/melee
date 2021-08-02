@@ -35,17 +35,19 @@ export enum Opcode {
   GT,
   GTE,
 
-  SETG = 245,
-  GETG = 246,
+  GETN = 244, // Get native
 
-  SET = 247,
-  GET = 248,
+  SETG = 245, // Set global
+  GETG = 246, // Get global
 
-  RET = 249,
-  CALL = 250,
+  SET = 247, // Set local
+  GET = 248, // Get local
 
-  JMP = 251,
-  JMP_IF_NOT = 252,
+  RET = 249, // Return
+  CALL = 250, // Call function
+
+  JMP = 251, // Jump
+  JMP_IF_NOT = 252, // Jump conditional
 
   POP = 253,
   NOT_IMPLEMENTED = 254,
@@ -84,6 +86,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.NOT_EQ, 'NOT_EQ'],
     [Opcode.GT, 'GT'],
     [Opcode.GTE, 'GTE'],
+    [Opcode.GETN, 'GETN', [1]],
     [Opcode.SETG, 'SETG', [2]],
     [Opcode.GETG, 'GETG', [2]],
     [Opcode.SET, 'SET', [1]],
