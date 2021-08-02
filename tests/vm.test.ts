@@ -230,4 +230,11 @@ describe('VM', () => {
       ],
     ]);
   });
+
+  test('should support built-in function `len`', () => {
+    testInputs([
+      [`len([])`, 0],
+      [`len([1, 1, 2, 3, 5, 8])`, 6],
+    ]);
+  });
 });

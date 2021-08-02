@@ -261,6 +261,14 @@ export class VM {
           this.push(value);
           break;
         }
+        case Opcode.GETN: {
+          const index = this.readOperand(1, 1);
+          const fn = obj.NATIVE_FNS[index];
+          if (fn) {
+            this.push(fn);
+          }
+          break;
+        }
         case Opcode.BANG:
           this.execUnaryLogicalNegation();
           break;
@@ -294,24 +302,35 @@ export class VM {
           let numArgs = this.readOperand(1, 1);
           const fn = this.stack[this.sp - 1 - numArgs];
           assertStackObject(fn);
-          if (!(fn instanceof obj.Callable)) {
+          if (!(fn instanceof obj.Callable) && !(fn instanceof obj.NativeFn)) {
             throw new Error(
               'Cannot perform opcode CALL on a non-callable stack element',
             );
           }
-          while (numArgs > fn.numParams) {
-            this.pop();
-            numArgs--;
+          if (fn instanceof obj.Callable) {
+            while (numArgs > fn.numParams) {
+              this.pop();
+              numArgs--;
+            }
+            while (numArgs < fn.numParams) {
+              this.push(obj.NULL);
+              numArgs++;
+            }
+            frame = new Frame(fn, this.sp - numArgs);
+            this.sp += fn.numLocals;
+            inst = frame.instructions();
+            this.frames[this.fp] = frame;
+            this.fp++;
+          } else if (fn instanceof obj.NativeFn) {
+            const args: obj.BaseObject[] = [];
+            while (numArgs--) {
+              const arg = this.pop();
+              assertStackObject(arg);
+              args.push(arg);
+            }
+            this.sp -= numArgs + 1;
+            this.push(fn.handler(...args));
           }
-          while (numArgs < fn.numParams) {
-            this.push(obj.NULL);
-            numArgs++;
-          }
-          frame = new Frame(fn, this.sp - numArgs);
-          this.sp += fn.numLocals;
-          inst = frame.instructions();
-          this.frames[this.fp] = frame;
-          this.fp++;
           break;
         }
         case Opcode.RET: {
