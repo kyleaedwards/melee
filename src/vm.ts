@@ -200,7 +200,13 @@ export class VM {
         case Opcode.CLOSURE: {
           const idx = this.readOperand(1, 2);
           const _ = this.readOperand(3, 1);
-          this.push(new obj.Closure(this.constants[idx]));
+          const fn = this.constants[idx];
+          if (!(fn instanceof obj.Callable)) {
+            throw new Error(
+              'Cannot enclose non-callable inside a closure',
+            );
+          }
+          this.push(new obj.Closure(fn));
           break;
         }
         case Opcode.ARRAY: {
