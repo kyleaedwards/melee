@@ -1,7 +1,7 @@
 import { obj } from '.';
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
-import { BaseObject, Int, Fn } from './object';
+import { BaseObject, Int, Fn, Closure } from './object';
 import { ScopeType, SymbolTable } from './symbols';
 
 /**
@@ -49,9 +49,7 @@ export class Compiler {
   public scopeIndex: number;
   public symbolTable!: SymbolTable;
 
-  constructor(
-    public constants: BaseObject[] = [],
-  ) {
+  constructor(public constants: BaseObject[] = []) {
     this.scopeIndex = -1;
     this.scopes = [];
 
@@ -105,7 +103,12 @@ export class Compiler {
         this.compile(node.value);
       }
       const index = this.symbolTable.add(node.name.value);
-      this.emit(this.symbolTable.type === ScopeType.GLOBAL ? Opcode.SETG : Opcode.SET, index);
+      this.emit(
+        this.symbolTable.type === ScopeType.GLOBAL
+          ? Opcode.SETG
+          : Opcode.SET,
+        index,
+      );
     } else if (node instanceof ast.Identifier) {
       const sym = this.symbolTable.get(node.value);
       if (typeof sym === 'undefined') {
@@ -234,8 +237,10 @@ export class Compiler {
         throw new Error('Error compiling function');
       }
       const repr = node.toString();
-      const fn = new Fn(instructions, repr, numLocals, node.parameters.length);
-      this.emit(Opcode.CONST, this.addConstant(fn));
+      const fn = new Closure(
+        new Fn(instructions, repr, numLocals, node.parameters.length),
+      );
+      this.emit(Opcode.CLOSURE, this.addConstant(fn), 0);
     } else if (node instanceof ast.CallExpression) {
       if (!node.fn) {
         throw new Error('Invalid call expression');
@@ -271,7 +276,10 @@ export class Compiler {
         position: -1,
       },
     });
-    const type = this.symbolTable.type === ScopeType.NATIVE ? ScopeType.GLOBAL : ScopeType.LOCAL;
+    const type =
+      this.symbolTable.type === ScopeType.NATIVE
+        ? ScopeType.GLOBAL
+        : ScopeType.LOCAL;
     this.symbolTable = new SymbolTable(type, this.symbolTable);
   }
 

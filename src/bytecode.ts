@@ -17,37 +17,38 @@ export enum Opcode {
   ARRAY,
   INDEX,
 
-  TRUE,
+  TRUE = 10,
   FALSE,
   NULL,
 
-  ADD,
+  ADD = 20,
   SUB,
   MUL,
   DIV,
   MOD,
 
-  BANG,
+  BANG = 30,
   MINUS,
 
-  EQ,
+  EQ = 40,
   NOT_EQ,
   GT,
   GTE,
 
-  GETN = 244, // Get native
+  GETN = 50, // Get native
 
-  SETG = 245, // Set global
-  GETG = 246, // Get global
+  SETG = 60, // Set global
+  GETG, // Get global
 
-  SET = 247, // Set local
-  GET = 248, // Get local
+  SET = 70, // Set local
+  GET, // Get local
 
-  RET = 249, // Return
-  CALL = 250, // Call function
+  RET = 80, // Return
+  CALL, // Call function
+  CLOSURE, // Wrap function in closure
 
-  JMP = 251, // Jump
-  JMP_IF_NOT = 252, // Jump conditional
+  JMP = 90, // Jump
+  JMP_IF_NOT, // Jump conditional
 
   POP = 253,
   NOT_IMPLEMENTED = 254,
@@ -96,6 +97,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.POP, 'POP'],
     [Opcode.RET, 'RET'],
     [Opcode.CALL, 'CALL', [1]],
+    [Opcode.CLOSURE, 'CLOSURE', [2, 1]],
   ];
 
 operations.forEach(([op, name, operands]) => {

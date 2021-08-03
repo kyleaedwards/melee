@@ -80,7 +80,7 @@ export class VM {
     this.sp = 0;
 
     this.frames[0] = new Frame(
-      new obj.Fn(compiler.instructions(), '<MAIN>'),
+      new obj.Closure(new obj.Fn(compiler.instructions(), '<MAIN>')),
       0,
     );
   }
@@ -197,6 +197,11 @@ export class VM {
           this.push(this.constants[idx]);
           break;
         }
+        case Opcode.CLOSURE: {
+          const idx = this.readOperand(1, 2);
+          this.push(this.constants[idx]);
+          break;
+        }
         case Opcode.ARRAY: {
           const size = this.readOperand(1, 2);
           const arr = new obj.Arr(new Array(size));
@@ -300,28 +305,31 @@ export class VM {
           break;
         case Opcode.CALL: {
           let numArgs = this.readOperand(1, 1);
-          const fn = this.stack[this.sp - 1 - numArgs];
-          assertStackObject(fn);
-          if (!(fn instanceof obj.Callable) && !(fn instanceof obj.NativeFn)) {
+          const o = this.stack[this.sp - 1 - numArgs];
+          assertStackObject(o);
+          if (
+            !(o instanceof obj.Closure) &&
+            !(o instanceof obj.NativeFn)
+          ) {
             throw new Error(
               'Cannot perform opcode CALL on a non-callable stack element',
             );
           }
-          if (fn instanceof obj.Callable) {
-            while (numArgs > fn.numParams) {
+          if (o instanceof obj.Closure) {
+            while (numArgs > o.fn.numParams) {
               this.pop();
               numArgs--;
             }
-            while (numArgs < fn.numParams) {
+            while (numArgs < o.fn.numParams) {
               this.push(obj.NULL);
               numArgs++;
             }
-            frame = new Frame(fn, this.sp - numArgs);
-            this.sp += fn.numLocals;
+            frame = new Frame(o, this.sp - numArgs);
+            this.sp += o.fn.numLocals;
             inst = frame.instructions();
             this.frames[this.fp] = frame;
             this.fp++;
-          } else if (fn instanceof obj.NativeFn) {
+          } else if (o instanceof obj.NativeFn) {
             const args: obj.BaseObject[] = [];
             while (numArgs--) {
               const arg = this.pop();
@@ -329,14 +337,16 @@ export class VM {
               args.push(arg);
             }
             this.sp -= numArgs + 1;
-            this.push(fn.handler(...args));
+            this.push(o.handler(...args));
           }
           break;
         }
         case Opcode.RET: {
           const value = this.pop();
           if (!value) {
-            throw new Error('Functions must return an explicit value or an implicit null');
+            throw new Error(
+              'Functions must return an explicit value or an implicit null',
+            );
           }
           this.fp--;
           frame = this.frame();

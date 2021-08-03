@@ -14,7 +14,8 @@ export type Type =
   | 'function'
   | 'native'
   | 'sequence'
-  | 'generator';
+  | 'generator'
+  | 'closure';
 
 export interface BaseObject {
   type: Type;
@@ -135,10 +136,20 @@ export class NativeFn implements BaseObject {
   constructor(
     public label: string,
     public handler: NativeFnHandler,
-  ) { }
+  ) {}
 
   inspectObject(): string {
     return `${this.label}() { <native code> }`;
+  }
+}
+
+export class Closure implements BaseObject {
+  type: Type = 'closure';
+
+  constructor(public fn: Callable, public vars: BaseObject[] = []) {}
+
+  inspectObject(): string {
+    return `closure::${this.fn.inspectObject()}`;
   }
 }
 
@@ -262,46 +273,38 @@ export function isTruthy(obj: BaseObject | undefined): boolean {
 }
 
 export const NATIVE_FNS: NativeFn[] = [
-  new NativeFn(
-    'len',
-    (...args: BaseObject[]): BaseObject => {
-      const arr = args[0];
-      if (args.length !== 1 || !(arr instanceof Arr)) {
-        throw new Error('Function `len` takes a single array argument');
-      }
-      return new Int(arr.items.length);
-    },
-  ),
-  new NativeFn(
-    'push',
-    (...args: BaseObject[]): BaseObject => {
-      const arr = args[0];
-      const next = args[1] || NULL;
-      if (args.length !== 2 || !(arr instanceof Arr)) {
-        throw new Error('Function `push` takes an array and an item to push');
-      }
-      arr.items.push(next);
-      return arr;
-    },
-  ),
-  new NativeFn(
-    'pop',
-    (...args: BaseObject[]): BaseObject => {
-      const arr = args[0];
-      if (args.length !== 1 || !(arr instanceof Arr)) {
-        throw new Error('Function `pop` takes a single array argument');
-      }
-      return arr.items.pop() || NULL;
-    },
-  ),
-  new NativeFn(
-    'shift',
-    (...args: BaseObject[]): BaseObject => {
-      const arr = args[0];
-      if (args.length !== 1 || !(arr instanceof Arr)) {
-        throw new Error('Function `shift` takes a single array argument');
-      }
-      return arr.items.shift() || NULL;
-    },
-  ),
+  new NativeFn('len', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error('Function `len` takes a single array argument');
+    }
+    return new Int(arr.items.length);
+  }),
+  new NativeFn('push', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    const next = args[1] || NULL;
+    if (args.length !== 2 || !(arr instanceof Arr)) {
+      throw new Error(
+        'Function `push` takes an array and an item to push',
+      );
+    }
+    arr.items.push(next);
+    return arr;
+  }),
+  new NativeFn('pop', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error('Function `pop` takes a single array argument');
+    }
+    return arr.items.pop() || NULL;
+  }),
+  new NativeFn('shift', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error(
+        'Function `shift` takes a single array argument',
+      );
+    }
+    return arr.items.shift() || NULL;
+  }),
 ];

@@ -64,10 +64,12 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
           assertObjectType(actual, obj.Int);
           expect(actual.value).toEqual(expected);
         } else if (expected instanceof Uint8Array) {
-          assertObjectType(actual, obj.Fn);
-          expect(actual.instructions.length).toEqual(expected.length);
+          assertObjectType(actual, obj.Closure);
+          const { fn } = actual;
+          assertObjectType(fn, obj.Callable);
+          expect(fn.instructions.length).toEqual(expected.length);
           expected.forEach((inst, i) => {
-            expect(actual.instructions[i]).toEqual(inst);
+            expect(fn.instructions[i]).toEqual(inst);
           });
         }
       }
@@ -386,7 +388,7 @@ describe('Compiler.compile', () => {
           ]),
         ],
         [
-          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CLOSURE, 2, 0),
           createInstruction(Opcode.POP),
         ],
       ],
@@ -404,7 +406,7 @@ describe('Compiler.compile', () => {
           ]),
         ],
         [
-          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CLOSURE, 1),
           createInstruction(Opcode.POP),
         ],
       ],
@@ -412,7 +414,7 @@ describe('Compiler.compile', () => {
         'fn () { return 0; }()',
         [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
         [
-          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CLOSURE, 1),
           createInstruction(Opcode.CALL, 0),
           createInstruction(Opcode.POP),
         ],
@@ -421,7 +423,7 @@ describe('Compiler.compile', () => {
         'f := fn () { return 0; }; f()',
         [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
         [
-          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CLOSURE, 1),
           createInstruction(Opcode.SETG, 0),
           createInstruction(Opcode.GETG, 0),
           createInstruction(Opcode.CALL, 0),
@@ -430,9 +432,20 @@ describe('Compiler.compile', () => {
       ],
       [
         'f := fn (a, b) { return a + b; }; f(1, 2)',
-        [new Uint8Array([Opcode.GET, 0, Opcode.GET, 1, Opcode.ADD, Opcode.RET]), 1, 2],
         [
-          createInstruction(Opcode.CONST, 0),
+          new Uint8Array([
+            Opcode.GET,
+            0,
+            Opcode.GET,
+            1,
+            Opcode.ADD,
+            Opcode.RET,
+          ]),
+          1,
+          2,
+        ],
+        [
+          createInstruction(Opcode.CLOSURE, 0),
           createInstruction(Opcode.SETG, 0),
           createInstruction(Opcode.GETG, 0),
           createInstruction(Opcode.CONST, 1),
@@ -470,7 +483,7 @@ describe('Compiler.compile', () => {
         [
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.SETG, 0),
-          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CLOSURE, 2),
           createInstruction(Opcode.SETG, 1),
         ],
       ],

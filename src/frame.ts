@@ -1,5 +1,5 @@
 import { Bytecode } from './bytecode';
-import { Callable } from './object';
+import { Closure } from './object';
 
 /**
  * Call "stack" frame (might not be in the call stack) representing
@@ -11,7 +11,7 @@ export class Frame {
    */
   public ip: number;
 
-  constructor(public callable: Callable, public base: number) {
+  constructor(public closure: Closure, public base: number) {
     this.ip = -1;
   }
 
@@ -21,6 +21,6 @@ export class Frame {
    * @returns Bytecode instructions
    */
   instructions(): Bytecode {
-    return this.callable.instructions;
+    return this.closure.fn.instructions;
   }
 }
