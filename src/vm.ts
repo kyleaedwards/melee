@@ -199,7 +199,8 @@ export class VM {
         }
         case Opcode.CLOSURE: {
           const idx = this.readOperand(1, 2);
-          this.push(this.constants[idx]);
+          const _ = this.readOperand(3, 1);
+          this.push(new obj.Closure(this.constants[idx]));
           break;
         }
         case Opcode.ARRAY: {

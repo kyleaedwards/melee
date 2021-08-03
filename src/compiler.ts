@@ -237,8 +237,11 @@ export class Compiler {
         throw new Error('Error compiling function');
       }
       const repr = node.toString();
-      const fn = new Closure(
-        new Fn(instructions, repr, numLocals, node.parameters.length),
+      const fn = new Fn(
+        instructions,
+        repr,
+        numLocals,
+        node.parameters.length,
       );
       this.emit(Opcode.CLOSURE, this.addConstant(fn), 0);
     } else if (node instanceof ast.CallExpression) {

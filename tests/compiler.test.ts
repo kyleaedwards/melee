@@ -64,12 +64,10 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
           assertObjectType(actual, obj.Int);
           expect(actual.value).toEqual(expected);
         } else if (expected instanceof Uint8Array) {
-          assertObjectType(actual, obj.Closure);
-          const { fn } = actual;
-          assertObjectType(fn, obj.Callable);
-          expect(fn.instructions.length).toEqual(expected.length);
+          assertObjectType(actual, obj.Callable);
+          expect(actual.instructions.length).toEqual(expected.length);
           expected.forEach((inst, i) => {
-            expect(fn.instructions[i]).toEqual(inst);
+            expect(actual.instructions[i]).toEqual(inst);
           });
         }
       }
