@@ -208,6 +208,22 @@ describe('VM', () => {
         f(2)`,
         10,
       ],
+      [
+        `a := 3;
+        f := fn (c) {
+          b := 5;
+          g := fn () {
+            d := 1;
+            h := fn () {
+              return a + b + c + d;
+            };
+            return h();
+          }
+          return g();
+        };
+        f(2)`,
+        11,
+      ],
     ]);
   });
 
@@ -247,6 +263,16 @@ describe('VM', () => {
         add5 := addX(5);
         add5(6)`,
         11,
+      ],
+      [
+        `
+        addTriad := fn (z) {
+          return fn (y) {
+            return fn (x) { return x + y + z; }
+          };
+        };
+        addTriad(5)(4)(3);`,
+        12,
       ],
     ]);
   });
