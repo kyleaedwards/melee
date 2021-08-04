@@ -5,6 +5,7 @@ export enum ScopeType {
   NATIVE,
   GLOBAL,
   LOCAL,
+  FREE,
 }
 
 /**
@@ -38,11 +39,13 @@ export interface SymbolIdentifier {
  */
 export class SymbolTable {
   private symbols: Record<string, SymbolIdentifier>;
+  public freeSymbols: SymbolIdentifier[];
   public numSymbols: number;
   public depth: number;
 
   constructor(public type: ScopeType, public parent?: SymbolTable) {
     this.symbols = {};
+    this.freeSymbols = [];
     this.numSymbols = 0;
     this.depth = parent ? parent.depth + 1 : -1;
   }
@@ -66,6 +69,23 @@ export class SymbolTable {
   }
 
   /**
+   * Free a variable for use in an inner function or closure.
+   *
+   * @param sym - Existing symbol in scope
+   * @returns Symbol representing a free closure variable
+   */
+  free(sym: SymbolIdentifier): SymbolIdentifier {
+    this.freeSymbols.push(sym);
+    const freeSymbol = {
+      ...sym,
+      index: this.freeSymbols.length - 1,
+      type: ScopeType.FREE,
+    };
+    this.symbols[sym.label] = freeSymbol;
+    return freeSymbol;
+  }
+
+  /**
    * Look up a symbol in the table. If not found, it recurses
    * up its parent scope.
    *
@@ -74,7 +94,15 @@ export class SymbolTable {
    */
   get(label: string): SymbolIdentifier | undefined {
     if (!this.symbols[label] && this.parent) {
-      return this.parent.get(label);
+      const variable = this.parent.get(label);
+      if (
+        !variable ||
+        variable.type === ScopeType.GLOBAL ||
+        variable.type === ScopeType.NATIVE
+      ) {
+        return variable;
+      }
+      return this.free(variable);
     }
     return this.symbols[label];
   }

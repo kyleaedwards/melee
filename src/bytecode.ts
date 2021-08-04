@@ -43,11 +43,13 @@ export enum Opcode {
   SET = 70, // Set local
   GET, // Get local
 
-  RET = 80, // Return
-  CALL, // Call function
-  CLOSURE, // Wrap function in closure
+  CLOSURE = 80, // Wrap function in closure
+  GETC, // Get free variable from closure
 
-  JMP = 90, // Jump
+  RET = 90, // Return
+  CALL, // Call function
+
+  JMP = 100, // Jump
   JMP_IF_NOT, // Jump conditional
 
   POP = 253,
@@ -98,6 +100,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.RET, 'RET'],
     [Opcode.CALL, 'CALL', [1]],
     [Opcode.CLOSURE, 'CLOSURE', [2, 1]],
+    [Opcode.GETC, 'GETC', [1]],
   ];
 
 operations.forEach(([op, name, operands]) => {

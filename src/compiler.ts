@@ -1,7 +1,7 @@
 import { obj } from '.';
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
-import { BaseObject, Int, Fn, Closure } from './object';
+import { BaseObject, Int, Fn } from './object';
 import { ScopeType, SymbolTable } from './symbols';
 
 /**
@@ -118,6 +118,9 @@ export class Compiler {
       }
       let opcode: Opcode;
       switch (sym.type) {
+        case ScopeType.FREE:
+          opcode = Opcode.GETC;
+          break;
         case ScopeType.NATIVE:
           opcode = Opcode.GETN;
           break;
@@ -227,7 +230,9 @@ export class Compiler {
         this.symbolTable.add(param.value);
       });
       this.compile(node.body);
-      const numLocals = this.symbolTable.numSymbols;
+
+      const { freeSymbols, numSymbols } = this.symbolTable;
+
       if (this.scope().lastInstruction.opcode !== Opcode.RET) {
         this.emit(Opcode.NULL);
         this.emit(Opcode.RET);
@@ -236,14 +241,37 @@ export class Compiler {
       if (!instructions) {
         throw new Error('Error compiling function');
       }
+
+      freeSymbols.forEach((sym) => {
+        let opcode: Opcode;
+        switch (sym.type) {
+          case ScopeType.FREE:
+            opcode = Opcode.GETC;
+            break;
+          case ScopeType.NATIVE:
+            opcode = Opcode.GETN;
+            break;
+          case ScopeType.GLOBAL:
+            opcode = Opcode.GETG;
+            break;
+          default:
+            opcode = Opcode.GET;
+        }
+        this.emit(opcode, sym.index);
+      });
+
       const repr = node.toString();
       const fn = new Fn(
         instructions,
         repr,
-        numLocals,
+        numSymbols,
         node.parameters.length,
       );
-      this.emit(Opcode.CLOSURE, this.addConstant(fn), 0);
+      this.emit(
+        Opcode.CLOSURE,
+        this.addConstant(fn),
+        freeSymbols.length,
+      );
     } else if (node instanceof ast.CallExpression) {
       if (!node.fn) {
         throw new Error('Invalid call expression');

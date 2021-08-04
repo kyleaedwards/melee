@@ -457,7 +457,7 @@ describe('Compiler.compile', () => {
     testCompilerResult(inputs);
   });
 
-  test('should compile functions with scoped variables', () => {
+  test('should compile functions with global, local, and closure variables', () => {
     const inputs: CompilerTestCase[] = [
       [
         `a := 3;
@@ -483,6 +483,66 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.SETG, 0),
           createInstruction(Opcode.CLOSURE, 2),
           createInstruction(Opcode.SETG, 1),
+        ],
+      ],
+      [
+        `fn (x) {
+          return fn (y) {
+            return x * y;
+          }
+        }
+        `,
+        [
+          new Uint8Array([
+            ...createInstruction(Opcode.GETC, 0),
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.MUL),
+            ...createInstruction(Opcode.RET),
+          ]),
+          new Uint8Array([
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.CLOSURE, 0, 1),
+            ...createInstruction(Opcode.RET),
+          ]),
+        ],
+        [
+          createInstruction(Opcode.CLOSURE, 1, 0),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        `fn (x) {
+          return fn (y) {
+            return fn (z) {
+              return x * y + z;
+            }
+          }
+        }
+        `,
+        [
+          new Uint8Array([
+            ...createInstruction(Opcode.GETC, 0),
+            ...createInstruction(Opcode.GETC, 1),
+            ...createInstruction(Opcode.MUL),
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.ADD),
+            ...createInstruction(Opcode.RET),
+          ]),
+          new Uint8Array([
+            ...createInstruction(Opcode.GETC, 0),
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.CLOSURE, 0, 2),
+            ...createInstruction(Opcode.RET),
+          ]),
+          new Uint8Array([
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.CLOSURE, 1, 1),
+            ...createInstruction(Opcode.RET),
+          ]),
+        ],
+        [
+          createInstruction(Opcode.CLOSURE, 2, 0),
+          createInstruction(Opcode.POP),
         ],
       ],
     ];
