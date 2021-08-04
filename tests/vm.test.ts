@@ -6,7 +6,10 @@ import { VM } from '../src/vm';
 import * as obj from '../src/object';
 
 type TestScalar = number | boolean | null;
-type VMTestCase = [input: string, expected: TestScalar | TestScalar[]];
+type VMTestCase = [
+  input: string,
+  expected: TestScalar | TestScalar[],
+];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T> = new (...args: any[]) => T;
@@ -26,7 +29,7 @@ function assertObjectType<T extends obj.BaseObject>(
   if (!(o instanceof constructor)) {
     const name = constructor.name as string;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const debug = o ? o.toString() as string : 'undefined';
+    const debug = o ? (o.toString() as string) : 'undefined';
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     throw new AssertionError({
       message: `Object ${debug} is not type ${name}`,
@@ -34,7 +37,10 @@ function assertObjectType<T extends obj.BaseObject>(
   }
 }
 
-function testScalar(result: obj.BaseObject, expected: number | boolean | null): void {
+function testScalar(
+  result: obj.BaseObject,
+  expected: number | boolean | null,
+): void {
   if (typeof expected === 'number') {
     assertObjectType(result, obj.Int);
     expect(result.value).toEqual(expected);
@@ -227,6 +233,20 @@ describe('VM', () => {
         };
         f(5, 6)`,
         5,
+      ],
+    ]);
+  });
+
+  test('should support closures', () => {
+    testInputs([
+      [
+        `
+        addX := fn (y) {
+          return fn (x) { return x + y; }
+        };
+        add5 := addX(5);
+        add5(6)`,
+        11,
       ],
     ]);
   });

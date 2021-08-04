@@ -86,6 +86,27 @@ export class VM {
   }
 
   /**
+   * Pretty-prints the current stack.
+   *
+   * @returns Stringified stack items
+   */
+  printStack(): string {
+    let curr = this.sp;
+    let output = `FRAME ${this.frame().closure.inspectObject()}\n`;
+    output += `CVARS ${this.frame()
+      .closure.vars.map((n, i) => `  ${i}: ${n.inspectObject()}`)
+      .join('\n')}\n\n`;
+    while (curr--) {
+      const item = this.stack[curr];
+      const stackAddress = `0000${curr}`.slice(-5);
+      output += `${stackAddress} ${
+        item ? item.inspectObject() : '<undef>'
+      }\n`;
+    }
+    return output;
+  }
+
+  /**
    * Returns the current frame object.
    *
    * @returns Current frame
@@ -164,15 +185,14 @@ export class VM {
   /**
    * Reads operand at offset.
    *
-   * @param offset - Number of bytes into instruction
    * @param width - Byte width of operand
    * @internal
    */
-  readOperand(offset: number, width: number): number {
+  readOperand(width: number): number {
     const frame = this.frame();
     const operand = unpackBigEndian(
       frame.instructions(),
-      frame.ip + offset,
+      frame.ip + 1,
       width,
     );
     frame.ip += width;
@@ -193,24 +213,37 @@ export class VM {
 
       switch (op) {
         case Opcode.CONST: {
-          const idx = this.readOperand(1, 2);
+          const idx = this.readOperand(2);
           this.push(this.constants[idx]);
           break;
         }
         case Opcode.CLOSURE: {
-          const idx = this.readOperand(1, 2);
-          const _ = this.readOperand(3, 1);
+          const idx = this.readOperand(2);
+          const numFree = this.readOperand(1);
           const fn = this.constants[idx];
           if (!(fn instanceof obj.Callable)) {
             throw new Error(
               'Cannot enclose non-callable inside a closure',
             );
           }
-          this.push(new obj.Closure(fn));
+          const closureVars = numFree
+            ? new Array<obj.BaseObject>(numFree)
+            : [];
+          for (let i = 0; i < numFree; i++) {
+            const item = this.stack[this.sp - numFree + i];
+            if (!item) {
+              throw new Error(
+                'Stack out of usable objects for closure variables',
+              );
+            }
+            closureVars[i] = item;
+          }
+          this.sp -= numFree;
+          this.push(new obj.Closure(fn, closureVars));
           break;
         }
         case Opcode.ARRAY: {
-          const size = this.readOperand(1, 2);
+          const size = this.readOperand(2);
           const arr = new obj.Arr(new Array(size));
           const start = this.sp - size;
           for (let i = start; i < this.sp; i++) {
@@ -250,31 +283,38 @@ export class VM {
           this.push(obj.NULL);
           break;
         case Opcode.SETG: {
-          const index = this.readOperand(1, 2);
+          const index = this.readOperand(2);
           this.variables[index] = this.pop();
           break;
         }
         case Opcode.GETG: {
-          const index = this.readOperand(1, 2);
+          const index = this.readOperand(2);
           const value = this.variables[index];
           assertVariableObject(value);
           this.push(value);
           break;
         }
         case Opcode.SET: {
-          const index = this.readOperand(1, 1);
+          const index = this.readOperand(1);
           this.stack[this.frame().base + index] = this.pop();
           break;
         }
         case Opcode.GET: {
-          const index = this.readOperand(1, 1);
+          const index = this.readOperand(1);
           const value = this.stack[this.frame().base + index];
           assertVariableObject(value);
           this.push(value);
           break;
         }
+        case Opcode.GETC: {
+          const index = this.readOperand(1);
+          const value = this.frame().closure.vars[index];
+          assertVariableObject(value);
+          this.push(value);
+          break;
+        }
         case Opcode.GETN: {
-          const index = this.readOperand(1, 1);
+          const index = this.readOperand(1);
           const fn = obj.NATIVE_FNS[index];
           if (fn) {
             this.push(fn);
@@ -311,7 +351,7 @@ export class VM {
           }
           break;
         case Opcode.CALL: {
-          let numArgs = this.readOperand(1, 1);
+          let numArgs = this.readOperand(1);
           const o = this.stack[this.sp - 1 - numArgs];
           assertStackObject(o);
           if (
