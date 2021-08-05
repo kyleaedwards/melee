@@ -291,8 +291,7 @@ describe('VM', () => {
   test('should support recursion', () => {
     testInputs([
       [
-        `
-        fact := fn (n) {
+        `fact := fn (n) {
           if (n <= 1) {
             return n;
           }
@@ -300,6 +299,45 @@ describe('VM', () => {
         };
         fact(5)`,
         120,
+      ],
+      [
+        `fib := fn (x) {
+          if (x <= 1) {
+            return x;
+          } else {
+            return fib(x - 1) + fib(x - 2);
+          }
+        };
+        fib(10)`,
+        55,
+      ],
+      [
+        `wrapper := fn (n) {
+          fib := fn (x) {
+            if (x <= 1) {
+              return x;
+            } else {
+              return fib(x - 1) + fib(x - 2);
+            }
+          };
+          return fib(n);
+        };
+        wrapper(11);`,
+        89,
+      ],
+      [
+        `wrapper := fn () {
+          fib := fn (x) {
+            if (x <= 1) {
+              return x;
+            } else {
+              return fib(x - 1) + fib(x - 2);
+            }
+          };
+          return fib;
+        };
+        wrapper()(12);`,
+        144,
       ],
     ]);
   });
