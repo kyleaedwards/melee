@@ -99,10 +99,10 @@ export class Compiler {
       }
       this.emit(Opcode.POP);
     } else if (node instanceof ast.DeclareStatement) {
+      const index = this.symbolTable.add(node.name.value);
       if (node.value) {
         this.compile(node.value);
       }
-      const index = this.symbolTable.add(node.name.value);
       this.emit(
         this.symbolTable.type === ScopeType.GLOBAL
           ? Opcode.SETG
@@ -126,6 +126,9 @@ export class Compiler {
           break;
         case ScopeType.GLOBAL:
           opcode = Opcode.GETG;
+          break;
+        case ScopeType.SELF:
+          opcode = Opcode.SELF;
           break;
         default:
           opcode = Opcode.GET;
@@ -226,6 +229,9 @@ export class Compiler {
       this.emit(Opcode.INDEX);
     } else if (node instanceof ast.FunctionLiteral) {
       this.pushScope();
+      if (node.name) {
+        this.symbolTable.setSelf(node.name);
+      }
       node.parameters.forEach((param) => {
         this.symbolTable.add(param.value);
       });
@@ -253,6 +259,9 @@ export class Compiler {
             break;
           case ScopeType.GLOBAL:
             opcode = Opcode.GETG;
+            break;
+          case ScopeType.SELF:
+            opcode = Opcode.SELF;
             break;
           default:
             opcode = Opcode.GET;

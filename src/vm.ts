@@ -86,17 +86,21 @@ export class VM {
   }
 
   /**
-   * Pretty-prints the current stack.
+   * Pretty-prints information about the VM state.
    *
    * @returns Stringified stack items
    */
-  printStack(): string {
+  printState(): string {
     let curr = this.sp;
-    let output = `FRAME ${this.frame().closure.inspectObject()}\n`;
-    output += `CVARS ${this.frame()
+    let output = `SP ${curr}\n`;
+    output += `FRAME ${this.frame().closure.inspectObject()}\n`;
+    output += `CVARS\n${this.frame()
       .closure.vars.map((n, i) => `  ${i}: ${n.inspectObject()}`)
+      .join('\n')}\n`;
+    output += `CONSTS\n${this.constants
+      .map((n, i) => `  ${i}: ${n.inspectObject()}`)
       .join('\n')}\n\n`;
-    while (curr--) {
+    while (curr > 0 && curr--) {
       const item = this.stack[curr];
       const stackAddress = `0000${curr}`.slice(-5);
       output += `${stackAddress} ${
@@ -242,6 +246,9 @@ export class VM {
           this.push(new obj.Closure(fn, closureVars));
           break;
         }
+        case Opcode.SELF:
+          this.push(this.frame().closure);
+          break;
         case Opcode.ARRAY: {
           const size = this.readOperand(2);
           const arr = new obj.Arr(new Array(size));
@@ -372,10 +379,10 @@ export class VM {
               numArgs++;
             }
             frame = new Frame(o, this.sp - numArgs);
-            this.sp += o.fn.numLocals;
             inst = frame.instructions();
             this.frames[this.fp] = frame;
             this.fp++;
+            this.sp = frame.base + o.fn.numLocals;
           } else if (o instanceof obj.NativeFn) {
             const args: obj.BaseObject[] = [];
             while (numArgs--) {
@@ -396,9 +403,9 @@ export class VM {
             );
           }
           this.fp--;
-          frame = this.frame();
-          inst = frame.instructions();
           this.sp = frame.base - 1;
+          frame = this.frames[this.fp - 1];
+          inst = frame.instructions();
           this.push(value);
           break;
         }

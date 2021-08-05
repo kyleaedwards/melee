@@ -161,6 +161,13 @@ class Parser {
     this.nextToken();
     const value = this.parseExpression(precedence.NIL);
 
+    if (
+      value instanceof ast.FunctionLiteral ||
+      value instanceof ast.GeneratorLiteral
+    ) {
+      value.name = name.value;
+    }
+
     this.skipSemicolon();
 
     return new ast.DeclareStatement(declare, name, value);

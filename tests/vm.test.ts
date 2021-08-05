@@ -2,6 +2,7 @@ import { AssertionError } from 'assert';
 import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
 import { Compiler } from '../src/compiler';
+import { disassemble } from '../src/bytecode';
 import { VM } from '../src/vm';
 import * as obj from '../src/object';
 
@@ -60,20 +61,30 @@ function testInputs(inputs: VMTestCase[]): void {
     const compiler = new Compiler();
     compiler.compile(program);
 
-    const vm = new VM(compiler);
-    vm.run();
+    try {
+      const vm = new VM(compiler);
+      vm.run();
 
-    const result = vm.lastElement();
+      const result = vm.lastElement();
 
-    if (expected instanceof Array) {
-      assertObjectType(result, obj.Arr);
-      expect(result.items.length).toEqual(expected.length);
+      if (expected instanceof Array) {
+        assertObjectType(result, obj.Arr);
+        expect(result.items.length).toEqual(expected.length);
 
-      expected.forEach((exp, i) => {
-        testScalar(result.items[i], exp);
+        expected.forEach((exp, i) => {
+          testScalar(result.items[i], exp);
+        });
+      } else {
+        testScalar(result, expected);
+      }
+    } catch (e) {
+      console.log(disassemble(compiler.instructions()));
+      compiler.constants.forEach((c) => {
+        if (c instanceof obj.Fn) {
+          console.log(disassemble(c.instructions));
+        }
       });
-    } else {
-      testScalar(result, expected);
+      throw e;
     }
   });
 }
@@ -273,6 +284,22 @@ describe('VM', () => {
         };
         addTriad(5)(4)(3);`,
         12,
+      ],
+    ]);
+  });
+
+  test('should support recursion', () => {
+    testInputs([
+      [
+        `
+        fact := fn (n) {
+          if (n <= 1) {
+            return n;
+          }
+          return n * fact(n - 1);
+        };
+        fact(5)`,
+        120,
       ],
     ]);
   });

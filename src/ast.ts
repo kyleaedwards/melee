@@ -269,6 +269,7 @@ class FunctionLiteral implements Expression {
     public token: Token,
     public parameters: Identifier[],
     public body: BlockStatement,
+    public name?: string,
   ) {
     this.nodeType = 'expression';
   }
@@ -277,7 +278,9 @@ class FunctionLiteral implements Expression {
     const params = this.parameters
       .map((p) => p.toString())
       .join(', ');
-    return `fn (${params}) ${this.body.toString()}`;
+    return `${
+      this.name || '<anonymous fn>'
+    }(${params}) ${this.body.toString()}`;
   }
 }
 
@@ -288,6 +291,7 @@ class GeneratorLiteral implements Expression {
     public token: Token,
     public parameters: Identifier[],
     public body: BlockStatement,
+    public name?: string,
   ) {
     this.nodeType = 'expression';
   }
@@ -296,7 +300,9 @@ class GeneratorLiteral implements Expression {
     const params = this.parameters
       .map((p) => p.toString())
       .join(', ');
-    return `seq (${params}) ${this.body.toString()}`;
+    return `${
+      this.name || '<anonymous gen>'
+    }(${params}) ${this.body.toString()}`;
   }
 }
 

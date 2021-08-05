@@ -44,6 +44,7 @@ export enum Opcode {
   GET, // Get local
 
   CLOSURE = 80, // Wrap function in closure
+  SELF, // Current closure
   GETC, // Get free variable from closure
 
   RET = 90, // Return
@@ -66,7 +67,7 @@ export interface Operation {
   size: number;
 }
 
-const OPCODES: { [key: number]: Operation } = {};
+export const OPCODES: { [key: number]: Operation } = {};
 
 // Precalculate all total opcode instruction sizes.
 const operations: [op: Opcode, name: string, operands?: number[]][] =
@@ -100,6 +101,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.RET, 'RET'],
     [Opcode.CALL, 'CALL', [1]],
     [Opcode.CLOSURE, 'CLOSURE', [2, 1]],
+    [Opcode.SELF, 'SELF'],
     [Opcode.GETC, 'GETC', [1]],
   ];
 

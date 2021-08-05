@@ -550,6 +550,41 @@ describe('Compiler.compile', () => {
     testCompilerResult(inputs);
   });
 
+  test('should compile recursive functions', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `fact := fn (n) {
+          return n * fact(n - 1);
+        };
+        fact(5)`,
+        [
+          1,
+          new Uint8Array([
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.SELF),
+            ...createInstruction(Opcode.GET, 0),
+            ...createInstruction(Opcode.CONST, 0),
+            ...createInstruction(Opcode.SUB),
+            ...createInstruction(Opcode.CALL, 1),
+            ...createInstruction(Opcode.MUL),
+            ...createInstruction(Opcode.RET),
+          ]),
+          5,
+        ],
+        [
+          createInstruction(Opcode.CLOSURE, 1, 0),
+          createInstruction(Opcode.SETG, 0),
+          createInstruction(Opcode.GETG, 0),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.CALL, 1),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
   test('should compile native built-in functions', () => {
     const inputs: CompilerTestCase[] = [
       [

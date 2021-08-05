@@ -6,6 +6,7 @@ export enum ScopeType {
   GLOBAL,
   LOCAL,
   FREE,
+  SELF,
 }
 
 /**
@@ -66,6 +67,23 @@ export class SymbolTable {
     this.numSymbols++;
     this.symbols[label] = sym;
     return sym.index;
+  }
+
+  /**
+   * Save the name of the current closure as a symbol in scope.
+   *
+   * @param label - Variable name of the current function
+   * @returns New symbol
+   */
+  setSelf(label: string): SymbolIdentifier {
+    const sym = {
+      label,
+      index: 0,
+      depth: -1,
+      type: ScopeType.SELF,
+    };
+    this.symbols[label] = sym;
+    return sym;
   }
 
   /**
