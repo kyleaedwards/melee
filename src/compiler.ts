@@ -109,6 +109,33 @@ export class Compiler {
           : Opcode.SET,
         index,
       );
+    } else if (node instanceof ast.AssignStatement) {
+      const sym = this.symbolTable.get(node.name.value);
+      if (!sym) {
+        throw new Error(
+          `Cannot assign undefined variable ${node.name.value}`,
+        );
+      }
+      if (node.value) {
+        this.compile(node.value);
+      }
+      let opcode: Opcode;
+      switch (sym.type) {
+        case ScopeType.FREE:
+          opcode = Opcode.SETC;
+          break;
+        case ScopeType.LOCAL:
+          opcode = Opcode.SET;
+          break;
+        case ScopeType.GLOBAL:
+          opcode = Opcode.SETG;
+          break;
+        default:
+          throw new Error(
+            `Cannot assign unassigned variable ${node.name.value}`,
+          );
+      }
+      this.emit(opcode, sym.index);
     } else if (node instanceof ast.Identifier) {
       const sym = this.symbolTable.get(node.value);
       if (typeof sym === 'undefined') {

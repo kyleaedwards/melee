@@ -46,6 +46,7 @@ export enum Opcode {
   CLOSURE = 80, // Wrap function in closure
   SELF, // Current closure
   GETC, // Get free variable from closure
+  SETC, // Set free variable from closure
 
   RET = 90, // Return
   CALL, // Call function
@@ -103,6 +104,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.CLOSURE, 'CLOSURE', [2, 1]],
     [Opcode.SELF, 'SELF'],
     [Opcode.GETC, 'GETC', [1]],
+    [Opcode.SETC, 'SETC', [1]],
   ];
 
 operations.forEach(([op, name, operands]) => {

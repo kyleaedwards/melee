@@ -15,7 +15,8 @@ export type Type =
   | 'native'
   | 'sequence'
   | 'generator'
-  | 'closure';
+  | 'closure'
+  | 'free';
 
 export interface BaseObject {
   type: Type;

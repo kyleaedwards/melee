@@ -159,6 +159,43 @@ describe('VM', () => {
     ]);
   });
 
+  test('should supprt variable reassignment through the virtual machine', () => {
+    testInputs([
+      [
+        `x := 5;
+         x = x + 6;`,
+        11,
+      ],
+      [
+        `x := 5;
+        fn () {
+          x := 10;
+        }();
+        x`,
+        5,
+      ],
+      [
+        `x := 5;
+        fn () {
+          x = 10;
+        }();
+        x;`,
+        10,
+      ],
+      [
+        `x := 5;
+        fn () {
+          x := 10;
+          fn () {
+            x = 20;
+          }();
+          return x;
+        }();`,
+        20,
+      ],
+    ]);
+  });
+
   test('should run array statements through the virtual machine', () => {
     testInputs([
       [`[]`, []],

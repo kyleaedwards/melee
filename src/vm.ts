@@ -313,6 +313,13 @@ export class VM {
           this.push(value);
           break;
         }
+        case Opcode.SETC: {
+          const index = this.readOperand(1);
+          const value = this.pop();
+          assertVariableObject(value);
+          this.frame().closure.vars[index] = value;
+          break;
+        }
         case Opcode.GETC: {
           const index = this.readOperand(1);
           const value = this.frame().closure.vars[index];
@@ -396,6 +403,7 @@ export class VM {
           break;
         }
         case Opcode.RET: {
+          const closureVars = this.frame().closure.vars;
           const value = this.pop();
           if (!value) {
             throw new Error(
@@ -406,6 +414,9 @@ export class VM {
           this.sp = frame.base - 1;
           frame = this.frames[this.fp - 1];
           inst = frame.instructions();
+          for (let i = 0; i < closureVars.length; i++) {
+            this.stack[frame.base + i] = closureVars[i];
+          }
           this.push(value);
           break;
         }

@@ -404,7 +404,7 @@ describe('Compiler.compile', () => {
           ]),
         ],
         [
-          createInstruction(Opcode.CLOSURE, 1),
+          createInstruction(Opcode.CLOSURE, 1, 0),
           createInstruction(Opcode.POP),
         ],
       ],
@@ -412,7 +412,7 @@ describe('Compiler.compile', () => {
         'fn () { return 0; }()',
         [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
         [
-          createInstruction(Opcode.CLOSURE, 1),
+          createInstruction(Opcode.CLOSURE, 1, 0),
           createInstruction(Opcode.CALL, 0),
           createInstruction(Opcode.POP),
         ],
@@ -481,7 +481,7 @@ describe('Compiler.compile', () => {
         [
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.SETG, 0),
-          createInstruction(Opcode.CLOSURE, 2),
+          createInstruction(Opcode.CLOSURE, 2, 0),
           createInstruction(Opcode.SETG, 1),
         ],
       ],
