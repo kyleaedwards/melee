@@ -48,6 +48,8 @@ export class Compiler {
   public scopes: CompilerScope[];
   public scopeIndex: number;
   public symbolTable!: SymbolTable;
+  private currentLoopStart?: number;
+  private breaks: number[] = [];
 
   constructor(public constants: BaseObject[] = []) {
     this.scopeIndex = -1;
@@ -323,13 +325,27 @@ export class Compiler {
       }
       this.emit(Opcode.RET);
     } else if (node instanceof ast.WhileExpression) {
-      const jumpStart = this.instructions().length;
+      this.currentLoopStart = this.instructions().length;
       this.compile(node.condition);
       const jumpToElse = this.emit(Opcode.JMP_IF_NOT, 0xffff);
       this.compile(node.block);
       this.removeInstructionIf(Opcode.POP);
-      this.emit(Opcode.JMP, jumpStart);
+      this.emit(Opcode.JMP, this.currentLoopStart);
       this.replaceInstruction(jumpToElse, this.instructions().length);
+      while (this.breaks.length) {
+        const brk = this.breaks.pop();
+        if (brk) {
+          this.replaceInstruction(brk, this.instructions().length);
+        }
+      }
+      this.currentLoopStart = undefined;
+    } else if (node instanceof ast.BreakStatement) {
+      this.breaks.push(this.emit(Opcode.JMP, 0xffff));
+    } else if (node instanceof ast.ContinueStatement) {
+      if (typeof this.currentLoopStart !== 'number') {
+        throw new Error('Cannot use continue outside of a loop');
+      }
+      this.emit(Opcode.JMP, this.currentLoopStart);
     }
   }
 

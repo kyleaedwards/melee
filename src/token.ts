@@ -19,6 +19,8 @@ export type TokenType =
   | 'loop'
   | 'return'
   | 'fn'
+  | 'continue'
+  | 'break'
   | 'yield'
   | 'note'
   | 'skip'
@@ -67,6 +69,8 @@ function isKeyword(str: string): str is TokenType {
       'else',
       'while',
       'loop',
+      'continue',
+      'break',
       'true',
       'false',
       'return',

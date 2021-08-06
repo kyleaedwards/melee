@@ -131,6 +131,30 @@ class BlockStatement implements Statement {
   }
 }
 
+class ContinueStatement implements Statement {
+  nodeType: 'statement';
+
+  constructor(public token: Token) {
+    this.nodeType = 'statement';
+  }
+
+  toString(): string {
+    return `continue;`;
+  }
+}
+
+class BreakStatement implements Statement {
+  nodeType: 'statement';
+
+  constructor(public token: Token) {
+    this.nodeType = 'statement';
+  }
+
+  toString(): string {
+    return `break;`;
+  }
+}
+
 /**
  * Expressions
  */
@@ -416,6 +440,8 @@ export {
   YieldStatement,
   ExpressionStatement,
   BlockStatement,
+  ContinueStatement,
+  BreakStatement,
   Identifier,
   IntegerLiteral,
   BooleanLiteral,

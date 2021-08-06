@@ -150,6 +150,16 @@ class Parser {
         }
         return this.parseExpressionStatement();
       }
+      case 'continue': {
+        const stmt = new ast.ContinueStatement(this.curr);
+        this.nextToken();
+        return stmt;
+      }
+      case 'break': {
+        const stmt = new ast.BreakStatement(this.curr);
+        this.nextToken();
+        return stmt;
+      }
       default: {
         return this.parseExpressionStatement();
       }

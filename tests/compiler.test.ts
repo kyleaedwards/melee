@@ -590,26 +590,31 @@ describe('Compiler.compile', () => {
       [
         `while (1 < 2) {
           3;
+          continue;
         }`,
         [2, 1, 3],
         [
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.CONST, 1),
           createInstruction(Opcode.GT),
-          createInstruction(Opcode.JMP_IF_NOT, 16),
+          createInstruction(Opcode.JMP_IF_NOT, 20),
           createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.POP),
+          createInstruction(Opcode.JMP, 0),
           createInstruction(Opcode.JMP, 0),
           createInstruction(Opcode.POP),
         ],
       ],
       [
         `loop {
+          break;
           3;
         }`,
         [3],
         [
           createInstruction(Opcode.TRUE),
-          createInstruction(Opcode.JMP_IF_NOT, 10),
+          createInstruction(Opcode.JMP_IF_NOT, 13),
+          createInstruction(Opcode.JMP, 13),
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.JMP, 0),
           createInstruction(Opcode.POP),
