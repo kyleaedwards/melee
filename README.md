@@ -1,10 +1,10 @@
 # Melee
 
-**Melee** is a domain-specific language for defining complex musical sequences using *generators*. This is a reference implementation written in TypeScript to faciliate an Ableton Max4Live device.
+**Melee** is a domain-specific language for defining complex musical sequences using *generators*. This specific repository is a reference implementation written in TypeScript to faciliate an Ableton Max4Live device.
 
 ## What is a "generator?"
 
-In some programming languages, a [generator](https://en.wikipedia.org/wiki/Generator_(computer_programming)) is a self-contained piece of code like a function or a coroutine that can "yield" multiple values out to the caller while maintaining its internal state. They're often used for infinite loops and lazy evaluation.
+In some programming languages, a [generator](https://en.wikipedia.org/wiki/Generator_(computer_programming)) is a self-contained piece of code like a function or a coroutine that can be paused and resumed as it "yields" values out to the caller while maintaining its internal state. In practice, they're often used for lazily evaluating extremely large (sometimes infinite) loops.
 
 ## But what does this mean if I'm not a total nerd?
 
