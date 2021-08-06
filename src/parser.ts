@@ -64,6 +64,8 @@ class Parser {
       lparen: this.parseParentheticalExpression.bind(this),
       lbracket: this.parseArrayLiteral.bind(this),
       if: this.parseConditional.bind(this),
+      while: this.parseWhile.bind(this),
+      loop: this.parseWhile.bind(this),
       next: this.parseNext.bind(this),
       note: this.parseNoteExpression.bind(this),
       skip: this.parseSkipExpression.bind(this),

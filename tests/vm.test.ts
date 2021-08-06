@@ -379,6 +379,28 @@ describe('VM', () => {
     ]);
   });
 
+  test('should support loops', () => {
+    testInputs([
+      [
+        `a := 0;
+        while (a < 4) {
+          a = a + 1;
+        }
+        a;`,
+        4,
+      ],
+      [
+        `a := 0;
+        b := while (a < 4) {
+          a = a + 1;
+          a + 3;
+        }
+        b;`,
+        7,
+      ],
+    ]);
+  });
+
   test('should support built-in function `len`', () => {
     testInputs([
       [`len([])`, 0],

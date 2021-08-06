@@ -585,6 +585,41 @@ describe('Compiler.compile', () => {
     testCompilerResult(inputs);
   });
 
+  test('should compile loops', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `while (1 < 2) {
+          3;
+        }`,
+        [2, 1, 3],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.GT),
+          createInstruction(Opcode.JMP_IF_NOT, 16),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.JMP, 0),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        `loop {
+          3;
+        }`,
+        [3],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.JMP_IF_NOT, 10),
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.JMP, 0),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
   test('should compile native built-in functions', () => {
     const inputs: CompilerTestCase[] = [
       [

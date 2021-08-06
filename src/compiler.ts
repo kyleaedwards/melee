@@ -322,6 +322,14 @@ export class Compiler {
         this.emit(Opcode.NULL);
       }
       this.emit(Opcode.RET);
+    } else if (node instanceof ast.WhileExpression) {
+      const jumpStart = this.instructions().length;
+      this.compile(node.condition);
+      const jumpToElse = this.emit(Opcode.JMP_IF_NOT, 0xffff);
+      this.compile(node.block);
+      this.removeInstructionIf(Opcode.POP);
+      this.emit(Opcode.JMP, jumpStart);
+      this.replaceInstruction(jumpToElse, this.instructions().length);
     }
   }
 

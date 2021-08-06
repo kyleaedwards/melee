@@ -420,6 +420,56 @@ describe('Parser', () => {
     });
   });
 
+  describe('parseWhile', () => {
+    test('should parse valid while expression', () => {
+      const input = `while (y == z) {
+        x
+      }`;
+      const stmts = parseProgramStatements(input);
+      expect(stmts).toHaveLength(1);
+
+      const stmt = stmts[0];
+      assertNodeType(stmt, ast.ExpressionStatement);
+
+      const expr = stmt.value;
+      assertNodeType(expr, ast.WhileExpression);
+
+      testInfixExpression(expr.condition, 'y', '==', 'z');
+
+      assertNodeType(expr.block, ast.BlockStatement);
+
+      expect(expr.block.statements).toHaveLength(1);
+      const subStmt = expr.block.statements[0];
+
+      assertNodeType(subStmt, ast.ExpressionStatement);
+      testLiteral(subStmt.value, 'x');
+    });
+
+    test('should parse valid loop expression', () => {
+      const input = `loop {
+        x
+      }`;
+      const stmts = parseProgramStatements(input);
+      expect(stmts).toHaveLength(1);
+
+      const stmt = stmts[0];
+      assertNodeType(stmt, ast.ExpressionStatement);
+
+      const expr = stmt.value;
+      assertNodeType(expr, ast.WhileExpression);
+
+      testLiteral(expr.condition, true);
+
+      assertNodeType(expr.block, ast.BlockStatement);
+
+      expect(expr.block.statements).toHaveLength(1);
+      const subStmt = expr.block.statements[0];
+
+      assertNodeType(subStmt, ast.ExpressionStatement);
+      testLiteral(subStmt.value, 'x');
+    });
+  });
+
   describe('parseFunctionLiteral', () => {
     test('should parse valid function literal', () => {
       const input = `fn (x, y) {
