@@ -398,7 +398,7 @@ export class VM {
             while (numArgs--) {
               const arg = this.pop();
               assertStackObject(arg);
-              args.push(arg);
+              args.unshift(arg);
             }
             this.sp -= numArgs + 1;
             this.push(o.handler(...args));
