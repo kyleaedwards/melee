@@ -2,8 +2,8 @@ import { Compiler } from './compiler';
 import { Lexer } from './lexer';
 import { BaseObject } from './object';
 import { Parser } from './parser';
-import { ScopeType, SymbolTable } from './symbols';
-import { MAX_VARIABLES, VM } from './vm';
+import { SymbolTable } from './symbols';
+import { VM, createGlobalVariables } from './vm';
 
 const MAX_REPL_HISTORY = 100;
 
@@ -17,8 +17,8 @@ export class Repl {
    * Constructs a new REPL instance.
    */
   constructor() {
-    this.globals = new Array(MAX_VARIABLES);
-    this.symbolTable = new SymbolTable(ScopeType.GLOBAL);
+    this.globals = createGlobalVariables();
+    this.symbolTable = SymbolTable.createGlobalSymbolTable();
   }
 
   /**

@@ -372,15 +372,19 @@ export class Compiler {
         position: -1,
       },
     });
-    const type =
-      this.symbolTable.type === ScopeType.NATIVE
-        ? ScopeType.GLOBAL
-        : ScopeType.LOCAL;
     if (symbolTable) {
       symbolTable.parent = this.symbolTable;
+      this.symbolTable = symbolTable;
+    } else if (this.symbolTable.type === ScopeType.NATIVE) {
+      const globals = SymbolTable.createGlobalSymbolTable();
+      globals.parent = this.symbolTable;
+      this.symbolTable = globals;
+    } else {
+      this.symbolTable = new SymbolTable(
+        ScopeType.LOCAL,
+        this.symbolTable,
+      );
     }
-    this.symbolTable =
-      symbolTable || new SymbolTable(type, this.symbolTable);
   }
 
   /**

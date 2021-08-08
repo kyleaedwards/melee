@@ -1,5 +1,5 @@
 import { AssertionError } from 'assert';
-import { NATIVE_FNS } from './builtins';
+import { BUILTINS, NATIVE_FNS } from './builtins';
 import { Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import { Frame } from './frame';
@@ -51,6 +51,30 @@ function assertVariableObject(
 }
 
 /**
+ * Create a new repository of global variables that have native values
+ * already populated.
+ *
+ * @param builtins - A hashmap containing any default variables
+ * @returns Array of global variables
+ *
+ * @internal
+ */
+export function createGlobalVariables(
+  builtins: Record<string, obj.BaseObject> = {},
+): (obj.BaseObject | undefined)[] {
+  const globals = new Array<obj.BaseObject | undefined>(
+    MAX_VARIABLES,
+  );
+  const allBuiltins = { ...BUILTINS, ...builtins };
+  Object.keys(allBuiltins).forEach((key, i) => {
+    if (allBuiltins[key]) {
+      globals[i] = allBuiltins[key];
+    }
+  });
+  return globals;
+}
+
+/**
  * Virtual stack machine for executing instructions.
  */
 export class VM {
@@ -77,9 +101,7 @@ export class VM {
     this.stack = new Array<obj.BaseObject | undefined>(
       MAX_STACK_SIZE,
     );
-    this.variables =
-      variables ||
-      new Array<obj.BaseObject | undefined>(MAX_VARIABLES);
+    this.variables = variables || createGlobalVariables();
     this.fp = 1;
     this.sp = 0;
 

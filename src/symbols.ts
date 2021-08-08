@@ -1,3 +1,6 @@
+import { BaseObject } from './object';
+import { BUILTINS } from './builtins';
+
 /**
  * Label defining level of variable scope.
  */
@@ -133,5 +136,27 @@ export class SymbolTable {
    */
   getIndex(label: string): number | undefined {
     return this.get(label)?.index;
+  }
+
+  /**
+   * Create a default global symbol table with native values
+   * already populated.
+   *
+   * @param builtins - A hashmap containing any default variables
+   * @returns Global symbol table
+   *
+   * @internal
+   */
+  static createGlobalSymbolTable(
+    builtins: Record<string, BaseObject> = {},
+  ): SymbolTable {
+    const globals = new SymbolTable(ScopeType.GLOBAL);
+    if (builtins) {
+      Object.keys({
+        ...BUILTINS,
+        ...builtins,
+      }).forEach((label) => globals.add(label));
+    }
+    return globals;
   }
 }

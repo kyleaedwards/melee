@@ -98,4 +98,7 @@ function midiToSPN(): Record<string, BaseObject> {
 }
 
 const MIDI_MAP = midiToSPN();
-console.log(MIDI_MAP);
+
+export const BUILTINS = {
+  ...MIDI_MAP,
+};
