@@ -4,6 +4,7 @@ import { Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import { Frame } from './frame';
 import * as obj from './object';
+import { clamp } from './utils';
 
 /**
  * Constants
@@ -491,6 +492,33 @@ export class VM {
               pitch.value,
               durationValue,
               velocityValue,
+            ),
+          );
+          break;
+        }
+        case Opcode.CC: {
+          const args = this.pop();
+          if (
+            !args ||
+            !(args instanceof obj.Arr) ||
+            args.items.length !== 2
+          ) {
+            throw new Error(
+              'CC messages must be created with an array containing a key integer and a value integer',
+            );
+          }
+          const key = args.items[0];
+          if (!(key instanceof obj.Int)) {
+            throw new Error('MIDI CC key must be an integer');
+          }
+          const value = args.items[1];
+          if (!(value instanceof obj.Int)) {
+            throw new Error('MIDI CC value must be an integer');
+          }
+          this.push(
+            new obj.MidiCC(
+              clamp(key.value, 0, 127),
+              clamp(value.value, 0, 127),
             ),
           );
         }

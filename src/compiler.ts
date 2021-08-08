@@ -357,6 +357,14 @@ export class Compiler {
       }
       this.compile(node.note);
       this.emit(Opcode.NOTE);
+    } else if (node instanceof ast.CCExpression) {
+      if (!node.message) {
+        throw new Error(
+          'Cannot use the `cc` keyword without an argument',
+        );
+      }
+      this.compile(node.message);
+      this.emit(Opcode.CC);
     }
   }
 

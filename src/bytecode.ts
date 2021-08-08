@@ -55,6 +55,7 @@ export enum Opcode {
   JMP_IF_NOT, // Jump conditional
 
   NOTE = 200, // MIDI note
+  CC, // MIDI CC message
 
   POP = 253,
   NOT_IMPLEMENTED = 254,
@@ -108,6 +109,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.GETC, 'GETC', [1]],
     [Opcode.SETC, 'SETC', [1]],
     [Opcode.NOTE, 'NOTE'],
+    [Opcode.CC, 'CC'],
   ];
 
 operations.forEach(([op, name, operands]) => {
