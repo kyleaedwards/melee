@@ -102,13 +102,14 @@ Hopefully you're starting to see how with a little bit of code you can build com
 
 | Type | Example | Description |
 | --- | --- | --- |
+| **print** | `print(...)` | Prints arguments to the console |
 | **rand** | `rand(n)` | Generates a random `int` from 0 up to *and not including* `n` |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
 | **min** | `min(arr)` | Returns the minimum value of an array of `int`s |
 | **max** | `max(arr)` | Returns the maximum value of an array of `int`s |
 | **push** | `push(arr)` | Pushes a new element onto an array |
 | **pop** | `pop(arr)` | Pops an element off the end of an array and returns it |
-| **concat** | `join(arr, arr)` | Pops an element off the end of an array and returns it |
+| **concat** | `concat(arr, arr)` | Pops an element off the end of an array and returns it |
 | **scale** | `scale(base, interval, scaleNum)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
 
 ### Scales

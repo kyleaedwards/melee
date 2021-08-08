@@ -309,29 +309,33 @@ export const NATIVE_FNS: NativeFn[] = [
     return arr.items.shift() || NULL;
   }),
   new NativeFn('rand', (...args: BaseObject[]): BaseObject => {
-    const end = args[0];
-    if (args.length !== 1 || !(end instanceof Int)) {
+    const hi = args[0];
+    if (args.length !== 1 || !(hi instanceof Int)) {
       throw new Error(
         'Function `rand(num)` takes a single integer argument, which returns a number between 1 and the argument inclusively',
       );
     }
-    return new Int(Math.ceil(Math.random() * end.value));
+    return new Int(Math.ceil(Math.random() * hi.value));
   }),
   new NativeFn('rrand', (...args: BaseObject[]): BaseObject => {
-    const start = args[0];
-    const end = args[0];
+    const lo = args[0];
+    const hi = args[1];
     if (
       args.length !== 2 ||
-      !(end instanceof Int) ||
-      !(start instanceof Int)
+      !(hi instanceof Int) ||
+      !(lo instanceof Int)
     ) {
       throw new Error(
-        'Function `rrand(start, end)` takes a two integer arguments, the beginning and end of a range of numbers, one of which will be returned at random',
+        'Function `rrand(lo, hi)` takes a two integer arguments, the beginning and end of a range of numbers, one of which will be returned at random',
       );
     }
     return new Int(
-      start.value +
-        Math.floor(Math.random() * (end.value + 1 - start.value)),
+      lo.value +
+        Math.floor(Math.random() * (hi.value + 1 - lo.value)),
     );
+  }),
+  new NativeFn('print', (...args: BaseObject[]): BaseObject => {
+    console.log(...args.map((arg) => arg.inspectObject()));
+    return NULL;
   }),
 ];
