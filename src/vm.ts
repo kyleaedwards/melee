@@ -69,7 +69,7 @@ export class VM {
    */
   constructor(
     compiler: Compiler,
-    variables: (obj.BaseObject | undefined)[],
+    variables?: (obj.BaseObject | undefined)[],
   ) {
     this.constants = compiler.constants;
     this.frames = new Array<Frame>(MAX_FRAME_SIZE);
