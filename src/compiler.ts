@@ -1,8 +1,8 @@
-import { obj } from '.';
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
 import { BaseObject, Int, Fn } from './object';
 import { ScopeType, SymbolTable } from './symbols';
+import { NATIVE_FNS } from './builtins';
 
 /**
  * Instruction occurence at a given position in the bytecode.
@@ -60,7 +60,7 @@ export class Compiler {
 
     // Create native symbol table for built-in functions and values.
     this.symbolTable = new SymbolTable(ScopeType.NATIVE);
-    obj.NATIVE_FNS.forEach((fn) => {
+    NATIVE_FNS.forEach((fn) => {
       this.symbolTable.add(fn.label);
     });
 

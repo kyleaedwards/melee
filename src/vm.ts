@@ -1,4 +1,5 @@
 import { AssertionError } from 'assert';
+import { NATIVE_FNS } from './builtins';
 import { Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import { Frame } from './frame';
@@ -332,7 +333,7 @@ export class VM {
         }
         case Opcode.GETN: {
           const index = this.readOperand(1);
-          const fn = obj.NATIVE_FNS[index];
+          const fn = NATIVE_FNS[index];
           if (fn) {
             this.push(fn);
           }
