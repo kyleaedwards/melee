@@ -67,6 +67,8 @@ describe('createInstruction', () => {
         ],
         [Opcode.GETC, [16], [Opcode.GETC, 0x10]],
         [Opcode.SELF, [], [Opcode.SELF]],
+        [Opcode.NOTE, [], [Opcode.NOTE]],
+        [Opcode.CC, [], [Opcode.CC]],
         [Opcode.NOT_IMPLEMENTED, [], []],
       ];
 
@@ -114,6 +116,8 @@ describe('disassemble', () => {
       ...[Opcode.CLOSURE, 0xff, 0xff, 0x01],
       ...[Opcode.GETC, 0x10],
       ...[Opcode.SELF],
+      ...[Opcode.NOTE],
+      ...[Opcode.CC],
       ...[Opcode.HALT],
     ]);
     const expected = [
@@ -148,7 +152,9 @@ describe('disassemble', () => {
       '0046 CLOSURE (65535, 1)',
       '0050 GETC (16)',
       '0052 SELF',
-      '0053 HALT',
+      '0053 NOTE',
+      '0054 CC',
+      '0055 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });

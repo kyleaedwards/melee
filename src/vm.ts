@@ -452,10 +452,11 @@ export class VM {
           if (
             !value ||
             !(value instanceof obj.Arr) ||
-            !value.items.length
+            !value.items.length ||
+            value.items.length > 3
           ) {
             throw new Error(
-              'Notes must be created with an array containing at least one argument',
+              'Notes must be created with an array containing one to three integer arguments',
             );
           }
           const pitch = value.items[0];

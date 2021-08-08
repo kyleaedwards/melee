@@ -7,9 +7,10 @@ import { VM } from '../src/vm';
 import * as obj from '../src/object';
 
 type TestScalar = number | boolean | null;
+
 type VMTestCase = [
   input: string,
-  expected: TestScalar | TestScalar[],
+  expected: TestScalar | TestScalar[] | obj.MidiNote | obj.MidiCC,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,6 +75,15 @@ function testInputs(inputs: VMTestCase[]): void {
         expected.forEach((exp, i) => {
           testScalar(result.items[i], exp);
         });
+      } else if (expected instanceof obj.MidiNote) {
+        assertObjectType(result, obj.MidiNote);
+        expect(result.pitch).toEqual(expected.pitch);
+        expect(result.duration).toEqual(expected.duration);
+        expect(result.velocity).toEqual(expected.velocity);
+      } else if (expected instanceof obj.MidiCC) {
+        assertObjectType(result, obj.MidiCC);
+        expect(result.key).toEqual(expected.key);
+        expect(result.value).toEqual(expected.value);
       } else {
         testScalar(result, expected);
       }
@@ -87,6 +97,20 @@ function testInputs(inputs: VMTestCase[]): void {
       throw e;
     }
   });
+}
+
+function testError(input: string): void {
+  const lexer = new Lexer(input);
+  const parser = new Parser(lexer);
+  const program = parser.parse();
+  const compiler = new Compiler();
+  compiler.compile(program);
+  const vm = new VM(compiler);
+  expect(() => {
+    vm.run();
+    const result = vm.lastElement();
+    console.log(result.inspectObject());
+  }).toThrow();
 }
 
 describe('VM', () => {
@@ -430,5 +454,30 @@ describe('VM', () => {
       [`len([])`, 0],
       [`len([1, 1, 2, 3, 5, 8])`, 6],
     ]);
+  });
+
+  test('should support MIDI `note` messages', () => {
+    testInputs([
+      [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],
+      [`note [C3]`, new obj.MidiNote(48, 1, 64)],
+    ]);
+
+    testError('note []');
+    testError('note [false]');
+    testError('note true');
+    testError('note 3');
+    testError('note [3, 4, 5, 6, 7]');
+    testError('note [note [60]]');
+  });
+
+  test('should support MIDI `cc` messages', () => {
+    testInputs([[`cc [1, 2]`, new obj.MidiCC(1, 2)]]);
+
+    testError('cc []');
+    testError('cc [false]');
+    testError('cc true');
+    testError('cc 3');
+    testError('cc [3, 4, 5, 6, 7]');
+    testError('cc [note [60], cc [1, 2]]');
   });
 });

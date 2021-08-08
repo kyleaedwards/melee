@@ -46,7 +46,7 @@ type CompilerTestCase = [
 /**
  * Runs a set of test cases and asserts the expected results.
  *
- * @param inputs - Expected test cases
+ * @param inputs - Test case and expected result
  *
  * @internal
  */
@@ -101,6 +101,23 @@ function testCompilerResult(inputs: CompilerTestCase[]): void {
       throw e;
     }
   });
+}
+
+/**
+ * Runs a set of test cases and asserts the expected results.
+ *
+ * @param input - Code snippet to test
+ *
+ * @internal
+ */
+function testCompilerError(input: string): void {
+  const lexer = new Lexer(input);
+  const parser = new Parser(lexer);
+  const program = parser.parse();
+  const compiler = new Compiler();
+  expect(() => {
+    compiler.compile(program);
+  }).toThrow();
 }
 
 describe('Compiler.compile', () => {
@@ -643,5 +660,65 @@ describe('Compiler.compile', () => {
     ];
 
     testCompilerResult(inputs);
+  });
+
+  test('should compile midi note keywords', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `note [C3]`,
+        [],
+        [
+          createInstruction(Opcode.GETG, 68),
+          createInstruction(Opcode.ARRAY, 1),
+          createInstruction(Opcode.NOTE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        `note [C3, 4]`,
+        [4],
+        [
+          createInstruction(Opcode.GETG, 68),
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.ARRAY, 2),
+          createInstruction(Opcode.NOTE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        `note [C3, 4, 64]`,
+        [4, 64],
+        [
+          createInstruction(Opcode.GETG, 68),
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.ARRAY, 3),
+          createInstruction(Opcode.NOTE),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+    testCompilerError(`note`);
+  });
+
+  test('should compile midi cc keywords', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `cc [4, 5]`,
+        [4, 5],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.ARRAY, 2),
+          createInstruction(Opcode.CC),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+    testCompilerError(`cc`);
   });
 });
