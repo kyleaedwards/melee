@@ -10,6 +10,9 @@ import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
 import { Compiler } from '../src/compiler';
 import * as obj from '../src/object';
+import { BUILTINS } from '../src/builtins';
+
+const GLOBALS = Object.keys(BUILTINS).length;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T> = new (...args: any[]) => T;
@@ -347,18 +350,18 @@ describe('Compiler.compile', () => {
         [5, 6],
         [
           createInstruction(Opcode.CONST, 0),
-          createInstruction(Opcode.SETG, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
           createInstruction(Opcode.CONST, 1),
-          createInstruction(Opcode.SETG, 1),
-          createInstruction(Opcode.GETG, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 1),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
           createInstruction(Opcode.POP),
-          createInstruction(Opcode.GETG, 1),
+          createInstruction(Opcode.GETG, GLOBALS + 1),
           createInstruction(Opcode.POP),
-          createInstruction(Opcode.GETG, 0),
-          createInstruction(Opcode.GETG, 1),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
+          createInstruction(Opcode.GETG, GLOBALS + 1),
           createInstruction(Opcode.ADD),
-          createInstruction(Opcode.SETG, 2),
-          createInstruction(Opcode.GETG, 2),
+          createInstruction(Opcode.SETG, GLOBALS + 2),
+          createInstruction(Opcode.GETG, GLOBALS + 2),
           createInstruction(Opcode.POP),
         ],
       ],
@@ -422,8 +425,8 @@ describe('Compiler.compile', () => {
         [0, new Uint8Array([Opcode.CONST, 0, 0, Opcode.RET])],
         [
           createInstruction(Opcode.CLOSURE, 1),
-          createInstruction(Opcode.SETG, 0),
-          createInstruction(Opcode.GETG, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
           createInstruction(Opcode.CALL, 0),
           createInstruction(Opcode.POP),
         ],
@@ -444,8 +447,8 @@ describe('Compiler.compile', () => {
         ],
         [
           createInstruction(Opcode.CLOSURE, 0),
-          createInstruction(Opcode.SETG, 0),
-          createInstruction(Opcode.GETG, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
           createInstruction(Opcode.CONST, 1),
           createInstruction(Opcode.CONST, 2),
           createInstruction(Opcode.CALL, 2),
@@ -472,7 +475,7 @@ describe('Compiler.compile', () => {
           new Uint8Array([
             ...createInstruction(Opcode.CONST, 1),
             ...createInstruction(Opcode.SET, 0),
-            ...createInstruction(Opcode.GETG, 0),
+            ...createInstruction(Opcode.GETG, GLOBALS + 0),
             ...createInstruction(Opcode.GET, 0),
             ...createInstruction(Opcode.ADD),
             ...createInstruction(Opcode.RET),
@@ -480,9 +483,9 @@ describe('Compiler.compile', () => {
         ],
         [
           createInstruction(Opcode.CONST, 0),
-          createInstruction(Opcode.SETG, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
           createInstruction(Opcode.CLOSURE, 2, 0),
-          createInstruction(Opcode.SETG, 1),
+          createInstruction(Opcode.SETG, GLOBALS + 1),
         ],
       ],
       [
@@ -573,8 +576,8 @@ describe('Compiler.compile', () => {
         ],
         [
           createInstruction(Opcode.CLOSURE, 1, 0),
-          createInstruction(Opcode.SETG, 0),
-          createInstruction(Opcode.GETG, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
           createInstruction(Opcode.CONST, 2),
           createInstruction(Opcode.CALL, 1),
           createInstruction(Opcode.POP),
