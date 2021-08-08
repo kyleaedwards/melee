@@ -7,9 +7,9 @@ import * as obj from './object';
 /**
  * Constants
  */
-const MAX_FRAME_SIZE = 1024;
-const MAX_STACK_SIZE = 1024;
-const MAX_VARIABLES = 65536;
+export const MAX_FRAME_SIZE = 1024;
+export const MAX_STACK_SIZE = 1024;
+export const MAX_VARIABLES = 65536;
 
 /**
  * Asserts stack object is defined.
@@ -67,15 +67,18 @@ export class VM {
    *
    * @param compiler - Compiler instance
    */
-  constructor(compiler: Compiler) {
+  constructor(
+    compiler: Compiler,
+    variables: (obj.BaseObject | undefined)[],
+  ) {
     this.constants = compiler.constants;
     this.frames = new Array<Frame>(MAX_FRAME_SIZE);
     this.stack = new Array<obj.BaseObject | undefined>(
       MAX_STACK_SIZE,
     );
-    this.variables = new Array<obj.BaseObject | undefined>(
-      MAX_VARIABLES,
-    );
+    this.variables =
+      variables ||
+      new Array<obj.BaseObject | undefined>(MAX_VARIABLES);
     this.fp = 1;
     this.sp = 0;
 

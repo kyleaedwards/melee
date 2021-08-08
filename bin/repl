@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+
+/**
+ * Imports
+ */
+var readline = require('readline');
+var Melee = require('../dist');
+
+/**
+ * Constants
+ */
+var repl = new Melee.Repl();
+var rl = readline.createInterface(process.stdin, process.stdout);
+var prefix = 'melee ▸ ';
+
+rl.on('line', function (line) {
+  var cmd = line.trim();
+  if (cmd === 'exit' || cmd === 'quit') {
+    process.stdout.write('Come back soon!');
+    process.exit(0);
+  }
+  var res;
+  try {
+    res = repl.exec(line);
+  } catch (e) {
+    res = e.message;
+  }
+  process.stdout.write(res + '\n');
+  rl.setPrompt(prefix, prefix.length);
+  rl.prompt();
+}).on('close', function () {
+  process.exit(0);
+});
+
+process.stdout.write("Melee (v0.0.1):\n");
+process.stdout.write("A DSL for Generating Musical Sequences\n");
+
+rl.setPrompt(prefix, prefix.length);
+rl.prompt();

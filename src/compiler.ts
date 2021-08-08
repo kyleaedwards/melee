@@ -47,11 +47,14 @@ interface CompilerScope {
 export class Compiler {
   public scopes: CompilerScope[];
   public scopeIndex: number;
-  public symbolTable!: SymbolTable;
+  public symbolTable: SymbolTable;
   private currentLoopStart?: number;
   private breaks: number[] = [];
 
-  constructor(public constants: BaseObject[] = []) {
+  constructor(
+    public constants: BaseObject[] = [],
+    symbolTable?: SymbolTable,
+  ) {
     this.scopeIndex = -1;
     this.scopes = [];
 
@@ -61,7 +64,7 @@ export class Compiler {
       this.symbolTable.add(fn.label);
     });
 
-    this.pushScope();
+    this.pushScope(symbolTable);
   }
 
   /**
@@ -352,9 +355,11 @@ export class Compiler {
   /**
    * Add a new scope item onto the stack.
    *
+   * @param symbolTable - Optional symbol table
+   *
    * @internal
    */
-  pushScope(): void {
+  pushScope(symbolTable?: SymbolTable): void {
     this.scopeIndex++;
     this.scopes.push({
       instructions: new Uint8Array(0),
@@ -371,7 +376,11 @@ export class Compiler {
       this.symbolTable.type === ScopeType.NATIVE
         ? ScopeType.GLOBAL
         : ScopeType.LOCAL;
-    this.symbolTable = new SymbolTable(type, this.symbolTable);
+    if (symbolTable) {
+      symbolTable.parent = this.symbolTable;
+    }
+    this.symbolTable =
+      symbolTable || new SymbolTable(type, this.symbolTable);
   }
 
   /**
