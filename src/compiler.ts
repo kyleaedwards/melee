@@ -349,6 +349,14 @@ export class Compiler {
         throw new Error('Cannot use continue outside of a loop');
       }
       this.emit(Opcode.JMP, this.currentLoopStart);
+    } else if (node instanceof ast.NoteExpression) {
+      if (!node.note) {
+        throw new Error(
+          'Cannot use the `note` keyword without an argument',
+        );
+      }
+      this.compile(node.note);
+      this.emit(Opcode.NOTE);
     }
   }
 

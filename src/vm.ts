@@ -446,6 +446,54 @@ export class VM {
           this.push(value);
           break;
         }
+        case Opcode.NOTE: {
+          const value = this.pop();
+          if (
+            !value ||
+            !(value instanceof obj.Arr) ||
+            !value.items.length
+          ) {
+            throw new Error(
+              'Notes must be created with an array containing at least one argument',
+            );
+          }
+          const pitch = value.items[0];
+          if (!(pitch instanceof obj.Int)) {
+            throw new Error(
+              'MIDI note pitch must be an integer or a pitch literal like Eb4',
+            );
+          }
+          const duration = value.items[1];
+          let durationValue = 1;
+          if (duration) {
+            if (!(duration instanceof obj.Int)) {
+              throw new Error(
+                'MIDI note duration must be an integer',
+              );
+            }
+            durationValue = Math.max(1, duration.value);
+          }
+          const velocity = value.items[2];
+          let velocityValue = 64;
+          if (velocity) {
+            if (!(velocity instanceof obj.Int)) {
+              throw new Error(
+                'MIDI note velocity must be an integer',
+              );
+            }
+            velocityValue = Math.min(
+              127,
+              Math.max(0, velocity.value),
+            );
+          }
+          this.push(
+            new obj.MidiNote(
+              pitch.value,
+              durationValue,
+              velocityValue,
+            ),
+          );
+        }
       }
     }
   }
