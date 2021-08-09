@@ -472,6 +472,27 @@ describe('VM', () => {
     ]);
   });
 
+  test('should support built-in function `sort`', () => {
+    testInputs([
+      [`sort([])`, []],
+      [`sort([1])`, [1]],
+      [`sort([true, false])`, [false, true]],
+      [`sort([1, false])`, [false, 1]],
+      [`sort([2, 1])`, [1, 2]],
+      [`sort([1, 3, 1, 5, 2, 8])`, [1, 1, 2, 3, 5, 8]],
+    ]);
+  });
+
+  test('should support built-in function `rev`', () => {
+    testInputs([
+      [`rev([])`, []],
+      [`rev([1])`, [1]],
+      [`rev([2, 1])`, [1, 2]],
+      [`rev([2, false, 0])`, [0, false, 2]],
+      [`rev([1, 1, 2, 3, 5, 8])`, [8, 5, 3, 2, 1, 1]],
+    ]);
+  });
+
   test('should support built-in function `min`', () => {
     testInputs([
       [`min([])`, null],

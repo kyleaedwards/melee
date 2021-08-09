@@ -1,4 +1,4 @@
-import { Arr, BaseObject, Int, NativeFn, NULL } from './object';
+import { Arr, BaseObject, Bool, Int, NativeFn, NULL } from './object';
 
 export const NATIVE_FNS: NativeFn[] = [
   new NativeFn('len', (...args: BaseObject[]): BaseObject => {
@@ -53,6 +53,44 @@ export const NATIVE_FNS: NativeFn[] = [
       return NULL;
     }
     return new Int(Math.max.apply(null, items));
+  }),
+  new NativeFn('sort', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error(
+        'Function `sort` takes a single array argument',
+      );
+    }
+    const items = arr.items.sort((a, b) => {
+      let aVal = NaN;
+      let bVal = NaN;
+      if (a instanceof Int) {
+        aVal = a.value;
+      } else if (a instanceof Bool) {
+        aVal = a.value ? 1 : 0;
+      }
+      if (b instanceof Int) {
+        bVal = b.value;
+      } else if (b instanceof Bool) {
+        bVal = b.value ? 1 : 0;
+      }
+      if (isNaN(aVal) && isNaN(bVal)) return 0;
+      if (isNaN(bVal)) return -1;
+      if (isNaN(aVal)) return 1;
+      return aVal - bVal;
+    });
+    return new Arr(items);
+  }),
+  new NativeFn('rev', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error('Function `rev` takes a single array argument');
+    }
+    const items = [];
+    for (let i = 0; i < arr.items.length; i++) {
+      items.push(arr.items[arr.items.length - 1 - i]);
+    }
+    return new Arr(items);
   }),
   new NativeFn('push', (...args: BaseObject[]): BaseObject => {
     const arr = args[0];
