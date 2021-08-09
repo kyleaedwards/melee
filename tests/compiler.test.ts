@@ -722,7 +722,7 @@ describe('Compiler.compile', () => {
     testCompilerError(`cc`);
   });
 
-  test('should compile yield keywords', () => {
+  test('should compile yield statements', () => {
     const inputs: CompilerTestCase[] = [
       [
         `yield`,
@@ -732,9 +732,33 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.YIELD),
         ],
       ],
+      [
+        `yield 3`,
+        [3],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.YIELD),
+        ],
+      ],
     ];
 
     testCompilerResult(inputs);
-    testCompilerError(`cc`);
+  });
+
+  test('should compile next statements', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `next 3`,
+        [3],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.NEXT),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+    testCompilerError(`next`);
   });
 });
