@@ -510,6 +510,15 @@ describe('VM', () => {
         next s;`,
         null,
       ],
+      [
+        `g := gen (x, y) { loop { <- x + y; } };
+        s := g(2, 3);
+        next s;
+        next s;
+        next s;
+        next s;`,
+        5,
+      ],
     ]);
   });
 });
