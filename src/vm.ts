@@ -2,7 +2,6 @@ import { AssertionError } from 'assert';
 import { BUILTINS, NATIVE_FNS } from './builtins';
 import { Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
-import { Frame } from './frame';
 import * as obj from './object';
 import { clamp } from './utils';
 
@@ -85,8 +84,10 @@ export class VM {
   public stack: (obj.BaseObject | undefined)[];
   public sp: number;
 
-  public frames: Frame[];
+  public frames: obj.Frame[];
   public fp: number;
+
+  private coroutine?: obj.ExecutionState;
 
   /**
    * Constructs a new VM instance.
@@ -98,7 +99,7 @@ export class VM {
     variables?: (obj.BaseObject | undefined)[],
   ) {
     this.constants = compiler.constants;
-    this.frames = new Array<Frame>(MAX_FRAME_SIZE);
+    this.frames = new Array<obj.Frame>(MAX_FRAME_SIZE);
     this.stack = new Array<obj.BaseObject | undefined>(
       MAX_STACK_SIZE,
     );
@@ -106,10 +107,78 @@ export class VM {
     this.fp = 1;
     this.sp = 0;
 
-    this.frames[0] = new Frame(
+    this.frames[0] = new obj.Frame(
       new obj.Closure(new obj.Fn(compiler.instructions(), '<MAIN>')),
       0,
     );
+  }
+
+  createCoroutine(
+    closure: obj.Closure,
+    args: obj.BaseObject[],
+  ): obj.ExecutionState {
+    const parentExecutionState = {
+      stack: this.stack,
+      sp: this.sp,
+      frames: this.frames,
+      fp: this.fp,
+      parent:
+        this.coroutine && this.coroutine.parent
+          ? this.coroutine.parent
+          : undefined,
+    };
+    const frames = new Array<obj.Frame>(MAX_FRAME_SIZE);
+    frames[0] = new obj.Frame(closure, 0);
+    const stack = new Array<obj.BaseObject | undefined>(
+      MAX_STACK_SIZE,
+    );
+    const sp = args.length;
+    for (let i = 0; i < args.length; i++) {
+      stack[i] = args[i];
+    }
+    return {
+      stack,
+      sp,
+      frames,
+      fp: 1,
+      parent: parentExecutionState,
+    };
+  }
+
+  enterCoroutine(executionState: obj.ExecutionState): void {
+    if (!executionState.parent) {
+      throw new Error('Cannot enter a root-level coroutine');
+    }
+    const { stack, sp, frames, fp } = this;
+    executionState.parent.stack = stack;
+    executionState.parent.sp = sp;
+    executionState.parent.frames = frames;
+    executionState.parent.fp = fp;
+
+    this.stack = executionState.stack;
+    this.sp = executionState.sp;
+    this.frames = executionState.frames;
+    this.fp = executionState.fp;
+    this.coroutine = executionState;
+  }
+
+  leaveCoroutine(): void {
+    const executionState = this.coroutine;
+    if (!executionState || !executionState.parent) {
+      throw new Error('Cannot leave root execution state');
+    }
+
+    const { stack, sp, frames, fp } = this;
+    executionState.stack = stack;
+    executionState.sp = sp;
+    executionState.frames = frames;
+    executionState.fp = fp;
+
+    this.coroutine = executionState.parent;
+    this.stack = executionState.parent.stack;
+    this.sp = executionState.parent.sp;
+    this.frames = executionState.parent.frames;
+    this.fp = executionState.parent.fp;
   }
 
   /**
@@ -144,7 +213,7 @@ export class VM {
    *
    * @internal
    */
-  frame(): Frame {
+  frame(): obj.Frame {
     return this.frames[this.fp - 1];
   }
 
@@ -237,6 +306,7 @@ export class VM {
   run(): void {
     let frame = this.frame();
     let inst = frame.instructions();
+
     while (frame.ip <= inst.length) {
       frame.ip++;
       const ip = frame.ip;
@@ -404,19 +474,40 @@ export class VM {
             );
           }
           if (o instanceof obj.Closure) {
-            while (numArgs > o.fn.numParams) {
-              this.pop();
-              numArgs--;
+            if (o.fn instanceof obj.Fn) {
+              while (numArgs > o.fn.numParams) {
+                this.pop();
+                numArgs--;
+              }
+              while (numArgs < o.fn.numParams) {
+                this.push(obj.NULL);
+                numArgs++;
+              }
+              frame = new obj.Frame(o, this.sp - numArgs);
+              inst = frame.instructions();
+              this.frames[this.fp] = frame;
+              this.fp++;
+              this.sp = frame.base + o.fn.numLocals;
+            } else if (o.fn instanceof obj.Gen) {
+              while (numArgs > o.fn.numParams) {
+                this.pop();
+                numArgs--;
+              }
+              while (numArgs < o.fn.numParams) {
+                this.push(obj.NULL);
+                numArgs++;
+              }
+              const args: obj.BaseObject[] = [];
+              while (numArgs--) {
+                const arg = this.pop();
+                assertStackObject(arg);
+                args.unshift(arg);
+              }
+              this.pop(); // Get the closure out of the way.
+              this.push(
+                new obj.Seq(o, this.createCoroutine(o, args)),
+              );
             }
-            while (numArgs < o.fn.numParams) {
-              this.push(obj.NULL);
-              numArgs++;
-            }
-            frame = new Frame(o, this.sp - numArgs);
-            inst = frame.instructions();
-            this.frames[this.fp] = frame;
-            this.fp++;
-            this.sp = frame.base + o.fn.numLocals;
           } else if (o instanceof obj.NativeFn) {
             const args: obj.BaseObject[] = [];
             while (numArgs--) {
@@ -437,13 +528,51 @@ export class VM {
               'Functions must return an explicit value or an implicit null',
             );
           }
-          this.fp--;
-          this.sp = frame.base - 1;
-          frame = this.frames[this.fp - 1];
-          inst = frame.instructions();
-          for (let i = 0; i < closureVars.length; i++) {
-            this.stack[frame.base + i] = closureVars[i];
+          if (
+            this.fp <= 1 &&
+            this.coroutine &&
+            this.coroutine.parent
+          ) {
+            if (this.coroutine.seq) {
+              this.coroutine.seq.done = true;
+            }
+            this.leaveCoroutine();
+            frame = this.frame();
+            inst = frame.instructions();
+          } else {
+            this.fp--;
+            this.sp = frame.base - 1;
+            frame = this.frames[this.fp - 1];
+            inst = frame.instructions();
+            for (let i = 0; i < closureVars.length; i++) {
+              this.stack[frame.base + i] = closureVars[i];
+            }
           }
+          this.push(value);
+          break;
+        }
+        case Opcode.NEXT: {
+          const seq = this.pop();
+          if (!seq || !(seq instanceof obj.Seq)) {
+            throw new Error(
+              '`next` can only be used on generated sequence instances',
+            );
+          }
+          if (seq.done) {
+            this.push(obj.NULL);
+            break;
+          }
+          this.enterCoroutine(seq.executionState);
+          frame = this.frame();
+          inst = frame.instructions();
+          break;
+        }
+        case Opcode.YIELD: {
+          const value = this.pop();
+          assertStackObject(value);
+          this.leaveCoroutine();
+          frame = this.frame();
+          inst = frame.instructions();
           this.push(value);
           break;
         }

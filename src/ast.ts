@@ -330,7 +330,7 @@ class GeneratorLiteral implements Expression {
   }
 }
 
-class NextLiteral implements Expression {
+class NextExpression implements Expression {
   nodeType: 'expression';
 
   constructor(public token: Token, public right?: Expression) {
@@ -452,7 +452,7 @@ export {
   WhileExpression,
   FunctionLiteral,
   GeneratorLiteral,
-  NextLiteral,
+  NextExpression,
   IndexExpression,
   CallExpression,
   NoteExpression,

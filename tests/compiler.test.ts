@@ -721,4 +721,20 @@ describe('Compiler.compile', () => {
     testCompilerResult(inputs);
     testCompilerError(`cc`);
   });
+
+  test('should compile yield keywords', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `yield`,
+        [],
+        [
+          createInstruction(Opcode.NULL),
+          createInstruction(Opcode.YIELD),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+    testCompilerError(`cc`);
+  });
 });

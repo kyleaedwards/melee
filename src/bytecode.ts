@@ -57,6 +57,9 @@ export enum Opcode {
   NOTE = 200, // MIDI note
   CC, // MIDI CC message
 
+  YIELD = 210,
+  NEXT,
+
   POP = 253,
   NOT_IMPLEMENTED = 254,
   HALT = 255,
@@ -110,6 +113,8 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.SETC, 'SETC', [1]],
     [Opcode.NOTE, 'NOTE'],
     [Opcode.CC, 'CC'],
+    [Opcode.YIELD, 'YIELD'],
+    [Opcode.NEXT, 'NEXT'],
   ];
 
 operations.forEach(([op, name, operands]) => {

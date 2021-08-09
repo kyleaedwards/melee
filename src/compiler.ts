@@ -1,6 +1,6 @@
 import * as ast from './ast';
 import { Opcode, Bytecode, createInstruction } from './bytecode';
-import { BaseObject, Int, Fn } from './object';
+import { BaseObject, Int, Fn, Gen } from './object';
 import { ScopeType, SymbolTable } from './symbols';
 import { NATIVE_FNS } from './builtins';
 
@@ -259,7 +259,10 @@ export class Compiler {
       this.compile(node.collection);
       this.compile(node.index);
       this.emit(Opcode.INDEX);
-    } else if (node instanceof ast.FunctionLiteral) {
+    } else if (
+      node instanceof ast.FunctionLiteral ||
+      node instanceof ast.GeneratorLiteral
+    ) {
       this.pushScope();
       if (node.name) {
         this.symbolTable.setSelf(node.name);
@@ -302,7 +305,9 @@ export class Compiler {
       });
 
       const repr = node.toString();
-      const fn = new Fn(
+      const CallableConstructor =
+        node instanceof ast.FunctionLiteral ? Fn : Gen;
+      const fn = new CallableConstructor(
         instructions,
         repr,
         numSymbols,
@@ -313,6 +318,22 @@ export class Compiler {
         this.addConstant(fn),
         freeSymbols.length,
       );
+    } else if (node instanceof ast.YieldStatement) {
+      if (!node.value) {
+        this.emit(Opcode.NULL);
+      } else {
+        this.compile(node.value);
+      }
+      this.emit(Opcode.YIELD);
+    } else if (node instanceof ast.NextExpression) {
+      if (!node.right) {
+        throw new Error(
+          'Cannot use the `next` keyword without an operand',
+        );
+      } else {
+        this.compile(node.right);
+      }
+      this.emit(Opcode.NEXT);
     } else if (node instanceof ast.CallExpression) {
       if (!node.fn) {
         throw new Error('Invalid call expression');
@@ -352,7 +373,7 @@ export class Compiler {
     } else if (node instanceof ast.NoteExpression) {
       if (!node.note) {
         throw new Error(
-          'Cannot use the `note` keyword without an argument',
+          'Cannot use the `note` keyword without an operand',
         );
       }
       this.compile(node.note);
@@ -360,7 +381,7 @@ export class Compiler {
     } else if (node instanceof ast.CCExpression) {
       if (!node.message) {
         throw new Error(
-          'Cannot use the `cc` keyword without an argument',
+          'Cannot use the `cc` keyword without an operand',
         );
       }
       this.compile(node.message);

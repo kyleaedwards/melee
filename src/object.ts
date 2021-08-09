@@ -1,5 +1,42 @@
 import { Bytecode } from './bytecode';
 
+/**
+ * Call "stack" frame (might not be in the call stack) representing
+ * a function's execution context.
+ */
+export class Frame {
+  /**
+   * Instruction pointer
+   */
+  public ip: number;
+
+  constructor(public closure: Closure, public base: number) {
+    this.ip = -1;
+  }
+
+  /**
+   * Gets the bytecode instructions of the callable function or generator.
+   *
+   * @returns Bytecode instructions
+   */
+  instructions(): Bytecode {
+    return this.closure.fn.instructions;
+  }
+}
+
+/**
+ * Collection of frame and stack information representing
+ * the current state of execution.
+ */
+export interface ExecutionState {
+  stack: (BaseObject | undefined)[];
+  sp: number;
+  frames: Frame[];
+  fp: number;
+  parent?: ExecutionState;
+  seq?: Seq;
+}
+
 export type Type =
   | 'null'
   | 'error'
@@ -156,21 +193,18 @@ export class Closure implements BaseObject {
 
 export class Seq implements BaseObject {
   type: Type = 'sequence';
-  public curr: number;
-  public position: number[];
   public done: boolean;
 
   constructor(
-    public generator: Gen,
-    public environment: Environment,
+    public generator: Closure,
+    public executionState: ExecutionState,
   ) {
-    this.curr = 0;
-    this.position = [0];
     this.done = false;
+    this.executionState.seq = this; // Self-reference
   }
 
   inspectObject(): string {
-    return `seq::${this.done ? 'done' : 'ongoing'}]`;
+    return `seq::[${this.done ? 'done' : 'ongoing'}]`;
   }
 }
 

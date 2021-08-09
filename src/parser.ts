@@ -389,13 +389,13 @@ class Parser {
     return new ast.GeneratorLiteral(token, parameters, body);
   }
 
-  parseNext(): ast.NextLiteral {
+  parseNext(): ast.NextExpression {
     const token = this.curr;
 
     this.nextToken();
     const right = this.parseExpression(precedence.PRF);
 
-    return new ast.NextLiteral(token, right);
+    return new ast.NextExpression(token, right);
   }
 
   parseConditional(): ast.IfExpression | undefined {

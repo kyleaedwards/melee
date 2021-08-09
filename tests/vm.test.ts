@@ -480,4 +480,36 @@ describe('VM', () => {
     testError('cc [3, 4, 5, 6, 7]');
     testError('cc [note [60], cc [1, 2]]');
   });
+
+  test('should support sequence generators', () => {
+    testInputs([
+      [
+        `g := gen () { <- 1; <- 2 };
+        s := g();
+        next s;
+        next s;`,
+        2,
+      ],
+      [
+        `g := gen (x, y) { <- x + y; };
+        s := g(2, 3);
+        next s`,
+        5,
+      ],
+      [
+        `g := gen (x, y) { <- x + y; };
+        s := g(2, 3);
+        a := next s;
+        a + 2`,
+        7,
+      ],
+      [
+        `g := gen (x, y) { <- x + y; };
+        s := g(2, 3);
+        next s;
+        next s;`,
+        null,
+      ],
+    ]);
+  });
 });

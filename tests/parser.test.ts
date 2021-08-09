@@ -567,7 +567,7 @@ describe('Parser', () => {
   });
 
   describe('parseNextExpression', () => {
-    test('should parse yielded next literal', () => {
+    test('should parse yielded next expression', () => {
       const input = `yield next item`;
       const stmts = parseProgramStatements(input);
       expect(stmts).toHaveLength(1);
@@ -576,12 +576,12 @@ describe('Parser', () => {
       assertNodeType(stmt, ast.YieldStatement);
 
       const expr = stmt.value;
-      assertNodeType(expr, ast.NextLiteral);
+      assertNodeType(expr, ast.NextExpression);
 
       testLiteral(expr.right, 'item');
     });
 
-    test('should parse returned next literal', () => {
+    test('should parse returned next expression', () => {
       const input = `return next item`;
       const stmts = parseProgramStatements(input);
       expect(stmts).toHaveLength(1);
@@ -590,12 +590,12 @@ describe('Parser', () => {
       assertNodeType(stmt, ast.ReturnStatement);
 
       const expr = stmt.value;
-      assertNodeType(expr, ast.NextLiteral);
+      assertNodeType(expr, ast.NextExpression);
 
       testLiteral(expr.right, 'item');
     });
 
-    test('should parse next literal in expression', () => {
+    test('should parse next keyword in expression', () => {
       const input = `x + next item`;
       const stmts = parseProgramStatements(input);
       expect(stmts).toHaveLength(1);
@@ -610,7 +610,7 @@ describe('Parser', () => {
       expect(expr.operator).toEqual('+');
 
       const next = expr.right;
-      assertNodeType(next, ast.NextLiteral);
+      assertNodeType(next, ast.NextExpression);
 
       testLiteral(next.right, 'item');
     });
