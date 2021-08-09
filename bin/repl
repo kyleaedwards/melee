@@ -7,6 +7,11 @@ var readline = require('readline');
 var Melee = require('../dist');
 
 /**
+ * Package
+ */
+var package = require('../package.json');
+
+/**
  * Constants
  */
 var repl = new Melee.Repl();
@@ -23,7 +28,8 @@ rl.on('line', function (line) {
   try {
     res = repl.exec(line);
   } catch (e) {
-    res = e.message;
+    process.stdout.write(e.message + '\n');
+    process.stdout.write(e.stack + '\n');
   }
   process.stdout.write(res + '\n');
   rl.setPrompt(prefix, prefix.length);
@@ -32,7 +38,7 @@ rl.on('line', function (line) {
   process.exit(0);
 });
 
-process.stdout.write("Melee (v0.0.1):\n");
+process.stdout.write("Melee (v" + package.version + "):\n");
 process.stdout.write("A DSL for Generating Musical Sequences\n");
 
 rl.setPrompt(prefix, prefix.length);
