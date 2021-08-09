@@ -1,4 +1,3 @@
-import { IndexExpression } from './ast';
 import { Arr, BaseObject, Int, NativeFn, NULL } from './object';
 
 export const NATIVE_FNS: NativeFn[] = [
@@ -20,6 +19,40 @@ export const NATIVE_FNS: NativeFn[] = [
       items = items.concat(arg.items);
     });
     return new Arr(items);
+  }),
+  new NativeFn('min', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error('Function `min` takes a single array argument');
+    }
+    const items = [];
+    for (let i = 0; i < arr.items.length; i++) {
+      const item = arr.items[i];
+      if (item instanceof Int) {
+        items.push(item.value);
+      }
+    }
+    if (!items.length) {
+      return NULL;
+    }
+    return new Int(Math.min.apply(null, items));
+  }),
+  new NativeFn('max', (...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (args.length !== 1 || !(arr instanceof Arr)) {
+      throw new Error('Function `max` takes a single array argument');
+    }
+    const items = [];
+    for (let i = 0; i < arr.items.length; i++) {
+      const item = arr.items[i];
+      if (item instanceof Int) {
+        items.push(item.value);
+      }
+    }
+    if (!items.length) {
+      return NULL;
+    }
+    return new Int(Math.max.apply(null, items));
   }),
   new NativeFn('push', (...args: BaseObject[]): BaseObject => {
     const arr = args[0];

@@ -465,6 +465,28 @@ describe('VM', () => {
         `concat([1, 1, 2, 3, 5, 8], [3, 4])`,
         [1, 1, 2, 3, 5, 8, 3, 4],
       ],
+      [
+        `concat([1, 1, 2], [3, 5, 8], [3, 4])`,
+        [1, 1, 2, 3, 5, 8, 3, 4],
+      ],
+    ]);
+  });
+
+  test('should support built-in function `min`', () => {
+    testInputs([
+      [`min([])`, null],
+      [`min([1])`, 1],
+      [`min([2, 1])`, 1],
+      [`min([1, -2, 7, 5])`, -2],
+    ]);
+  });
+
+  test('should support built-in function `max`', () => {
+    testInputs([
+      [`max([])`, null],
+      [`max([1])`, 1],
+      [`max([2, 1])`, 2],
+      [`max([1, 2, 7, 5])`, 7],
     ]);
   });
 
