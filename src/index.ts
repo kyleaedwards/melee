@@ -1,19 +1,16 @@
-import { Lexer } from './lexer';
-import { Parser } from './parser';
-import * as ast from './ast';
-import * as obj from './object';
-import { VM } from './vm';
-import { Token, TokenType, tokenIs } from './token';
-import { Repl } from './repl';
+/**
+ * Melee.js
+ *
+ * A reference implementation of the Melee programming language.
+ *
+ * Copyright(c) 2021 Kyle Edwards <edwards.kyle.a@gmail.com>
+ * Released under the MIT License.
+ */
 
-export {
-  ast,
-  obj,
-  Lexer,
-  Parser,
-  Token,
-  TokenType,
-  tokenIs,
-  VM,
-  Repl,
-};
+export { Lexer } from './lexer';
+export { Parser } from './parser';
+export * as ast from './ast';
+export * as obj from './object';
+export { VM } from './vm';
+export { Token, TokenType, tokenIs } from './token';
+export { Repl } from './repl';
