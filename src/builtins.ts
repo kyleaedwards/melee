@@ -1,3 +1,4 @@
+import { IndexExpression } from './ast';
 import { Arr, BaseObject, Int, NativeFn, NULL } from './object';
 
 export const NATIVE_FNS: NativeFn[] = [
@@ -7,6 +8,18 @@ export const NATIVE_FNS: NativeFn[] = [
       throw new Error('Function `len` takes a single array argument');
     }
     return new Int(arr.items.length);
+  }),
+  new NativeFn('concat', (...args: BaseObject[]): BaseObject => {
+    let items: BaseObject[] = [];
+    args.forEach((arg) => {
+      if (!(arg instanceof Arr)) {
+        throw new Error(
+          'Function `concat` only accepts array arguments',
+        );
+      }
+      items = items.concat(arg.items);
+    });
+    return new Arr(items);
   }),
   new NativeFn('push', (...args: BaseObject[]): BaseObject => {
     const arr = args[0];

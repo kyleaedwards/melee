@@ -456,6 +456,18 @@ describe('VM', () => {
     ]);
   });
 
+  test('should support built-in function `concat`', () => {
+    testInputs([
+      [`concat([], [])`, []],
+      [`concat([], [1])`, [1]],
+      [`concat([2], [1])`, [2, 1]],
+      [
+        `concat([1, 1, 2, 3, 5, 8], [3, 4])`,
+        [1, 1, 2, 3, 5, 8, 3, 4],
+      ],
+    ]);
+  });
+
   test('should support MIDI `note` messages', () => {
     testInputs([
       [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],
