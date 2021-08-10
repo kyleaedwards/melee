@@ -1,28 +1,48 @@
+/**
+ * Abstract syntax tree mechanisms and node types.
+ */
+
 import { Token } from './token';
 
 /**
  * Interfaces
  */
 
-interface Node {
+/**
+ * Base AST node interface.
+ *
+ * @public
+ */
+export interface Node {
   toString: () => string;
 }
 
-interface Statement extends Node {
+/**
+ * Base AST statement interface.
+ *
+ * @public
+ */
+export interface Statement extends Node {
   token: Token;
   nodeType: 'statement';
 }
 
-interface Expression extends Node {
+/**
+ * Base AST expression interface.
+ *
+ * @public
+ */
+export interface Expression extends Node {
   token: Token;
   nodeType: 'expression';
 }
 
 /**
- * Program
+ * Root-level program node encapsulating the full abstract syntax tree.
+ *
+ * @public
  */
-
-class Program implements Node {
+export class Program implements Node {
   statements: Statement[];
 
   constructor() {
@@ -38,7 +58,12 @@ class Program implements Node {
  * Statements
  */
 
-class DeclareStatement implements Statement {
+/**
+ * AST node type representing a variable definition statement like `var := 1;`.
+ *
+ * @public
+ */
+export class DeclareStatement implements Statement {
   nodeType: 'statement';
 
   constructor(
@@ -56,7 +81,12 @@ class DeclareStatement implements Statement {
   }
 }
 
-class AssignStatement implements Statement {
+/**
+ * AST node type representing a variable assignment statement like `var = 1;`.
+ *
+ * @public
+ */
+export class AssignStatement implements Statement {
   nodeType: 'statement';
 
   constructor(
@@ -74,7 +104,12 @@ class AssignStatement implements Statement {
   }
 }
 
-class ReturnStatement implements Statement {
+/**
+ * AST node type representing a return statement like `return var;`.
+ *
+ * @public
+ */
+export class ReturnStatement implements Statement {
   nodeType: 'statement';
 
   constructor(public token: Token, public value?: Expression) {
@@ -88,7 +123,13 @@ class ReturnStatement implements Statement {
   }
 }
 
-class YieldStatement implements Statement {
+/**
+ * AST node type representing a yield statement like `yield var;`. Must
+ * be used within a generator function.
+ *
+ * @public
+ */
+export class YieldStatement implements Statement {
   nodeType: 'statement';
 
   constructor(public token: Token, public value?: Expression) {
@@ -102,7 +143,12 @@ class YieldStatement implements Statement {
   }
 }
 
-class ExpressionStatement implements Statement {
+/**
+ * AST statement encapsulating an expression like `1 + 2;`.
+ *
+ * @public
+ */
+export class ExpressionStatement implements Statement {
   nodeType: 'statement';
 
   constructor(public token: Token, public value?: Expression) {
@@ -117,7 +163,13 @@ class ExpressionStatement implements Statement {
   }
 }
 
-class BlockStatement implements Statement {
+/**
+ * AST statement encapsulating a group of statements for a function body,
+ * conditional, while loop, etc.
+ *
+ * @public
+ */
+export class BlockStatement implements Statement {
   nodeType: 'statement';
 
   constructor(public token: Token, public statements: Statement[]) {
@@ -131,7 +183,13 @@ class BlockStatement implements Statement {
   }
 }
 
-class ContinueStatement implements Statement {
+/**
+ * AST node type representing a `continue` statement for flow control within
+ * a loop.
+ *
+ * @public
+ */
+export class ContinueStatement implements Statement {
   nodeType: 'statement';
 
   constructor(public token: Token) {
@@ -143,7 +201,13 @@ class ContinueStatement implements Statement {
   }
 }
 
-class BreakStatement implements Statement {
+/**
+ * AST node type representing a `break` statement for flow control within
+ * a loop.
+ *
+ * @public
+ */
+export class BreakStatement implements Statement {
   nodeType: 'statement';
 
   constructor(public token: Token) {
@@ -159,7 +223,12 @@ class BreakStatement implements Statement {
  * Expressions
  */
 
-class Identifier implements Expression {
+/**
+ * AST node type a variable identifier.
+ *
+ * @public
+ */
+export class Identifier implements Expression {
   nodeType: 'expression';
 
   constructor(public token: Token, public value: string) {
@@ -171,7 +240,12 @@ class Identifier implements Expression {
   }
 }
 
-class IntegerLiteral implements Expression {
+/**
+ * AST node type representing an integer literal.
+ *
+ * @public
+ */
+export class IntegerLiteral implements Expression {
   nodeType: 'expression';
 
   constructor(public token: Token, public value: number) {
@@ -183,7 +257,12 @@ class IntegerLiteral implements Expression {
   }
 }
 
-class BooleanLiteral implements Expression {
+/**
+ * AST node type representing a boolean literal.
+ *
+ * @public
+ */
+export class BooleanLiteral implements Expression {
   nodeType: 'expression';
 
   constructor(public token: Token, public value: boolean) {
@@ -195,7 +274,12 @@ class BooleanLiteral implements Expression {
   }
 }
 
-class ArrayLiteral implements Expression {
+/**
+ * AST node type representing an array literal.
+ *
+ * @public
+ */
+export class ArrayLiteral implements Expression {
   nodeType: 'expression';
 
   constructor(public token: Token, public values: Expression[]) {
@@ -209,7 +293,12 @@ class ArrayLiteral implements Expression {
   }
 }
 
-class PrefixExpression implements Expression {
+/**
+ * AST node type representing a unary operator expression like `!true` or `-2`.
+ *
+ * @public
+ */
+export class PrefixExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -227,7 +316,12 @@ class PrefixExpression implements Expression {
   }
 }
 
-class InfixExpression implements Expression {
+/**
+ * AST node type representing a binary operator expression like `1 + 2`.
+ *
+ * @public
+ */
+export class InfixExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -246,7 +340,12 @@ class InfixExpression implements Expression {
   }
 }
 
-class IfExpression implements Expression {
+/**
+ * AST node type representing an `if` or (`if`/`else`) conditional expression.
+ *
+ * @public
+ */
+export class IfExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -267,7 +366,12 @@ class IfExpression implements Expression {
   }
 }
 
-class WhileExpression implements Expression {
+/**
+ * AST node type representing a `while` or `loop` expression.
+ *
+ * @public
+ */
+export class WhileExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -286,7 +390,12 @@ class WhileExpression implements Expression {
   }
 }
 
-class FunctionLiteral implements Expression {
+/**
+ * AST node type representing a function literal (`fn(...params) { ... }`).
+ *
+ * @public
+ */
+export class FunctionLiteral implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -308,7 +417,12 @@ class FunctionLiteral implements Expression {
   }
 }
 
-class GeneratorLiteral implements Expression {
+/**
+ * AST node type representing a generator literal (`gen(...params) { ... }`).
+ *
+ * @public
+ */
+export class GeneratorLiteral implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -330,7 +444,12 @@ class GeneratorLiteral implements Expression {
   }
 }
 
-class NextExpression implements Expression {
+/**
+ * AST node type representing a `next` expression.
+ *
+ * @public
+ */
+export class NextExpression implements Expression {
   nodeType: 'expression';
 
   constructor(public token: Token, public right?: Expression) {
@@ -345,7 +464,12 @@ class NextExpression implements Expression {
   }
 }
 
-class IndexExpression implements Expression {
+/**
+ * AST node type representing an array index expression like `arr[1]`.
+ *
+ * @public
+ */
+export class IndexExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -361,7 +485,13 @@ class IndexExpression implements Expression {
   }
 }
 
-class CallExpression implements Expression {
+/**
+ * AST node type representing a function or generator call expression
+ * like `f(...args)`.
+ *
+ * @public
+ */
+export class CallExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -378,7 +508,12 @@ class CallExpression implements Expression {
   }
 }
 
-class NoteExpression implements Expression {
+/**
+ * AST node type representing a MIDI note expression.
+ *
+ * @public
+ */
+export class NoteExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -395,7 +530,12 @@ class NoteExpression implements Expression {
   }
 }
 
-class SkipExpression implements Expression {
+/**
+ * AST node type representing a MIDI skip expression.
+ *
+ * @public
+ */
+export class SkipExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -412,7 +552,12 @@ class SkipExpression implements Expression {
   }
 }
 
-class CCExpression implements Expression {
+/**
+ * AST node type representing a MIDI CC message expression.
+ *
+ * @public
+ */
+export class CCExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
@@ -428,34 +573,3 @@ class CCExpression implements Expression {
     }`;
   }
 }
-
-export {
-  Node,
-  Statement,
-  Expression,
-  Program,
-  DeclareStatement,
-  AssignStatement,
-  ReturnStatement,
-  YieldStatement,
-  ExpressionStatement,
-  BlockStatement,
-  ContinueStatement,
-  BreakStatement,
-  Identifier,
-  IntegerLiteral,
-  BooleanLiteral,
-  ArrayLiteral,
-  PrefixExpression,
-  InfixExpression,
-  IfExpression,
-  WhileExpression,
-  FunctionLiteral,
-  GeneratorLiteral,
-  NextExpression,
-  IndexExpression,
-  CallExpression,
-  NoteExpression,
-  SkipExpression,
-  CCExpression,
-};

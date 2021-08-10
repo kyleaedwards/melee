@@ -7,10 +7,20 @@
  * Released under the MIT License.
  */
 
+/**
+ * Abstract syntax tree mechanisms and node types.
+ */
+import * as ast from './ast';
+
+/**
+ * Melee object types.
+ */
+import * as obj from './object';
+
 export { Lexer } from './lexer';
 export { Parser } from './parser';
-export * as ast from './ast';
-export * as obj from './object';
 export { VM } from './vm';
 export { Token, TokenType, tokenIs } from './token';
 export { Repl } from './repl';
+
+export { ast, obj };

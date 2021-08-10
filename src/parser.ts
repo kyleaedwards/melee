@@ -41,15 +41,45 @@ const PRECEDENCE_MAP: Record<string, precedence> = {
   lbracket: precedence.IDX,
 };
 
-class Parser {
-  curr: Token;
-  peek: Token;
-  errors: string[];
+/**
+ * Parses tokens to generate an AST (abstract syntax tree).
+ */
+export class Parser {
+  /**
+   * Current token being parsed.
+   */
+  private curr: Token;
 
-  prefixParseFns: Record<string, prefixParseFn>;
-  infixParseFns: Record<string, infixParseFn>;
+  /**
+   * Next token to be parsed.
+   */
+  private peek: Token;
 
-  constructor(public lexer: Lexer) {
+  /**
+   * Collection of errors incurred during the parsing process.
+   */
+  public errors: string[];
+
+  /**
+   * Mapping of tokens to prefix parser methods.
+   *
+   * @internal
+   */
+  private prefixParseFns: Record<string, prefixParseFn>;
+
+  /**
+   * Mapping of tokens to infix parser methods.
+   *
+   * @internal
+   */
+  private infixParseFns: Record<string, infixParseFn>;
+
+  constructor(
+    /**
+     * Lexer instantiated with code to be parsed.
+     */
+    public lexer: Lexer,
+  ) {
     this.errors = [];
 
     this.prefixParseFns = {
@@ -103,17 +133,6 @@ class Parser {
     this.peek = this.lexer.nextToken();
   }
 
-  public expectPeek(t: TokenType): boolean {
-    if (tokenIs(this.peek, t)) {
-      this.nextToken();
-      return true;
-    } else {
-      const msg = `Expected next token to be ${t}, got ${this.peek[0]} instead`;
-      this.errors.push(msg);
-      return false;
-    }
-  }
-
   /**
    * Starts as the first lexer token and attempts to parse the full program.
    *
@@ -135,7 +154,7 @@ class Parser {
 
   /** Statements **/
 
-  parseStatement(): ast.Statement | undefined {
+  private parseStatement(): ast.Statement | undefined {
     switch (this.curr[0]) {
       case 'return':
         return this.parseReturnStatement();
@@ -166,7 +185,7 @@ class Parser {
     }
   }
 
-  parseDeclareStatement(): ast.DeclareStatement | undefined {
+  private parseDeclareStatement(): ast.DeclareStatement | undefined {
     const name = new ast.Identifier(this.curr, this.curr[1]);
     this.nextToken();
     const declare = this.curr;
@@ -185,7 +204,7 @@ class Parser {
     return new ast.DeclareStatement(declare, name, value);
   }
 
-  parseAssignStatement(): ast.AssignStatement | undefined {
+  private parseAssignStatement(): ast.AssignStatement | undefined {
     const name = new ast.Identifier(this.curr, this.curr[1]);
     this.nextToken();
     const declare = this.curr;
@@ -197,7 +216,7 @@ class Parser {
     return new ast.AssignStatement(declare, name, value);
   }
 
-  parseReturnStatement(): ast.ReturnStatement {
+  private parseReturnStatement(): ast.ReturnStatement {
     const token = this.curr;
     this.nextToken();
     const value = this.parseExpression(precedence.NIL);
@@ -207,7 +226,7 @@ class Parser {
     return new ast.ReturnStatement(token, value);
   }
 
-  parseYieldStatement(): ast.YieldStatement {
+  private parseYieldStatement(): ast.YieldStatement {
     const token = this.curr;
     this.nextToken();
     const value = this.parseExpression(precedence.NIL);
@@ -217,7 +236,7 @@ class Parser {
     return new ast.YieldStatement(token, value);
   }
 
-  parseExpressionStatement(): ast.ExpressionStatement {
+  private parseExpressionStatement(): ast.ExpressionStatement {
     const token = this.curr;
     const expr = this.parseExpression(precedence.NIL);
 
@@ -226,7 +245,7 @@ class Parser {
     return new ast.ExpressionStatement(token, expr);
   }
 
-  parseBlockStatement(): ast.BlockStatement {
+  private parseBlockStatement(): ast.BlockStatement {
     const block = new ast.BlockStatement(this.curr, []);
     this.nextToken();
 
@@ -246,7 +265,9 @@ class Parser {
 
   /** Expressions **/
 
-  parseExpression(precedence: number): ast.Expression | undefined {
+  private parseExpression(
+    precedence: number,
+  ): ast.Expression | undefined {
     // Attempt to parse a prefix expression
     const prefixFn = this.prefixParseFns[this.curr[0]];
     if (!prefixFn) {
@@ -274,7 +295,7 @@ class Parser {
     return left;
   }
 
-  parsePrefixExpression(): ast.Expression | undefined {
+  private parsePrefixExpression(): ast.Expression | undefined {
     const token = this.curr;
     const operator = this.curr[1];
 
@@ -284,7 +305,7 @@ class Parser {
     return new ast.PrefixExpression(token, operator, right);
   }
 
-  parseInfixExpression(
+  private parseInfixExpression(
     left?: ast.Expression,
   ): ast.Expression | undefined {
     const token = this.curr;
@@ -297,7 +318,7 @@ class Parser {
     return new ast.InfixExpression(token, left, operator, right);
   }
 
-  parseIndexExpression(
+  private parseIndexExpression(
     collection?: ast.Expression,
   ): ast.Expression | undefined {
     const token = this.curr;
@@ -313,7 +334,7 @@ class Parser {
     return new ast.IndexExpression(token, collection, index);
   }
 
-  parseNoteExpression(): ast.NoteExpression {
+  private parseNoteExpression(): ast.NoteExpression {
     const token = this.curr;
 
     this.nextToken();
@@ -322,7 +343,7 @@ class Parser {
     return new ast.NoteExpression(token, data);
   }
 
-  parseSkipExpression(): ast.SkipExpression {
+  private parseSkipExpression(): ast.SkipExpression {
     const token = this.curr;
 
     this.nextToken();
@@ -331,7 +352,7 @@ class Parser {
     return new ast.SkipExpression(token, duration);
   }
 
-  parseCCExpression(): ast.CCExpression {
+  private parseCCExpression(): ast.CCExpression {
     const token = this.curr;
 
     this.nextToken();
@@ -340,7 +361,7 @@ class Parser {
     return new ast.CCExpression(token, message);
   }
 
-  parseParentheticalExpression(): ast.Expression | undefined {
+  private parseParentheticalExpression(): ast.Expression | undefined {
     this.nextToken();
     const expr = this.parseExpression(precedence.NIL);
     if (!this.expectPeek('rparen')) {
@@ -349,29 +370,29 @@ class Parser {
     return expr;
   }
 
-  parseIdentifier(): ast.Identifier {
+  private parseIdentifier(): ast.Identifier {
     return new ast.Identifier(this.curr, this.curr[1]);
   }
 
-  parseBooleanLiteral(): ast.BooleanLiteral {
+  private parseBooleanLiteral(): ast.BooleanLiteral {
     return new ast.BooleanLiteral(this.curr, this.curr[1] === 'true');
   }
 
-  parseIntegerLiteral(): ast.IntegerLiteral {
+  private parseIntegerLiteral(): ast.IntegerLiteral {
     return new ast.IntegerLiteral(
       this.curr,
       parseInt(this.curr[1], 10),
     );
   }
 
-  parseArrayLiteral(): ast.ArrayLiteral {
+  private parseArrayLiteral(): ast.ArrayLiteral {
     return new ast.ArrayLiteral(
       this.curr,
-      this.parseArgumentList('rbracket'),
+      this.parseExpressionList('rbracket'),
     );
   }
 
-  parseFunctionLiteral(): ast.FunctionLiteral | undefined {
+  private parseFunctionLiteral(): ast.FunctionLiteral | undefined {
     const token = this.curr;
     if (!this.expectPeek('lparen')) return;
     const parameters = this.parseFunctionParameters();
@@ -380,7 +401,7 @@ class Parser {
     return new ast.FunctionLiteral(token, parameters, body);
   }
 
-  parseGeneratorLiteral(): ast.GeneratorLiteral | undefined {
+  private parseGeneratorLiteral(): ast.GeneratorLiteral | undefined {
     const token = this.curr;
     if (!this.expectPeek('lparen')) return;
     const parameters = this.parseFunctionParameters();
@@ -389,7 +410,7 @@ class Parser {
     return new ast.GeneratorLiteral(token, parameters, body);
   }
 
-  parseNext(): ast.NextExpression {
+  private parseNext(): ast.NextExpression {
     const token = this.curr;
 
     this.nextToken();
@@ -398,7 +419,7 @@ class Parser {
     return new ast.NextExpression(token, right);
   }
 
-  parseConditional(): ast.IfExpression | undefined {
+  private parseConditional(): ast.IfExpression | undefined {
     const token = this.curr;
     if (!this.expectPeek('lparen')) return;
 
@@ -426,7 +447,7 @@ class Parser {
     );
   }
 
-  parseWhile(): ast.WhileExpression | undefined {
+  private parseWhile(): ast.WhileExpression | undefined {
     const token = this.curr;
 
     // If using the syntactic sugar `loop` keyword, just
@@ -448,27 +469,29 @@ class Parser {
     return new ast.WhileExpression(token, condition, block);
   }
 
-  parseCallExpression(left?: ast.Expression): ast.CallExpression {
+  private parseCallExpression(
+    left?: ast.Expression,
+  ): ast.CallExpression {
     const token = this.curr;
-    const args = this.parseArgumentList('rparen');
+    const args = this.parseExpressionList('rparen');
     return new ast.CallExpression(token, left, args);
   }
 
   /** Utilities **/
 
-  peekPrecedence(): precedence {
+  private peekPrecedence(): precedence {
     return PRECEDENCE_MAP[this.peek[0]]
       ? PRECEDENCE_MAP[this.peek[0]]
       : precedence.NIL;
   }
 
-  currPrecedence(): precedence {
+  private currPrecedence(): precedence {
     return PRECEDENCE_MAP[this.curr[0]]
       ? PRECEDENCE_MAP[this.curr[0]]
       : precedence.NIL;
   }
 
-  parseFunctionParameters(): ast.Identifier[] {
+  private parseFunctionParameters(): ast.Identifier[] {
     const parameters: ast.Identifier[] = [];
 
     if (tokenIs(this.peek, 'rparen')) {
@@ -493,7 +516,7 @@ class Parser {
     return parameters;
   }
 
-  parseArgumentList(endChar: TokenType): ast.Expression[] {
+  private parseExpressionList(endChar: TokenType): ast.Expression[] {
     const args: ast.Expression[] = [];
 
     if (tokenIs(this.peek, endChar)) {
@@ -524,11 +547,20 @@ class Parser {
     return args;
   }
 
-  skipSemicolon(): void {
+  private expectPeek(t: TokenType): boolean {
+    if (tokenIs(this.peek, t)) {
+      this.nextToken();
+      return true;
+    } else {
+      const msg = `Expected next token to be ${t}, got ${this.peek[0]} instead`;
+      this.errors.push(msg);
+      return false;
+    }
+  }
+
+  private skipSemicolon(): void {
     if (tokenIs(this.peek, 'semicolon')) {
       this.nextToken();
     }
   }
 }
-
-export { Parser };

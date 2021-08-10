@@ -13,6 +13,13 @@ export const MAX_STACK_SIZE = 1024;
 export const MAX_VARIABLES = 65536;
 
 /**
+ * Literals
+ */
+const NULL = new obj.Null();
+const TRUE = new obj.Bool(true);
+const FALSE = new obj.Bool(false);
+
+/**
  * Asserts stack object is defined.
  *
  * @param obj - Object to be compared
@@ -78,14 +85,14 @@ export function createGlobalVariables(
  * Virtual stack machine for executing instructions.
  */
 export class VM {
-  public constants: obj.BaseObject[];
-  public variables: (obj.BaseObject | undefined)[];
+  private constants: obj.BaseObject[];
+  private variables: (obj.BaseObject | undefined)[];
 
-  public stack: (obj.BaseObject | undefined)[];
-  public sp: number;
+  private stack: (obj.BaseObject | undefined)[];
+  private sp: number;
 
-  public frames: obj.Frame[];
-  public fp: number;
+  private frames: obj.Frame[];
+  private fp: number;
 
   private coroutine?: obj.ExecutionState;
 
@@ -113,7 +120,14 @@ export class VM {
     );
   }
 
-  createCoroutine(
+  /**
+   * Create a new coroutine execution state for a generator sequence.
+   *
+   * @param closure - Closure-wrapped sequence
+   * @param args - Function arguments to place in the coroutine stack
+   * @returns New execution state
+   */
+  private createCoroutine(
     closure: obj.Closure,
     args: obj.BaseObject[],
   ): obj.ExecutionState {
@@ -145,7 +159,15 @@ export class VM {
     };
   }
 
-  enterCoroutine(executionState: obj.ExecutionState): void {
+  /**
+   * Enters a new coroutine by replacing the VM execution state with one saved
+   * by a generator sequence.
+   *
+   * @param executionState - Saved execution state
+   *
+   * @internal
+   */
+  private enterCoroutine(executionState: obj.ExecutionState): void {
     if (!executionState.parent) {
       throw new Error('Cannot enter a root-level coroutine');
     }
@@ -162,7 +184,13 @@ export class VM {
     this.coroutine = executionState;
   }
 
-  leaveCoroutine(): void {
+  /**
+   * Leaves the current coroutine context and restore the old
+   * VM execution state.
+   *
+   * @internal
+   */
+  private leaveCoroutine(): void {
     const executionState = this.coroutine;
     if (!executionState || !executionState.parent) {
       throw new Error('Cannot leave root execution state');
@@ -185,6 +213,8 @@ export class VM {
    * Pretty-prints information about the VM state.
    *
    * @returns Stringified stack items
+   *
+   * @internal
    */
   printState(): string {
     let curr = this.sp;
@@ -213,21 +243,8 @@ export class VM {
    *
    * @internal
    */
-  frame(): obj.Frame {
+  private frame(): obj.Frame {
     return this.frames[this.fp - 1];
-  }
-
-  /**
-   * Returns the next object on the stack, or undefined if the
-   * stack is empty.
-   *
-   * @returns Next stack object
-   */
-  peek(): obj.BaseObject | undefined {
-    if (this.sp === 0) {
-      return undefined;
-    }
-    return this.stack[this.sp - 1];
   }
 
   /**
@@ -236,7 +253,7 @@ export class VM {
    *
    * @returns Next stack object
    */
-  lastElement(): obj.BaseObject | undefined {
+  public lastElement(): obj.BaseObject | undefined {
     return this.stack[this.sp];
   }
 
@@ -245,8 +262,10 @@ export class VM {
    * the stack pointer.
    *
    * @param o - New object
+   *
+   * @internal
    */
-  push(o: obj.BaseObject): void {
+  private push(o: obj.BaseObject): void {
     if (this.sp >= MAX_STACK_SIZE) {
       throw new Error('Maximum stack size exceeded');
     }
@@ -259,8 +278,10 @@ export class VM {
    * the stack pointer.
    *
    * @param o - New object
+   *
+   * @internal
    */
-  pop(): obj.BaseObject | undefined {
+  private pop(): obj.BaseObject | undefined {
     const o = this.stack[this.sp - 1];
     this.sp--;
     return o;
@@ -272,7 +293,7 @@ export class VM {
    *
    * @internal
    */
-  jump(): void {
+  private jump(): void {
     const frame = this.frame();
     const destination = unpackBigEndian(
       frame.instructions(),
@@ -286,9 +307,10 @@ export class VM {
    * Reads operand at offset.
    *
    * @param width - Byte width of operand
+   *
    * @internal
    */
-  readOperand(width: number): number {
+  private readOperand(width: number): number {
     const frame = this.frame();
     const operand = unpackBigEndian(
       frame.instructions(),
@@ -303,7 +325,7 @@ export class VM {
    * Iterates over the compiler instructions item-by-item, using the
    * stack to hold values and perform operations.
    */
-  run(): void {
+  public run(): void {
     let frame = this.frame();
     let inst = frame.instructions();
 
@@ -370,7 +392,7 @@ export class VM {
               'Cannot retrieve an element from a non-array',
             );
           }
-          this.push(collection.items[index.value] ?? obj.NULL);
+          this.push(collection.items[index.value] ?? NULL);
           break;
         }
         case Opcode.POP: {
@@ -378,13 +400,13 @@ export class VM {
           break;
         }
         case Opcode.TRUE:
-          this.push(obj.TRUE);
+          this.push(TRUE);
           break;
         case Opcode.FALSE:
-          this.push(obj.FALSE);
+          this.push(FALSE);
           break;
         case Opcode.NULL:
-          this.push(obj.NULL);
+          this.push(NULL);
           break;
         case Opcode.SETG: {
           const index = this.readOperand(2);
@@ -480,7 +502,7 @@ export class VM {
                 numArgs--;
               }
               while (numArgs < o.fn.numParams) {
-                this.push(obj.NULL);
+                this.push(NULL);
                 numArgs++;
               }
               frame = new obj.Frame(o, this.sp - numArgs);
@@ -494,7 +516,7 @@ export class VM {
                 numArgs--;
               }
               while (numArgs < o.fn.numParams) {
-                this.push(obj.NULL);
+                this.push(NULL);
                 numArgs++;
               }
               const args: obj.BaseObject[] = [];
@@ -559,7 +581,7 @@ export class VM {
             );
           }
           if (seq.done) {
-            this.push(obj.NULL);
+            this.push(NULL);
             break;
           }
           this.enterCoroutine(seq.executionState);
@@ -659,8 +681,10 @@ export class VM {
   /**
    * Pops the last item off of the stack, performs a unary
    * arithmetic negation, and pushes its result onto the stack.
+   *
+   * @internal
    */
-  execUnaryArithmeticNegation(): void {
+  private execUnaryArithmeticNegation(): void {
     const right = this.pop();
 
     if (!right) {
@@ -682,8 +706,10 @@ export class VM {
   /**
    * Pops the last item off of the stack, performs a unary
    * logical negation, and pushes its result onto the stack.
+   *
+   * @internal
    */
-  execUnaryLogicalNegation(): void {
+  private execUnaryLogicalNegation(): void {
     const right = this.pop();
 
     if (!right) {
@@ -693,11 +719,11 @@ export class VM {
     }
 
     if (right instanceof obj.Int) {
-      this.push(obj.Bool.from(right.value !== 0));
-    } else if (right === obj.NULL || right === obj.FALSE) {
-      this.push(obj.TRUE);
+      this.push(new obj.Bool(right.value !== 0));
+    } else if (right === NULL || right === FALSE) {
+      this.push(TRUE);
     } else {
-      this.push(obj.FALSE);
+      this.push(FALSE);
     }
   }
 
@@ -706,8 +732,10 @@ export class VM {
    * operation, and pushes its result onto the stack.
    *
    * @param op - Opcode byte
+   *
+   * @internal
    */
-  execBinaryArithmetic(op: Opcode): void {
+  private execBinaryArithmetic(op: Opcode): void {
     const left = this.stack[this.sp - 2];
     const right = this.stack[this.sp - 1];
     this.sp -= 2;
@@ -735,8 +763,10 @@ export class VM {
    * @param op - Opcode byte
    * @param left - Left operand
    * @param right - Right operand
+   *
+   * @internal
    */
-  execBinaryIntegerArithmetic(
+  private execBinaryIntegerArithmetic(
     op: Opcode,
     left: obj.Int,
     right: obj.Int,
@@ -774,8 +804,10 @@ export class VM {
    * operation, and pushes its result onto the stack.
    *
    * @param op - Opcode byte
+   *
+   * @internal
    */
-  execComparison(op: Opcode): void {
+  private execComparison(op: Opcode): void {
     const left = this.stack[this.sp - 2];
     const right = this.stack[this.sp - 1];
     this.sp -= 2;
@@ -788,10 +820,10 @@ export class VM {
     if (left instanceof obj.Bool && right instanceof obj.Bool) {
       switch (op) {
         case Opcode.EQ:
-          this.push(obj.Bool.from(left === right));
+          this.push(new obj.Bool(left === right));
           break;
         case Opcode.NOT_EQ:
-          this.push(obj.Bool.from(left !== right));
+          this.push(new obj.Bool(left !== right));
           break;
         default:
           throw new Error(
@@ -819,8 +851,10 @@ export class VM {
    * @param op - Opcode byte
    * @param left - Left operand
    * @param right - Right operand
+   *
+   * @internal
    */
-  execIntegerComparison(
+  private execIntegerComparison(
     op: Opcode,
     left: obj.Int,
     right: obj.Int,
@@ -846,6 +880,6 @@ export class VM {
         );
     }
 
-    this.push(obj.Bool.from(result));
+    this.push(new obj.Bool(result));
   }
 }

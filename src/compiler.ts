@@ -45,13 +45,16 @@ interface CompilerScope {
  * Compiles AST into serial bytecode instructions.
  */
 export class Compiler {
-  public scopes: CompilerScope[];
-  public scopeIndex: number;
-  public symbolTable: SymbolTable;
+  private scopes: CompilerScope[];
+  private scopeIndex: number;
+  private symbolTable: SymbolTable;
   private currentLoopStart?: number;
   private breaks: number[] = [];
 
   constructor(
+    /**
+     * Constant values referenced by the VM.
+     */
     public constants: BaseObject[] = [],
     symbolTable?: SymbolTable,
   ) {
@@ -71,8 +74,10 @@ export class Compiler {
    * Gets the current scope. (Can't use getters in ES3.)
    *
    * @returns Current scope
+   *
+   * @internal
    */
-  scope(): CompilerScope {
+  private scope(): CompilerScope {
     return this.scopes[this.scopeIndex];
   }
 
@@ -80,8 +85,10 @@ export class Compiler {
    * Gets the current scope's instructions. (Can't use getters in ES3.)
    *
    * @returns Instruction bytecode
+   *
+   * @internal
    */
-  instructions(): Bytecode {
+  public instructions(): Bytecode {
     return this.scopes[this.scopeIndex].instructions;
   }
 
@@ -90,7 +97,7 @@ export class Compiler {
    *
    * @param node - AST node, preferrably a program node
    */
-  compile(node: ast.Node): void {
+  public compile(node: ast.Node): void {
     if (
       node instanceof ast.Program ||
       node instanceof ast.BlockStatement
@@ -396,7 +403,7 @@ export class Compiler {
    *
    * @internal
    */
-  pushScope(symbolTable?: SymbolTable): void {
+  private pushScope(symbolTable?: SymbolTable): void {
     this.scopeIndex++;
     this.scopes.push({
       instructions: new Uint8Array(0),
@@ -431,7 +438,7 @@ export class Compiler {
    *
    * @internal
    */
-  popScope(): Bytecode | undefined {
+  private popScope(): Bytecode | undefined {
     if (!this.scopeIndex || !this.symbolTable.parent) {
       return;
     }
@@ -448,7 +455,7 @@ export class Compiler {
    *
    * @internal
    */
-  addConstant(obj: BaseObject): number {
+  private addConstant(obj: BaseObject): number {
     this.constants.push(obj);
     return this.constants.length - 1;
   }
@@ -458,7 +465,7 @@ export class Compiler {
    *
    * @internal
    */
-  removeInstruction(): void {
+  private removeInstruction(): void {
     const position = this.scope().lastInstruction.position;
     this.scope().lastInstruction.opcode =
       this.scope().previousInstruction.opcode;
@@ -478,7 +485,7 @@ export class Compiler {
    *
    * @internal
    */
-  removeInstructionIf(op: Opcode): void {
+  private removeInstructionIf(op: Opcode): void {
     if (this.scope().lastInstruction.opcode === op) {
       this.removeInstruction();
     }
@@ -492,7 +499,10 @@ export class Compiler {
    *
    * @internal
    */
-  replaceInstruction(position: number, ...operands: number[]): void {
+  private replaceInstruction(
+    position: number,
+    ...operands: number[]
+  ): void {
     const op: Opcode = this.instructions()[position];
     this.instructions().set(
       createInstruction(op, ...operands),
@@ -509,7 +519,7 @@ export class Compiler {
    *
    * @internal
    */
-  emit(op: Opcode, ...operands: number[]): number {
+  private emit(op: Opcode, ...operands: number[]): number {
     const instruction = createInstruction(op, ...operands);
     const position = this.instructions().length;
     const temp = new Uint8Array(position + instruction.length);

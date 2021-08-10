@@ -50,7 +50,7 @@ function testScalar(
     assertObjectType(result, obj.Bool);
     expect(result.value).toEqual(expected);
   } else if (expected === null) {
-    expect(result).toEqual(obj.NULL);
+    expect(result).toBeInstanceOf(obj.Null);
   }
 }
 

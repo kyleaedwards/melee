@@ -1,8 +1,14 @@
+/**
+ * Melee object types.
+ */
+
 import { Bytecode } from './bytecode';
 
 /**
  * Call "stack" frame (might not be in the call stack) representing
  * a function's execution context.
+ *
+ * @public
  */
 export class Frame {
   /**
@@ -27,6 +33,8 @@ export class Frame {
 /**
  * Collection of frame and stack information representing
  * the current state of execution.
+ *
+ * @public
  */
 export interface ExecutionState {
   stack: (BaseObject | undefined)[];
@@ -37,6 +45,11 @@ export interface ExecutionState {
   seq?: Seq;
 }
 
+/**
+ * Object type label.
+ *
+ * @public
+ */
 export type Type =
   | 'null'
   | 'error'
@@ -55,30 +68,63 @@ export type Type =
   | 'closure'
   | 'free';
 
+/**
+ * Base object type interface.
+ *
+ * @public
+ */
 export interface BaseObject {
   type: Type;
   inspectObject: () => string;
 }
 
+/**
+ * MIDI value object interface for use in Melee runtimes.
+ *
+ * @public
+ */
 export interface MidiValue {
   type: string;
   data: number[];
 }
 
+/**
+ * MIDI object interface ensuring the object can be converted
+ * into a MIDI value.
+ *
+ * @public
+ */
 export interface MidiObject {
   midiValue: () => MidiValue;
 }
 
-export type NativeFnHandler = (...args: BaseObject[]) => BaseObject;
-
+/**
+ * Null type, contains no additional data.
+ *
+ * @public
+ */
 export class Null implements BaseObject {
+  static self?: Null;
+
   type: Type = 'null';
+
+  constructor() {
+    if (!Null.self) {
+      Null.self = this;
+    }
+    return Null.self;
+  }
 
   inspectObject(): string {
     return 'null';
   }
 }
 
+/**
+ * Error type. (To be implemented in the VM.)
+ *
+ * @public
+ */
 export class Err implements BaseObject {
   type: Type = 'error';
 
@@ -89,6 +135,11 @@ export class Err implements BaseObject {
   }
 }
 
+/**
+ * Internal return type, should not be exposed to runtimes.
+ *
+ * @internal
+ */
 export class Return implements BaseObject {
   type: Type = 'return';
 
@@ -99,6 +150,11 @@ export class Return implements BaseObject {
   }
 }
 
+/**
+ * Internal yield type, should not be exposed to runtimes.
+ *
+ * @internal
+ */
 export class Yield implements BaseObject {
   type: Type = 'yield';
 
@@ -109,6 +165,12 @@ export class Yield implements BaseObject {
   }
 }
 
+/**
+ * Integer type, contains a `value` property containing the implementation
+ * language's value.
+ *
+ * @public
+ */
 export class Int implements BaseObject {
   type: Type = 'integer';
 
@@ -119,20 +181,38 @@ export class Int implements BaseObject {
   }
 }
 
+/**
+ * Boolean type, contains a `value` property containing the implementation
+ * language's value.
+ *
+ * @public
+ */
 export class Bool implements BaseObject {
+  static t?: Bool;
+  static f?: Bool;
+
   type: Type = 'boolean';
 
-  constructor(public value: boolean) {}
+  constructor(public value: boolean) {
+    if (value) {
+      if (!Bool.t) Bool.t = this;
+      return Bool.t;
+    }
+    if (!Bool.f) Bool.f = this;
+    return Bool.f;
+  }
 
   inspectObject(): string {
     return this.value ? 'true' : 'false';
   }
-
-  static from(value: boolean): Bool {
-    return value ? TRUE : FALSE;
-  }
 }
 
+/**
+ * Array type, contains an array (in the implementation language) containing
+ * child BaseObjects.
+ *
+ * @public
+ */
 export class Arr implements BaseObject {
   type: Type = 'array';
 
@@ -145,6 +225,11 @@ export class Arr implements BaseObject {
   }
 }
 
+/**
+ * Base callable class for functions and generators.
+ *
+ * @public
+ */
 export class Callable implements BaseObject {
   type: Type = 'callable';
 
@@ -160,20 +245,35 @@ export class Callable implements BaseObject {
   }
 }
 
+/**
+ * Callable function type.
+ *
+ * @public
+ */
 export class Fn extends Callable {
   type: Type = 'function';
 }
 
+/**
+ * Callable generator type. Always returns a `Seq` object.
+ *
+ * @public
+ */
 export class Gen extends Callable {
   type: Type = 'generator';
 }
 
+/**
+ * Melee object wrapping a native function definition.
+ *
+ * @public
+ */
 export class NativeFn implements BaseObject {
   type: Type = 'native';
 
   constructor(
     public label: string,
-    public handler: NativeFnHandler,
+    public handler: (...args: BaseObject[]) => BaseObject,
   ) {}
 
   inspectObject(): string {
@@ -181,16 +281,26 @@ export class NativeFn implements BaseObject {
   }
 }
 
+/**
+ * Closure encapsulating scoped variables with a function or generator.
+ *
+ * @public
+ */
 export class Closure implements BaseObject {
   type: Type = 'closure';
 
   constructor(public fn: Callable, public vars: BaseObject[] = []) {}
 
   inspectObject(): string {
-    return `closure::${this.fn.inspectObject()}`;
+    return this.fn.inspectObject();
   }
 }
 
+/**
+ * Sequence type, instance of a generator execution.
+ *
+ * @public
+ */
 export class Seq implements BaseObject {
   type: Type = 'sequence';
   public done: boolean;
@@ -208,6 +318,11 @@ export class Seq implements BaseObject {
   }
 }
 
+/**
+ * MIDI note object to be used in musical runtimes.
+ *
+ * @public
+ */
 export class MidiNote implements BaseObject, MidiObject {
   type: Type = 'note';
 
@@ -232,6 +347,11 @@ export class MidiNote implements BaseObject, MidiObject {
   }
 }
 
+/**
+ * MIDI CC message object to be used in musical runtimes.
+ *
+ * @public
+ */
 export class MidiCC implements BaseObject, MidiObject {
   type: Type = 'cc';
 
@@ -249,56 +369,18 @@ export class MidiCC implements BaseObject, MidiObject {
   }
 }
 
-export class Environment {
-  store: Record<string, BaseObject>;
-
-  constructor(
-    public context: 'global' | 'function' | 'sequence',
-    public parent?: Environment,
-  ) {
-    this.store = {};
-  }
-
-  get(label: string): BaseObject {
-    if (this.store[label]) {
-      return this.store[label];
-    }
-    if (this.parent) {
-      return this.parent.get(label);
-    }
-    return new Err(`Identifier read before it was defined: ${label}`);
-  }
-
-  declare(label: string, value: BaseObject): BaseObject {
-    this.store[label] = value;
-    return value;
-  }
-
-  set(label: string, value: BaseObject): BaseObject {
-    if (this.store[label]) {
-      this.store[label] = value;
-      return value;
-    }
-    if (this.parent) {
-      return this.parent.set(label, value);
-    }
-    return new Err(`Identifier set before it was defined: ${label}`);
-  }
-}
-
-/* Literals */
-
-export const NULL = new Null();
-export const TRUE = new Bool(true);
-export const FALSE = new Bool(false);
-
 /* Utilities */
+
+const NULL = new Null();
+const FALSE = new Bool(false);
 
 /**
  * Returns false if 0, null, or false, otherwise true.
  *
  * @param obj - Any object
  * @returns True if a truthy object
+ *
+ * @public
  */
 export function isTruthy(obj: BaseObject | undefined): boolean {
   if (obj instanceof Int) {

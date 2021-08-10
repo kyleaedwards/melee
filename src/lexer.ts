@@ -50,7 +50,12 @@ export class Lexer {
    *
    * @param input - Code string
    */
-  constructor(public input: string) {
+  constructor(
+    /**
+     * Code snippet to be lexed.
+     */
+    public input: string,
+  ) {
     this.position = 0;
     this.readPosition = 0;
     this.char = '';

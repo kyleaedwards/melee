@@ -1,5 +1,13 @@
-import { Arr, BaseObject, Bool, Int, NativeFn, NULL } from './object';
+import { Arr, BaseObject, Bool, Int, NativeFn, Null } from './object';
 
+const NULL = new Null();
+
+/**
+ * Collection of native function implementations that cannot be implemented
+ * as easily with the compiled code itself.
+ *
+ * @internal
+ */
 export const NATIVE_FNS: NativeFn[] = [
   new NativeFn('len', (...args: BaseObject[]): BaseObject => {
     const arr = args[0];
@@ -151,22 +159,29 @@ export const NATIVE_FNS: NativeFn[] = [
   }),
 ];
 
-const NOTE_NAMES: string[][] = [
-  ['C'],
-  ['C#', 'Db'],
-  ['D'],
-  ['D#', 'Eb'],
-  ['E'],
-  ['F'],
-  ['F#', 'Gb'],
-  ['G'],
-  ['G#', 'Ab'],
-  ['A'],
-  ['A#', 'Bb'],
-  ['B'],
-];
-
-function midiToSPN(): Record<string, BaseObject> {
+/**
+ * Create a mapping of notes (in scientific pitch notation) to their
+ * corresponding integer MIDI pitch value.
+ *
+ * @returns Object containing integer MIDI value by note name
+ *
+ * @internal
+ */
+function createMidiMap(): Record<string, BaseObject> {
+  const NOTE_NAMES: string[][] = [
+    ['C'],
+    ['C#', 'Db'],
+    ['D'],
+    ['D#', 'Eb'],
+    ['E'],
+    ['F'],
+    ['F#', 'Gb'],
+    ['G'],
+    ['G#', 'Ab'],
+    ['A'],
+    ['A#', 'Bb'],
+    ['B'],
+  ];
   const midiMap: Record<string, BaseObject> = {};
   for (let midi = 0; midi < 128; midi++) {
     const oct = Math.floor(midi / 12) - 1;
@@ -181,8 +196,11 @@ function midiToSPN(): Record<string, BaseObject> {
   return midiMap;
 }
 
-const MIDI_MAP = midiToSPN();
-
+/**
+ * Default global variables placed in scope on startup.
+ *
+ * @internal
+ */
 export const BUILTINS = {
-  ...MIDI_MAP,
+  ...createMidiMap(),
 };

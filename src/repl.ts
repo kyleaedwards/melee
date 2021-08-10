@@ -7,6 +7,9 @@ import { VM, createGlobalVariables } from './vm';
 
 const MAX_REPL_HISTORY = 100;
 
+/**
+ * Read-eval-print loop for executing code from the command line.
+ */
 export class Repl {
   private constants: BaseObject[] = [];
   private globals: (BaseObject | undefined)[];
@@ -33,12 +36,9 @@ export class Repl {
     const program = parser.parse();
 
     const compiler = new Compiler(this.constants, this.symbolTable);
-    this.symbolTable = compiler.symbolTable;
-    this.constants = compiler.constants;
     compiler.compile(program);
 
     const vm = new VM(compiler, this.globals);
-    this.globals = vm.variables;
     vm.run();
 
     const obj = vm.lastElement();
