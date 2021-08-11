@@ -103,6 +103,8 @@ Hopefully you're starting to see how with a little bit of code you can build com
 | Type | Example | Description |
 | --- | --- | --- |
 | **print** | `print(...)` | Prints arguments to the console |
+| **len** | `len(arr)` | Returns the length of the array |
+| **range** | `range(n)` | Returns an array of length `n` containing the numbers `0` up to *and not including* `n` |
 | **rand** | `rand(n)` | Generates a random `int` from 0 up to *and not including* `n` |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
 | **min** | `min(arr)` | Returns the minimum value of an array of `int`s |

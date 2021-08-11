@@ -553,6 +553,20 @@ describe('VM', () => {
     ]);
   });
 
+  test('should support built-in function `range`', () => {
+    testInputs([
+      [`range(1)`, [0]],
+      [`range(3)`, [0, 1, 2]],
+      [`range(10)`, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]],
+    ]);
+
+    testError(`range(-100)`);
+    testError(`range(1, 2)`);
+    testError(`range(0)`);
+    testError(`range([])`);
+    testError(`range()`);
+  });
+
   test('should support MIDI `note` messages', () => {
     testInputs([
       [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],

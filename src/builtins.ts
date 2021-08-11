@@ -16,6 +16,24 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new Int(arr.items.length);
   }),
+  new NativeFn('range', (...args: BaseObject[]): BaseObject => {
+    const num = args[0];
+    if (args.length !== 1 || !(num instanceof Int)) {
+      throw new Error(
+        'Function `range` takes a single integer argument',
+      );
+    }
+    if (num.value < 1) {
+      throw new Error(
+        'Function `range(num)` requires num to be at least 1',
+      );
+    }
+    const items = [];
+    for (let i = 0; i < num.value; i++) {
+      items.push(new Int(i));
+    }
+    return new Arr(items);
+  }),
   new NativeFn('concat', (...args: BaseObject[]): BaseObject => {
     let items: BaseObject[] = [];
     args.forEach((arg) => {
