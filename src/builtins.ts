@@ -131,10 +131,10 @@ export const NATIVE_FNS: NativeFn[] = [
     const hi = args[0];
     if (args.length !== 1 || !(hi instanceof Int)) {
       throw new Error(
-        'Function `rand(num)` takes a single integer argument, which returns a number between 1 and the argument inclusively',
+        'Function `rand(num)` takes a single integer argument, which returns a number from 0 up to, but not including, num',
       );
     }
-    return new Int(Math.ceil(Math.random() * hi.value));
+    return new Int(Math.floor(Math.random() * hi.value));
   }),
   new NativeFn('rrand', (...args: BaseObject[]): BaseObject => {
     const lo = args[0];
@@ -145,13 +145,12 @@ export const NATIVE_FNS: NativeFn[] = [
       !(lo instanceof Int)
     ) {
       throw new Error(
-        'Function `rrand(lo, hi)` takes a two integer arguments, the beginning and end of a range of numbers, one of which will be returned at random',
+        'Function `rrand(lo, hi)` takes a two integer arguments, returning a random number from lo up to, but not including, hi',
       );
     }
-    return new Int(
-      lo.value +
-        Math.floor(Math.random() * (hi.value + 1 - lo.value)),
-    );
+    const x = Math.min(lo.value, hi.value);
+    const y = Math.max(lo.value, hi.value);
+    return new Int(x + Math.floor(Math.random() * (y - x)));
   }),
   new NativeFn('print', (...args: BaseObject[]): BaseObject => {
     console.log(...args.map((arg) => arg.inspectObject()));
