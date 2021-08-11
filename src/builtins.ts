@@ -1,4 +1,13 @@
-import { Arr, BaseObject, Bool, Int, NativeFn, Null } from './object';
+import {
+  Arr,
+  BaseObject,
+  Bool,
+  Fn,
+  Int,
+  NativeFn,
+  Null,
+} from './object';
+import type { VM } from './vm';
 
 const NULL = new Null();
 
@@ -9,44 +18,50 @@ const NULL = new Null();
  * @internal
  */
 export const NATIVE_FNS: NativeFn[] = [
-  new NativeFn('len', (...args: BaseObject[]): BaseObject => {
+  new NativeFn('len', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     if (args.length !== 1 || !(arr instanceof Arr)) {
       throw new Error('Function `len` takes a single array argument');
     }
     return new Int(arr.items.length);
   }),
-  new NativeFn('range', (...args: BaseObject[]): BaseObject => {
-    const num = args[0];
-    if (args.length !== 1 || !(num instanceof Int)) {
-      throw new Error(
-        'Function `range` takes a single integer argument',
-      );
-    }
-    if (num.value < 1) {
-      throw new Error(
-        'Function `range(num)` requires num to be at least 1',
-      );
-    }
-    const items = [];
-    for (let i = 0; i < num.value; i++) {
-      items.push(new Int(i));
-    }
-    return new Arr(items);
-  }),
-  new NativeFn('concat', (...args: BaseObject[]): BaseObject => {
-    let items: BaseObject[] = [];
-    args.forEach((arg) => {
-      if (!(arg instanceof Arr)) {
+  new NativeFn(
+    'range',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const num = args[0];
+      if (args.length !== 1 || !(num instanceof Int)) {
         throw new Error(
-          'Function `concat` only accepts array arguments',
+          'Function `range` takes a single integer argument',
         );
       }
-      items = items.concat(arg.items);
-    });
-    return new Arr(items);
-  }),
-  new NativeFn('min', (...args: BaseObject[]): BaseObject => {
+      if (num.value < 1) {
+        throw new Error(
+          'Function `range(num)` requires num to be at least 1',
+        );
+      }
+      const items = [];
+      for (let i = 0; i < num.value; i++) {
+        items.push(new Int(i));
+      }
+      return new Arr(items);
+    },
+  ),
+  new NativeFn(
+    'concat',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      let items: BaseObject[] = [];
+      args.forEach((arg) => {
+        if (!(arg instanceof Arr)) {
+          throw new Error(
+            'Function `concat` only accepts array arguments',
+          );
+        }
+        items = items.concat(arg.items);
+      });
+      return new Arr(items);
+    },
+  ),
+  new NativeFn('min', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     if (args.length !== 1 || !(arr instanceof Arr)) {
       throw new Error('Function `min` takes a single array argument');
@@ -63,7 +78,7 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new Int(Math.min.apply(null, items));
   }),
-  new NativeFn('max', (...args: BaseObject[]): BaseObject => {
+  new NativeFn('max', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     if (args.length !== 1 || !(arr instanceof Arr)) {
       throw new Error('Function `max` takes a single array argument');
@@ -80,7 +95,7 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new Int(Math.max.apply(null, items));
   }),
-  new NativeFn('sort', (...args: BaseObject[]): BaseObject => {
+  new NativeFn('sort', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     if (args.length !== 1 || !(arr instanceof Arr)) {
       throw new Error(
@@ -107,7 +122,7 @@ export const NATIVE_FNS: NativeFn[] = [
     });
     return new Arr(items);
   }),
-  new NativeFn('rev', (...args: BaseObject[]): BaseObject => {
+  new NativeFn('rev', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     if (args.length !== 1 || !(arr instanceof Arr)) {
       throw new Error('Function `rev` takes a single array argument');
@@ -118,7 +133,7 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new Arr(items);
   }),
-  new NativeFn('push', (...args: BaseObject[]): BaseObject => {
+  new NativeFn('push', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     const next = args[1] || NULL;
     if (args.length !== 2 || !(arr instanceof Arr)) {
@@ -129,23 +144,26 @@ export const NATIVE_FNS: NativeFn[] = [
     arr.items.push(next);
     return arr;
   }),
-  new NativeFn('pop', (...args: BaseObject[]): BaseObject => {
+  new NativeFn('pop', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
     if (args.length !== 1 || !(arr instanceof Arr)) {
       throw new Error('Function `pop` takes a single array argument');
     }
     return arr.items.pop() || NULL;
   }),
-  new NativeFn('shift', (...args: BaseObject[]): BaseObject => {
-    const arr = args[0];
-    if (args.length !== 1 || !(arr instanceof Arr)) {
-      throw new Error(
-        'Function `shift` takes a single array argument',
-      );
-    }
-    return arr.items.shift() || NULL;
-  }),
-  new NativeFn('rand', (...args: BaseObject[]): BaseObject => {
+  new NativeFn(
+    'shift',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      if (args.length !== 1 || !(arr instanceof Arr)) {
+        throw new Error(
+          'Function `shift` takes a single array argument',
+        );
+      }
+      return arr.items.shift() || NULL;
+    },
+  ),
+  new NativeFn('rand', (_: VM, ...args: BaseObject[]): BaseObject => {
     const hi = args[0];
     if (args.length !== 1 || !(hi instanceof Int)) {
       throw new Error(
@@ -154,26 +172,32 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new Int(Math.floor(Math.random() * hi.value));
   }),
-  new NativeFn('rrand', (...args: BaseObject[]): BaseObject => {
-    const lo = args[0];
-    const hi = args[1];
-    if (
-      args.length !== 2 ||
-      !(hi instanceof Int) ||
-      !(lo instanceof Int)
-    ) {
-      throw new Error(
-        'Function `rrand(lo, hi)` takes a two integer arguments, returning a random number from lo up to, but not including, hi',
-      );
-    }
-    const x = Math.min(lo.value, hi.value);
-    const y = Math.max(lo.value, hi.value);
-    return new Int(x + Math.floor(Math.random() * (y - x)));
-  }),
-  new NativeFn('print', (...args: BaseObject[]): BaseObject => {
-    console.log(...args.map((arg) => arg.inspectObject()));
-    return NULL;
-  }),
+  new NativeFn(
+    'rrand',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const lo = args[0];
+      const hi = args[1];
+      if (
+        args.length !== 2 ||
+        !(hi instanceof Int) ||
+        !(lo instanceof Int)
+      ) {
+        throw new Error(
+          'Function `rrand(lo, hi)` takes a two integer arguments, returning a random number from lo up to, but not including, hi',
+        );
+      }
+      const x = Math.min(lo.value, hi.value);
+      const y = Math.max(lo.value, hi.value);
+      return new Int(x + Math.floor(Math.random() * (y - x)));
+    },
+  ),
+  new NativeFn(
+    'print',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      console.log(...args.map((arg) => arg.inspectObject()));
+      return NULL;
+    },
+  ),
 ];
 
 /**

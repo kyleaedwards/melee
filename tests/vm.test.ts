@@ -564,6 +564,7 @@ describe('VM', () => {
     testError(`range(1, 2)`);
     testError(`range(0)`);
     testError(`range([])`);
+    testError(`range(true)`);
     testError(`range()`);
   });
 

@@ -3,6 +3,7 @@
  */
 
 import { Bytecode } from './bytecode';
+import type { VM } from './vm';
 
 /**
  * Call "stack" frame (might not be in the call stack) representing
@@ -273,7 +274,7 @@ export class NativeFn implements BaseObject {
 
   constructor(
     public label: string,
-    public handler: (...args: BaseObject[]) => BaseObject,
+    public handler: (vm: VM, ...args: BaseObject[]) => BaseObject,
   ) {}
 
   inspectObject(): string {

@@ -330,8 +330,7 @@ export class VM {
     let inst = frame.instructions();
 
     while (frame.ip <= inst.length) {
-      frame.ip++;
-      const ip = frame.ip;
+      const ip = ++frame.ip;
       const op = inst[ip];
 
       switch (op) {
@@ -484,62 +483,10 @@ export class VM {
           }
           break;
         case Opcode.CALL: {
-          let numArgs = this.readOperand(1);
+          const numArgs = this.readOperand(1);
           const o = this.stack[this.sp - 1 - numArgs];
           assertStackObject(o);
-          if (
-            !(o instanceof obj.Closure) &&
-            !(o instanceof obj.NativeFn)
-          ) {
-            throw new Error(
-              'Cannot perform opcode CALL on a non-callable stack element',
-            );
-          }
-          if (o instanceof obj.Closure) {
-            if (o.fn instanceof obj.Fn) {
-              while (numArgs > o.fn.numParams) {
-                this.pop();
-                numArgs--;
-              }
-              while (numArgs < o.fn.numParams) {
-                this.push(NULL);
-                numArgs++;
-              }
-              frame = new obj.Frame(o, this.sp - numArgs);
-              inst = frame.instructions();
-              this.frames[this.fp] = frame;
-              this.fp++;
-              this.sp = frame.base + o.fn.numLocals;
-            } else if (o.fn instanceof obj.Gen) {
-              while (numArgs > o.fn.numParams) {
-                this.pop();
-                numArgs--;
-              }
-              while (numArgs < o.fn.numParams) {
-                this.push(NULL);
-                numArgs++;
-              }
-              const args: obj.BaseObject[] = [];
-              while (numArgs--) {
-                const arg = this.pop();
-                assertStackObject(arg);
-                args.unshift(arg);
-              }
-              this.pop(); // Get the closure out of the way.
-              this.push(
-                new obj.Seq(o, this.createCoroutine(o, args)),
-              );
-            }
-          } else if (o instanceof obj.NativeFn) {
-            const args: obj.BaseObject[] = [];
-            while (numArgs--) {
-              const arg = this.pop();
-              assertStackObject(arg);
-              args.unshift(arg);
-            }
-            this.sp -= numArgs + 1;
-            this.push(o.handler(...args));
-          }
+          this.call(o, numArgs);
           break;
         }
         case Opcode.RET: {
@@ -559,13 +506,10 @@ export class VM {
               this.coroutine.seq.done = true;
             }
             this.leaveCoroutine();
-            frame = this.frame();
-            inst = frame.instructions();
           } else {
             this.fp--;
             this.sp = frame.base - 1;
             frame = this.frames[this.fp - 1];
-            inst = frame.instructions();
             for (let i = 0; i < closureVars.length; i++) {
               this.stack[frame.base + i] = closureVars[i];
             }
@@ -585,16 +529,12 @@ export class VM {
             break;
           }
           this.enterCoroutine(seq.executionState);
-          frame = this.frame();
-          inst = frame.instructions();
           break;
         }
         case Opcode.YIELD: {
           const value = this.pop();
           assertStackObject(value);
           this.leaveCoroutine();
-          frame = this.frame();
-          inst = frame.instructions();
           this.push(value);
           break;
         }
@@ -675,7 +615,64 @@ export class VM {
           );
         }
       }
+      frame = this.frame();
+      inst = frame.instructions();
     }
+  }
+
+  private call(callee: obj.BaseObject, numArgs: number): void {
+    if (
+      !(callee instanceof obj.Closure) &&
+      !(callee instanceof obj.NativeFn)
+    ) {
+      throw new Error(
+        'Cannot perform opcode CALL on a non-callable stack element',
+      );
+    }
+    if (callee instanceof obj.Closure) {
+      const { fn } = callee;
+      while (numArgs > fn.numParams) {
+        this.pop();
+        numArgs--;
+      }
+      while (numArgs < fn.numParams) {
+        this.push(NULL);
+        numArgs++;
+      }
+      if (fn instanceof obj.Fn) {
+        const frame = new obj.Frame(callee, this.sp - numArgs);
+        this.frames[this.fp] = frame;
+        this.fp++;
+        this.sp = frame.base + fn.numLocals;
+      } else if (fn instanceof obj.Gen) {
+        const args = this.gatherArgs(numArgs);
+        this.push(
+          new obj.Seq(callee, this.createCoroutine(callee, args)),
+        );
+      }
+    } else if (callee instanceof obj.NativeFn) {
+      const args = this.gatherArgs(numArgs);
+      this.push(callee.handler(this, ...args));
+    }
+  }
+
+  /**
+   * Gather the expected arguments into an array of objects.
+   *
+   * @param numArgs - Number of expected arguments
+   * @returns Argument objects
+   *
+   * @internal
+   */
+  private gatherArgs(numArgs: number): obj.BaseObject[] {
+    const args: obj.BaseObject[] = [];
+    while (numArgs--) {
+      const arg = this.pop();
+      assertStackObject(arg);
+      args.unshift(arg);
+    }
+    this.pop(); // Get the closure or native function out of the way.
+    return args;
   }
 
   /**
