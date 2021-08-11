@@ -82,29 +82,6 @@ export class DeclareStatement implements Statement {
 }
 
 /**
- * AST node type representing a variable assignment statement like `var = 1;`.
- *
- * @public
- */
-export class AssignStatement implements Statement {
-  nodeType: 'statement';
-
-  constructor(
-    public token: Token,
-    public name: Identifier,
-    public value?: Expression,
-  ) {
-    this.nodeType = 'statement';
-  }
-
-  toString(): string {
-    return `${this.name.toString()} = ${
-      this.value ? this.value.toString() : ''
-    };`;
-  }
-}
-
-/**
  * AST node type representing a return statement like `return var;`.
  *
  * @public
@@ -237,6 +214,55 @@ export class Identifier implements Expression {
 
   toString(): string {
     return this.value;
+  }
+}
+
+/**
+ * AST node type representing a variable assignment expression like `var = 1;`
+ * or `arr[0] = 2`.
+ *
+ * @public
+ */
+export class AssignExpression implements Expression {
+  nodeType: 'expression';
+
+  constructor(
+    public token: Token,
+    public name: Expression,
+    public value?: Expression,
+  ) {
+    this.nodeType = 'expression';
+  }
+
+  toString(): string {
+    return `${this.name.toString()} = ${
+      this.value ? this.value.toString() : ''
+    };`;
+  }
+}
+
+/**
+ * AST node type representing a compound assignment expression like `var += 1;`
+ * or `arr[0] *= 2`.
+ *
+ * @public
+ */
+export class CompoundAssignExpression implements Expression {
+  nodeType: 'expression';
+
+  constructor(
+    public token: Token,
+    public name: Expression,
+    public operator: string,
+    public value?: Expression,
+  ) {
+    this.nodeType = 'expression';
+  }
+
+  toString(): string {
+    return `${this.name.toString()} ${this.operator} ${
+      this.value ? this.value.toString() : ''
+    };`;
   }
 }
 

@@ -189,19 +189,44 @@ export class Lexer {
         token = ['comma', this.char];
         break;
       case '+':
-        token = ['plus', this.char];
+        if (this.peekChar() == '=') {
+          this.readChar();
+          token = ['pluseq', '+='];
+        } else {
+          token = ['plus', this.char];
+        }
         break;
       case '-':
-        token = ['minus', this.char];
+        if (this.peekChar() == '=') {
+          this.readChar();
+          token = ['minuseq', '-='];
+        } else {
+          token = ['minus', this.char];
+        }
         break;
       case '*':
-        token = ['asterisk', this.char];
+        if (this.peekChar() == '=') {
+          this.readChar();
+          token = ['asteriskeq', '*='];
+        } else {
+          token = ['asterisk', this.char];
+        }
         break;
       case '/':
-        token = ['rslash', this.char];
+        if (this.peekChar() == '=') {
+          this.readChar();
+          token = ['rslasheq', '/='];
+        } else {
+          token = ['rslash', this.char];
+        }
         break;
       case '%':
-        token = ['percent', this.char];
+        if (this.peekChar() == '=') {
+          this.readChar();
+          token = ['percenteq', '%='];
+        } else {
+          token = ['percent', this.char];
+        }
         break;
       case '!':
         if (this.peekChar() == '=') {

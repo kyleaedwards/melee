@@ -43,6 +43,11 @@ describe('Lexer', () => {
       l := gen {
         yield note [Db3 64 1];
       };
+      a += 3;
+      b -= 4;
+      c *= 5;
+      d /= 6;
+      e %= 7;
     `;
 
     const expected: Token[] = [
@@ -98,6 +103,26 @@ describe('Lexer', () => {
       ['rbracket', ']'],
       ['semicolon', ';'],
       ['rbrace', '}'],
+      ['semicolon', ';'],
+      ['identifier', 'a'],
+      ['pluseq', '+='],
+      ['int', '3'],
+      ['semicolon', ';'],
+      ['identifier', 'b'],
+      ['minuseq', '-='],
+      ['int', '4'],
+      ['semicolon', ';'],
+      ['identifier', 'c'],
+      ['asteriskeq', '*='],
+      ['int', '5'],
+      ['semicolon', ';'],
+      ['identifier', 'd'],
+      ['rslasheq', '/='],
+      ['int', '6'],
+      ['semicolon', ';'],
+      ['identifier', 'e'],
+      ['percenteq', '%='],
+      ['int', '7'],
       ['semicolon', ';'],
     ];
 

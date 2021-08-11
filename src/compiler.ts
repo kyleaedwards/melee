@@ -121,33 +121,149 @@ export class Compiler {
           : Opcode.SET,
         index,
       );
-    } else if (node instanceof ast.AssignStatement) {
-      const sym = this.symbolTable.get(node.name.value);
+    } else if (node instanceof ast.AssignExpression) {
+      const name = node.name;
+      if (!(name instanceof ast.Identifier)) {
+        // Assignment for array expressions
+        if (name instanceof ast.IndexExpression) {
+          this.compile(name.collection);
+          this.compile(name.index);
+          if (node.value) {
+            this.compile(node.value);
+          }
+          this.emit(Opcode.SET_INDEX);
+
+          this.compile(name.collection);
+          this.compile(name.index);
+          this.emit(Opcode.INDEX);
+          return;
+        }
+        throw new Error(
+          'Left-hand of assignment must be a variable or an array index expression',
+        );
+      }
+      const sym = this.symbolTable.get(name.value);
       if (!sym) {
         throw new Error(
-          `Cannot assign undefined variable ${node.name.value}`,
+          `Cannot assign undefined variable ${name.value}`,
         );
       }
       if (node.value) {
         this.compile(node.value);
       }
       let opcode: Opcode;
+      let fetch: Opcode;
       switch (sym.type) {
         case ScopeType.FREE:
           opcode = Opcode.SETC;
+          fetch = Opcode.GETC;
           break;
         case ScopeType.LOCAL:
           opcode = Opcode.SET;
+          fetch = Opcode.GET;
           break;
         case ScopeType.GLOBAL:
           opcode = Opcode.SETG;
+          fetch = Opcode.GETG;
           break;
         default:
           throw new Error(
-            `Cannot assign unassigned variable ${node.name.value}`,
+            `Cannot assign unassigned variable ${name.value}`,
           );
       }
       this.emit(opcode, sym.index);
+      this.emit(fetch, sym.index);
+    } else if (node instanceof ast.CompoundAssignExpression) {
+      const name = node.name;
+      if (!(name instanceof ast.Identifier)) {
+        // Assignment for array expressions
+        if (name instanceof ast.IndexExpression) {
+          this.compile(name.collection);
+          this.compile(name.index);
+          this.compile(name.collection);
+          this.compile(name.index);
+          this.emit(Opcode.INDEX);
+          if (node.value) {
+            this.compile(node.value);
+          }
+          switch (node.operator) {
+            case '+=':
+              this.emit(Opcode.ADD);
+              break;
+            case '-=':
+              this.emit(Opcode.SUB);
+              break;
+            case '*=':
+              this.emit(Opcode.MUL);
+              break;
+            case '/=':
+              this.emit(Opcode.DIV);
+              break;
+            case '%=':
+              this.emit(Opcode.MOD);
+              break;
+          }
+          this.emit(Opcode.SET_INDEX);
+
+          this.compile(name.collection);
+          this.compile(name.index);
+          this.emit(Opcode.INDEX);
+          return;
+        }
+        throw new Error(
+          'Left-hand of assignment must be a variable or an array index expression',
+        );
+      }
+      const sym = this.symbolTable.get(name.value);
+      if (!sym) {
+        throw new Error(
+          `Cannot assign undefined variable ${name.value}`,
+        );
+      }
+      this.compile(name);
+      if (node.value) {
+        this.compile(node.value);
+      }
+      switch (node.operator) {
+        case '+=':
+          this.emit(Opcode.ADD);
+          break;
+        case '-=':
+          this.emit(Opcode.SUB);
+          break;
+        case '*=':
+          this.emit(Opcode.MUL);
+          break;
+        case '/=':
+          this.emit(Opcode.DIV);
+          break;
+        case '%=':
+          this.emit(Opcode.MOD);
+          break;
+      }
+
+      let opcode: Opcode;
+      let fetch: Opcode;
+      switch (sym.type) {
+        case ScopeType.FREE:
+          opcode = Opcode.SETC;
+          fetch = Opcode.GETC;
+          break;
+        case ScopeType.LOCAL:
+          opcode = Opcode.SET;
+          fetch = Opcode.GET;
+          break;
+        case ScopeType.GLOBAL:
+          opcode = Opcode.SETG;
+          fetch = Opcode.GETG;
+          break;
+        default:
+          throw new Error(
+            `Cannot assign unassigned variable ${name.value}`,
+          );
+      }
+      this.emit(opcode, sym.index);
+      this.emit(fetch, sym.index);
     } else if (node instanceof ast.Identifier) {
       const sym = this.symbolTable.get(node.value);
       if (typeof sym === 'undefined') {

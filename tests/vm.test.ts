@@ -183,7 +183,7 @@ describe('VM', () => {
     ]);
   });
 
-  test('should supprt variable reassignment through the virtual machine', () => {
+  test('should support variable reassignment through the virtual machine', () => {
     testInputs([
       [
         `x := 5;
@@ -216,6 +216,39 @@ describe('VM', () => {
           return x;
         }();`,
         20,
+      ],
+    ]);
+  });
+
+  test('should support compound reassignment through the virtual machine', () => {
+    testInputs([
+      [
+        `x := 5;
+         x += 6;
+         x`,
+        11,
+      ],
+      [
+        `x := 5;
+         x -= 6;
+         x`,
+        -1,
+      ],
+      [
+        `x := 5;
+         x *= 6;
+         x`,
+        30,
+      ],
+      [
+        `x := 5;
+         x /= 2;`,
+        2,
+      ],
+      [
+        `x := 5;
+         x %= 2;`,
+        1,
       ],
     ]);
   });
@@ -412,6 +445,15 @@ describe('VM', () => {
         }
         a;`,
         4,
+      ],
+      [
+        `a := 5;
+        b := 1;
+        while (a -= 1) {
+          b *= 2;
+        }
+        b;`,
+        16,
       ],
       [
         `a := 0;

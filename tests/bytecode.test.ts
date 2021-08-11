@@ -71,6 +71,7 @@ describe('createInstruction', () => {
         [Opcode.CC, [], [Opcode.CC]],
         [Opcode.YIELD, [], [Opcode.YIELD]],
         [Opcode.NEXT, [], [Opcode.NEXT]],
+        [Opcode.SET_INDEX, [], [Opcode.SET_INDEX]],
         [Opcode.NOT_IMPLEMENTED, [], []],
       ];
 
@@ -122,6 +123,7 @@ describe('disassemble', () => {
       ...[Opcode.CC],
       ...[Opcode.YIELD],
       ...[Opcode.NEXT],
+      ...[Opcode.SET_INDEX],
       ...[Opcode.HALT],
     ]);
     const expected = [
@@ -160,7 +162,8 @@ describe('disassemble', () => {
       '0054 CC',
       '0055 YIELD',
       '0056 NEXT',
-      '0057 HALT',
+      '0057 SET_INDEX',
+      '0058 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });

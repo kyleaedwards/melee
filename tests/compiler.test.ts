@@ -387,6 +387,28 @@ describe('Compiler.compile', () => {
     testCompilerResult(inputs);
   });
 
+  test('should compile compound assignment expressions', () => {
+    const inputs: CompilerTestCase[] = [
+      [
+        `x := 5;
+         x += 3;`,
+        [5, 3],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.ADD),
+          createInstruction(Opcode.SETG, GLOBALS + 0),
+          createInstruction(Opcode.GETG, GLOBALS + 0),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+    ];
+
+    testCompilerResult(inputs);
+  });
+
   test('should compile function expressions', () => {
     const inputs: CompilerTestCase[] = [
       [

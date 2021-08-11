@@ -170,9 +170,64 @@ describe('Parser', () => {
       const stmts = parseProgramStatements(input);
       expect(stmts).toHaveLength(1);
 
-      const dec = stmts[0];
-      assertNodeType(dec, ast.AssignStatement);
+      const stmt = stmts[0];
+      assertNodeType(stmt, ast.ExpressionStatement);
+
+      const dec = stmt.value;
+      assertNodeType(dec, ast.AssignExpression);
       expect(dec.token).toEqual(['assign', '=']);
+
+      const left = dec.name;
+      assertNodeType(left, ast.Identifier);
+      expect(left.value).toEqual(name);
+
+      const right = dec.value;
+      if (typeof value === 'string') {
+        assertNodeType(right, ast.Identifier);
+      } else {
+        assertNodeType(right, ast.IntegerLiteral);
+      }
+      expect(right.value).toEqual(value);
+    });
+  });
+
+  test('should parse valid compound assign statements', () => {
+    const cases: {
+      input: string;
+      name: string;
+      operator: string;
+      value: number | string;
+    }[] = [
+      {
+        input: 'a += 3;',
+        name: 'a',
+        operator: '+=',
+        value: 3,
+      },
+      {
+        input: 'big_number -= 100000000;',
+        name: 'big_number',
+        operator: '-=',
+        value: 100000000,
+      },
+      {
+        input: 'a *= b;',
+        name: 'a',
+        operator: '*=',
+        value: 'b',
+      },
+    ];
+
+    cases.forEach(({ input, name, value, operator }) => {
+      const stmts = parseProgramStatements(input);
+      expect(stmts).toHaveLength(1);
+
+      const stmt = stmts[0];
+      assertNodeType(stmt, ast.ExpressionStatement);
+
+      const dec = stmt.value;
+      assertNodeType(dec, ast.CompoundAssignExpression);
+      expect(dec.token[1]).toEqual(operator);
 
       const left = dec.name;
       assertNodeType(left, ast.Identifier);

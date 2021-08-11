@@ -13,6 +13,7 @@ type infixParseFn = (
  */
 enum precedence {
   NIL = 1,
+  ASN,
   EQL,
   CMP,
   ADD,
@@ -26,6 +27,12 @@ enum precedence {
  * Assigns precedence values to tokens.
  */
 const PRECEDENCE_MAP: Record<string, precedence> = {
+  assign: precedence.ASN,
+  pluseq: precedence.ASN,
+  minuseq: precedence.ASN,
+  asteriskeq: precedence.ASN,
+  rslasheq: precedence.ASN,
+  percenteq: precedence.ASN,
   eq: precedence.EQL,
   noteq: precedence.EQL,
   lt: precedence.CMP,
@@ -116,6 +123,12 @@ export class Parser {
       gte: this.parseInfixExpression.bind(this),
       lparen: this.parseCallExpression.bind(this),
       lbracket: this.parseIndexExpression.bind(this),
+      assign: this.parseAssignExpression.bind(this),
+      pluseq: this.parseCompoundAssignmentExpression.bind(this),
+      minuseq: this.parseCompoundAssignmentExpression.bind(this),
+      asteriskeq: this.parseCompoundAssignmentExpression.bind(this),
+      rslasheq: this.parseCompoundAssignmentExpression.bind(this),
+      percenteq: this.parseCompoundAssignmentExpression.bind(this),
     };
 
     this.curr = this.lexer.nextToken();
@@ -164,9 +177,6 @@ export class Parser {
         if (tokenIs(this.peek, 'declare')) {
           return this.parseDeclareStatement();
         }
-        if (tokenIs(this.peek, 'assign')) {
-          return this.parseAssignStatement();
-        }
         return this.parseExpressionStatement();
       }
       case 'continue': {
@@ -202,18 +212,6 @@ export class Parser {
     this.skipSemicolon();
 
     return new ast.DeclareStatement(declare, name, value);
-  }
-
-  private parseAssignStatement(): ast.AssignStatement | undefined {
-    const name = new ast.Identifier(this.curr, this.curr[1]);
-    this.nextToken();
-    const declare = this.curr;
-    this.nextToken();
-    const value = this.parseExpression(precedence.NIL);
-
-    this.skipSemicolon();
-
-    return new ast.AssignStatement(declare, name, value);
   }
 
   private parseReturnStatement(): ast.ReturnStatement {
@@ -316,6 +314,43 @@ export class Parser {
     const right = this.parseExpression(leftPrecedence);
 
     return new ast.InfixExpression(token, left, operator, right);
+  }
+
+  private parseCompoundAssignmentExpression(
+    left?: ast.Expression,
+  ): ast.Expression | undefined {
+    if (!left) {
+      throw new Error(
+        'Error compiling compound assignment expression',
+      );
+    }
+
+    const token = this.curr;
+    const operator = this.curr[1];
+
+    this.nextToken();
+    const right = this.parseExpression(precedence.NIL);
+
+    return new ast.CompoundAssignExpression(
+      token,
+      left,
+      operator,
+      right,
+    );
+  }
+
+  private parseAssignExpression(
+    left?: ast.Expression,
+  ): ast.AssignExpression | undefined {
+    if (!left) {
+      throw new Error('Error compiling assignment expression');
+    }
+
+    const token = this.curr;
+    this.nextToken();
+    const value = this.parseExpression(precedence.NIL);
+
+    return new ast.AssignExpression(token, left, value);
   }
 
   private parseIndexExpression(
