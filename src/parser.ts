@@ -108,6 +108,7 @@ export class Parser {
       note: this.parseNoteExpression.bind(this),
       skip: this.parseSkipExpression.bind(this),
       cc: this.parseCCExpression.bind(this),
+      comment: this.parseComment.bind(this),
     };
 
     this.infixParseFns = {
@@ -542,6 +543,10 @@ export class Parser {
     const token = this.curr;
     const args = this.parseExpressionList('rparen');
     return new ast.CallExpression(token, left, args);
+  }
+
+  private parseComment(): ast.CommentLiteral {
+    return new ast.CommentLiteral(this.curr);
   }
 
   /** Utilities **/

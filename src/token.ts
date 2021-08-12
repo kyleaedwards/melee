@@ -57,7 +57,8 @@ export type TokenType =
   | 'lparen'
   | 'rparen'
   | 'lbrace'
-  | 'rbrace';
+  | 'rbrace'
+  | 'comment';
 
 /**
  * User-defined type guard for keyword token types.

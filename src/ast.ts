@@ -493,6 +493,26 @@ export class GeneratorLiteral implements Expression {
 }
 
 /**
+ * AST node type representing a comment (`// comment goes here`).
+ *
+ * @public
+ */
+export class CommentLiteral implements Expression {
+  nodeType: 'expression';
+
+  public body: string;
+
+  constructor(public token: Token) {
+    this.body = token[1];
+    this.nodeType = 'expression';
+  }
+
+  toString(): string {
+    return this.body;
+  }
+}
+
+/**
  * AST node type representing a `next` expression.
  *
  * @public

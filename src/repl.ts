@@ -60,7 +60,7 @@ export class Repl {
    * @param offset - Position from end of history record
    * @returns Previously run snippet
    */
-  getPreviousEntry(offset: number = 0): string | undefined {
+  getPreviousEntry(offset = 0): string | undefined {
     if (offset >= MAX_REPL_HISTORY) return;
     return this.history[MAX_REPL_HISTORY - offset - 1];
   }

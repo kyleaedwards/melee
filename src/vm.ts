@@ -1,6 +1,6 @@
 import { AssertionError } from 'assert';
 import { BUILTINS, NATIVE_FNS } from './builtins';
-import { Opcode, OPCODES, unpackBigEndian } from './bytecode';
+import { Opcode, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import * as obj from './object';
 import { clamp } from './utils';

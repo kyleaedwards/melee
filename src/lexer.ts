@@ -216,6 +216,13 @@ export class Lexer {
         if (this.peekChar() == '=') {
           this.readChar();
           token = ['rslasheq', '/='];
+        } else if (this.peekChar() == '/') {
+          this.readChar();
+          let literal = '//';
+          while (this.peekChar() != '\n' && this.peekChar() != '') {
+            literal += this.readChar();
+          }
+          token = ['comment', literal];
         } else {
           token = ['rslash', this.char];
         }

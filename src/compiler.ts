@@ -578,6 +578,8 @@ export class Compiler {
       }
       this.compile(node.message);
       this.emit(Opcode.CC);
+    } else if (node instanceof ast.CommentLiteral) {
+      this.removeInstructionIf(Opcode.POP);
     }
   }
 
