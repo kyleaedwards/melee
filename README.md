@@ -114,6 +114,8 @@ Hopefully you're starting to see how with a little bit of code you can build com
 | **concat** | `concat(arr1, arr2, ..., arrN)` | Pops an element off the end of an array and returns it |
 | **sort** | `sort(arr)` | Returns a sorted array |
 | **rev** | `rev(arr)` | Returns a reversed array |
+| **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
+| **filter** | `filter(arr, fn)` | Creates a new array of items where `fn(item)` returns *truthy* |
 | **scale** | `scale(base, interval, scaleNum)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
 
 ### Scales

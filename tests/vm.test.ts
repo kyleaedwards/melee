@@ -568,6 +568,36 @@ describe('VM', () => {
     testError(`range()`);
   });
 
+  test('should support built-in function `map`', () => {
+    testInputs([
+      [`map([1, 2, 3], fn (x) { return x * 2 })`, [2, 4, 6]],
+      [`map([1, 2, 3], fn (x) { x * 2 })`, [null, null, null]],
+      [`map([range(1), range(3)], len)`, [1, 3]],
+    ]);
+
+    testError(`map(-100, len)`);
+    testError(`map(1, 2)`);
+    testError(`map(0, fn () {}, 3)`);
+    testError(`map([])`);
+    testError(`map(true)`);
+    testError(`map()`);
+  });
+
+  test('should support built-in function `filter`', () => {
+    testInputs([
+      [`filter([1, 2, 3], fn (x) { return x == 2 })`, [2]],
+      [`filter([1, 2, 3], fn (x) { x * 2 })`, []],
+      [`filter([1, 2, 3], fn (x) { return x % 2 == 1 })`, [1, 3]],
+    ]);
+
+    testError(`filter(-100, len)`);
+    testError(`filter(1, 2)`);
+    testError(`filter(0, fn () {}, 3)`);
+    testError(`filter([])`);
+    testError(`filter(true)`);
+    testError(`filter()`);
+  });
+
   test('should support MIDI `note` messages', () => {
     testInputs([
       [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],

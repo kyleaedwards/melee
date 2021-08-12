@@ -2,8 +2,9 @@ import {
   Arr,
   BaseObject,
   Bool,
-  Fn,
+  Closure,
   Int,
+  isTruthy,
   NativeFn,
   Null,
 } from './object';
@@ -20,7 +21,7 @@ const NULL = new Null();
 export const NATIVE_FNS: NativeFn[] = [
   new NativeFn('len', (_: VM, ...args: BaseObject[]): BaseObject => {
     const arr = args[0];
-    if (args.length !== 1 || !(arr instanceof Arr)) {
+    if (!(arr instanceof Arr)) {
       throw new Error('Function `len` takes a single array argument');
     }
     return new Int(arr.items.length);
@@ -43,6 +44,42 @@ export const NATIVE_FNS: NativeFn[] = [
       for (let i = 0; i < num.value; i++) {
         items.push(new Int(i));
       }
+      return new Arr(items);
+    },
+  ),
+  new NativeFn('map', (vm: VM, ...args: BaseObject[]): BaseObject => {
+    const [arr, fn] = args;
+    if (
+      args.length !== 2 ||
+      !(arr instanceof Arr) ||
+      !(fn instanceof Closure || fn instanceof NativeFn)
+    ) {
+      throw new Error(
+        'Function `map` takes an array and a function to transform each element',
+      );
+    }
+    const items = arr.items.map((item, i) =>
+      vm.callAndReturn(fn, [item, new Int(i)]),
+    );
+    return new Arr(items);
+  }),
+  new NativeFn(
+    'filter',
+    (vm: VM, ...args: BaseObject[]): BaseObject => {
+      const [arr, fn] = args;
+      if (
+        args.length !== 2 ||
+        !(arr instanceof Arr) ||
+        !(fn instanceof Closure || fn instanceof NativeFn)
+      ) {
+        throw new Error(
+          'Function `map` takes an array and a function to transform each element',
+        );
+      }
+      const items = arr.items.filter((item, i) => {
+        const res = vm.callAndReturn(fn, [item, new Int(i)]);
+        return isTruthy(res);
+      });
       return new Arr(items);
     },
   ),
