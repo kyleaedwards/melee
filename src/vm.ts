@@ -324,12 +324,22 @@ export class VM {
   /**
    * Iterates over the compiler instructions item-by-item, using the
    * stack to hold values and perform operations.
+   *
+   * @param exitFrame - Frame index on which to halt execution
    */
-  public run(): void {
+  public run(exitFrame?: number): void {
     let frame = this.frame();
     let inst = frame.instructions();
 
     while (frame.ip <= inst.length) {
+      // The VM can be run recursively, but in doing so, you must
+      // specify an exit frame index in which to bounce out. This
+      // is particularly useful because the next item on the stack
+      // is the return value from the exited frame.
+      if (exitFrame && this.fp <= exitFrame) {
+        return;
+      }
+
       const ip = ++frame.ip;
       const op = inst[ip];
 
@@ -620,7 +630,30 @@ export class VM {
     }
   }
 
-  private call(callee: obj.BaseObject, numArgs: number): void {
+  public callAndReturn(
+    callee: obj.BaseObject,
+    args: obj.BaseObject[],
+  ): obj.BaseObject {
+    this.push(callee);
+    args.forEach((arg) => {
+      this.push(arg);
+    });
+    const exitFrame = this.call(callee, args.length);
+    if (exitFrame >= 0) {
+      this.run(exitFrame);
+    }
+    const result = this.pop();
+    assertStackObject(result);
+    return result;
+  }
+
+  /**
+   * Begin a function, generator, or built-in call.
+   * @param callee
+   * @param numArgs
+   * @returns
+   */
+  private call(callee: obj.BaseObject, numArgs: number): number {
     if (
       !(callee instanceof obj.Closure) &&
       !(callee instanceof obj.NativeFn)
@@ -644,6 +677,9 @@ export class VM {
         this.frames[this.fp] = frame;
         this.fp++;
         this.sp = frame.base + fn.numLocals;
+
+        // Specify an exit frame.
+        return this.fp - 1;
       } else if (fn instanceof obj.Gen) {
         const args = this.gatherArgs(numArgs);
         this.push(
@@ -654,6 +690,7 @@ export class VM {
       const args = this.gatherArgs(numArgs);
       this.push(callee.handler(this, ...args));
     }
+    return -1;
   }
 
   /**
