@@ -15,6 +15,8 @@ export type TokenType =
   | 'false'
   | 'if'
   | 'else'
+  | 'for'
+  | 'in'
   | 'while'
   | 'loop'
   | 'return'
@@ -72,6 +74,8 @@ function isKeyword(str: string): str is TokenType {
       'gen',
       'if',
       'else',
+      'for',
+      'in',
       'while',
       'loop',
       'continue',

@@ -47,11 +47,25 @@ export class SymbolTable {
   public numSymbols: number;
   public depth: number;
 
+  static iota = 0;
+
   constructor(public type: ScopeType, public parent?: SymbolTable) {
     this.symbols = {};
     this.freeSymbols = [];
     this.numSymbols = 0;
     this.depth = parent ? parent.depth + 1 : -1;
+  }
+
+  /**
+   * Adds a new iota symbol to the table and returns its unique index.
+   *
+   * @param label - Variable name
+   * @returns Index of new symbol
+   */
+  addIota(): number {
+    const iota = SymbolTable.iota++;
+    const label = `$iota__${iota}`;
+    return this.add(label);
   }
 
   /**

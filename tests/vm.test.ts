@@ -598,7 +598,7 @@ describe('VM', () => {
     testError(`filter()`);
   });
 
-  test('should support built-in function `token`', () => {
+  test('should support built-in function `take`', () => {
     testInputs([
       [
         `g := gen(x) {
@@ -688,6 +688,40 @@ describe('VM', () => {
         next s;
         next s;`,
         5,
+      ],
+    ]);
+  });
+
+  test('should support `for` expressions', () => {
+    testInputs([
+      [
+        `acc := 0;
+        for x in [1, 2, 3] {
+          acc += x;
+        };
+        acc;`,
+        6,
+      ],
+      [
+        `x := 1;
+        f := fn () {
+          acc := 0;
+          for x in [1, 2, 3] {
+            acc += x;
+          }
+          return acc;
+        }
+        f()`,
+        6,
+      ],
+      [
+        `g := gen() { yield 1; yield 4; yield 7; }
+        out := 0;
+        for x in take(g(), 3) {
+          out = x;
+        };
+        out;`,
+        7,
       ],
     ]);
   });

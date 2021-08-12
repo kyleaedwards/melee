@@ -1,6 +1,6 @@
 import { AssertionError } from 'assert';
 import { BUILTINS, NATIVE_FNS } from './builtins';
-import { Opcode, unpackBigEndian } from './bytecode';
+import { Opcode, OPCODES, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import * as obj from './object';
 import { clamp } from './utils';
@@ -390,6 +390,14 @@ export class VM {
           this.push(arr);
           break;
         }
+        case Opcode.LEN: {
+          const arr = this.pop();
+          if (!(arr instanceof obj.Arr)) {
+            throw new Error('Cannot iterate over non-array');
+          }
+          this.push(new obj.Int(arr.items.length));
+          break;
+        }
         case Opcode.INDEX: {
           const index = this.pop();
           if (!(index instanceof obj.Int)) {
@@ -419,7 +427,8 @@ export class VM {
           break;
         case Opcode.SETG: {
           const index = this.readOperand(2);
-          this.variables[index] = this.pop();
+          const val = this.pop();
+          this.variables[index] = val;
           break;
         }
         case Opcode.GETG: {

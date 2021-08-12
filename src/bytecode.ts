@@ -15,6 +15,7 @@ export type Instruction = Uint8Array;
 export enum Opcode {
   CONST = 1,
   ARRAY,
+  LEN,
   INDEX,
   SET_INDEX,
 
@@ -82,6 +83,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
   [
     [Opcode.CONST, 'CONST', [2]],
     [Opcode.ARRAY, 'ARRAY', [2]],
+    [Opcode.LEN, 'LEN'],
     [Opcode.INDEX, 'INDEX'],
     [Opcode.SET_INDEX, 'SET_INDEX'],
     [Opcode.HALT, 'HALT'],

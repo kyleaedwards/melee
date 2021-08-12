@@ -48,8 +48,8 @@ export class Compiler {
   private scopes: CompilerScope[];
   private scopeIndex: number;
   private symbolTable: SymbolTable;
-  private currentLoopStart?: number;
-  private breaks: number[] = [];
+  private loopStarts: number[] = [];
+  private breaks: number[][] = [];
 
   constructor(
     /**
@@ -371,8 +371,8 @@ export class Compiler {
     } else if (node instanceof ast.IntegerLiteral) {
       // TODO: Why use constants for MIDI Ints, could we just bake them
       // into the bytecode instead?
-      const obj = new Int(node.value);
-      this.emit(Opcode.CONST, this.addConstant(obj));
+      const o = new Int(node.value);
+      this.emit(Opcode.CONST, this.addConstant(o));
     } else if (node instanceof ast.BooleanLiteral) {
       this.emit(node.value ? Opcode.TRUE : Opcode.FALSE);
     } else if (node instanceof ast.ArrayLiteral) {
@@ -471,28 +471,97 @@ export class Compiler {
         this.emit(Opcode.NULL);
       }
       this.emit(Opcode.RET);
-    } else if (node instanceof ast.WhileExpression) {
-      this.currentLoopStart = this.instructions().length;
-      this.compile(node.condition);
-      const jumpToElse = this.emit(Opcode.JMP_IF_NOT, 0xffff);
+    } else if (node instanceof ast.ForExpression) {
+      const identifier = this.symbolTable.add(node.identifier.value);
+      const setter =
+        this.symbolTable.type === ScopeType.GLOBAL
+          ? Opcode.SETG
+          : Opcode.SET;
+      const getter =
+        this.symbolTable.type === ScopeType.GLOBAL
+          ? Opcode.GETG
+          : Opcode.GET;
+      const counter = this.symbolTable.addIota();
+      const collection = this.symbolTable.addIota();
+      const incr = this.addConstant(new Int(1));
+
+      // Set counter
+      this.emit(Opcode.CONST, this.addConstant(new Int(0)));
+      this.emit(setter, counter);
+
+      // Save collection
+      this.compile(node.collection);
+      this.emit(setter, collection);
+
+      this.loopStarts.push(this.instructions().length);
+      this.breaks.push([]);
+
+      // Check if iterator has gone past the end of the arra
+      this.emit(getter, collection);
+      this.emit(Opcode.LEN);
+      this.emit(getter, counter);
+      this.emit(Opcode.GT);
+      const jumpOut = this.emit(Opcode.JMP_IF_NOT, 0xffff);
+
+      // Set the current array item in the local variable
+      this.emit(getter, collection);
+      this.emit(getter, counter);
+      this.emit(Opcode.INDEX);
+      this.emit(setter, identifier);
+
+      // Increment the iterator
+      this.emit(getter, counter);
+      this.emit(Opcode.CONST, incr);
+      this.emit(Opcode.ADD);
+      this.emit(setter, counter);
+
+      // Compile code block and loop
       this.compile(node.block);
-      this.removeInstructionIf(Opcode.POP);
-      this.emit(Opcode.JMP, this.currentLoopStart);
-      this.replaceInstruction(jumpToElse, this.instructions().length);
-      while (this.breaks.length) {
-        const brk = this.breaks.pop();
+      this.emit(
+        Opcode.JMP,
+        this.loopStarts[this.loopStarts.length - 1],
+      );
+      this.replaceInstruction(jumpOut, this.instructions().length);
+      while (this.breaks[this.breaks.length - 1].length) {
+        const brk = this.breaks[this.breaks.length - 1].pop();
         if (brk) {
           this.replaceInstruction(brk, this.instructions().length);
         }
       }
-      this.currentLoopStart = undefined;
+      this.breaks.pop();
+      this.loopStarts.pop();
+    } else if (node instanceof ast.WhileExpression) {
+      this.loopStarts.push(this.instructions().length);
+      this.breaks.push([]);
+      this.compile(node.condition);
+      const jumpToElse = this.emit(Opcode.JMP_IF_NOT, 0xffff);
+      this.compile(node.block);
+      this.removeInstructionIf(Opcode.POP);
+      this.emit(
+        Opcode.JMP,
+        this.loopStarts[this.loopStarts.length - 1],
+      );
+      this.replaceInstruction(jumpToElse, this.instructions().length);
+      while (this.breaks[this.breaks.length - 1].length) {
+        const brk = this.breaks[this.breaks.length - 1].pop();
+        if (brk) {
+          this.replaceInstruction(brk, this.instructions().length);
+        }
+      }
+      this.breaks.pop();
+      this.loopStarts.pop();
     } else if (node instanceof ast.BreakStatement) {
-      this.breaks.push(this.emit(Opcode.JMP, 0xffff));
+      this.breaks[this.breaks.length - 1].push(
+        this.emit(Opcode.JMP, 0xffff),
+      );
     } else if (node instanceof ast.ContinueStatement) {
-      if (typeof this.currentLoopStart !== 'number') {
+      if (!this.loopStarts.length) {
         throw new Error('Cannot use continue outside of a loop');
       }
-      this.emit(Opcode.JMP, this.currentLoopStart);
+      this.emit(
+        Opcode.JMP,
+        this.loopStarts[this.loopStarts.length - 1],
+      );
     } else if (node instanceof ast.NoteExpression) {
       if (!node.note) {
         throw new Error(
