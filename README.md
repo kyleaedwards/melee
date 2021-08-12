@@ -90,8 +90,8 @@ Hopefully you're starting to see how with a little bit of code you can build com
 | **null** | `null` | Nothing at all; if you got this, something probably went wrong |
 | **bool** | `true` | True or false; mostly used for branching your code |
 | **int** | `5` | An integer value; used for math or converting into `note` or `cc` data |
-| **note** | `note [D4, 1, 127]` | MIDI note, must contain the pitch (`note [D4]`), but you can also provide a duration and a velocity |
-| **skip** | `skip 2` | Special message telling the runtime to skip output for provided steps |
+| **note** | `note [D4, 1, 127]` | MIDI note, must contain the pitch (`note [D4]`), but you can also provide a duration and a velocity; a note with pitch -1 is a rest |
+| **skip** | `skip 2` | Shorthand for a note with a pitch of -1 |
 | **cc** | `cc [3, 64]` | MIDI CC message |
 | **array** | `[1, 2, 3]` | A list of any of the above data types
 | **fn** | `fn(...args) { ... }` | A function
@@ -116,7 +116,8 @@ Hopefully you're starting to see how with a little bit of code you can build com
 | **rev** | `rev(arr)` | Returns a reversed array |
 | **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
 | **filter** | `filter(arr, fn)` | Creates a new array of items where `fn(item)` returns *truthy* |
-| **scale** | `scale(base, interval, scaleNum)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
+| **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |
+| **scale** | `scale(root, interval, scaleArr)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
 
 ### Scales
 

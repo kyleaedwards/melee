@@ -598,6 +598,34 @@ describe('VM', () => {
     testError(`filter()`);
   });
 
+  test('should support built-in function `token`', () => {
+    testInputs([
+      [
+        `g := gen(x) {
+          <- 1;
+          <- 2;
+          <- x;
+        };
+        seq := g(4);
+        take(seq, 4)`,
+        [1, 2, 4, null],
+      ],
+      [
+        `g := gen(x) {
+          <- 3;
+          loop {
+            <- 1;
+            <- 2;
+            <- x;
+          }
+        };
+        seq := g(4);
+        take(seq, 5)`,
+        [3, 1, 2, 4, 1],
+      ],
+    ]);
+  });
+
   test('should support MIDI `note` messages', () => {
     testInputs([
       [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],

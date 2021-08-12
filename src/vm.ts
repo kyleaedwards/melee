@@ -325,18 +325,18 @@ export class VM {
    * Iterates over the compiler instructions item-by-item, using the
    * stack to hold values and perform operations.
    *
-   * @param exitFrame - Frame index on which to halt execution
+   * @param exitFrame - Frame on which to halt execution
    */
-  public run(exitFrame?: number): void {
+  public run(exitFrame?: obj.Frame): void {
     let frame = this.frame();
     let inst = frame.instructions();
 
     while (frame.ip <= inst.length) {
       // The VM can be run recursively, but in doing so, you must
-      // specify an exit frame index in which to bounce out. This
-      // is particularly useful because the next item on the stack
+      // specify an exit frame in which to bounce out. This is
+      // particularly useful because the next item on the stack
       // is the return value from the exited frame.
-      if (exitFrame && this.fp <= exitFrame) {
+      if (exitFrame && frame === exitFrame) {
         return;
       }
 
@@ -529,16 +529,7 @@ export class VM {
         }
         case Opcode.NEXT: {
           const seq = this.pop();
-          if (!seq || !(seq instanceof obj.Seq)) {
-            throw new Error(
-              '`next` can only be used on generated sequence instances',
-            );
-          }
-          if (seq.done) {
-            this.push(NULL);
-            break;
-          }
-          this.enterCoroutine(seq.executionState);
+          this.next(seq);
           break;
         }
         case Opcode.YIELD: {
@@ -630,6 +621,50 @@ export class VM {
     }
   }
 
+  /**
+   * Calculate a sequence's next value and retrieve the value from the stack.
+   *
+   * @param seq - Sequence instance
+   * @returns Return value
+   */
+  public takeNext(seq?: obj.BaseObject): obj.BaseObject {
+    const exitFrame = this.next(seq);
+    if (exitFrame) {
+      this.run(exitFrame);
+    }
+    const result = this.pop();
+    assertStackObject(result);
+    return result;
+  }
+
+  /**
+   * Calculate a sequence's next value.
+   *
+   * @param seq - Sequence instance
+   * @returns Current stack frame before the call
+   */
+  public next(seq?: obj.BaseObject): obj.Frame | undefined {
+    if (!seq || !(seq instanceof obj.Seq)) {
+      throw new Error(
+        '`next` can only be used on generated sequence instances',
+      );
+    }
+    if (seq.done) {
+      this.push(NULL);
+      return;
+    }
+    const frame = this.frame();
+    this.enterCoroutine(seq.executionState);
+    return frame;
+  }
+
+  /**
+   * Call a function and obtain its return value.
+   *
+   * @param callee - Closure or native function
+   * @param args - Arguments to apply
+   * @returns Return value
+   */
   public callAndReturn(
     callee: obj.BaseObject,
     args: obj.BaseObject[],
@@ -639,7 +674,7 @@ export class VM {
       this.push(arg);
     });
     const exitFrame = this.call(callee, args.length);
-    if (exitFrame >= 0) {
+    if (exitFrame) {
       this.run(exitFrame);
     }
     const result = this.pop();
@@ -649,11 +684,15 @@ export class VM {
 
   /**
    * Begin a function, generator, or built-in call.
-   * @param callee
-   * @param numArgs
-   * @returns
+   *
+   * @param callee - Closure or native function to call
+   * @param numArgs - Number of arguments applied to the call
+   * @returns Current stack frame before the call
    */
-  private call(callee: obj.BaseObject, numArgs: number): number {
+  private call(
+    callee: obj.BaseObject,
+    numArgs: number,
+  ): obj.Frame | undefined {
     if (
       !(callee instanceof obj.Closure) &&
       !(callee instanceof obj.NativeFn)
@@ -679,7 +718,7 @@ export class VM {
         this.sp = frame.base + fn.numLocals;
 
         // Specify an exit frame.
-        return this.fp - 1;
+        return this.frames[this.fp - 2];
       } else if (fn instanceof obj.Gen) {
         const args = this.gatherArgs(numArgs);
         this.push(
@@ -690,7 +729,7 @@ export class VM {
       const args = this.gatherArgs(numArgs);
       this.push(callee.handler(this, ...args));
     }
-    return -1;
+    return undefined;
   }
 
   /**

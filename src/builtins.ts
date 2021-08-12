@@ -7,6 +7,7 @@ import {
   isTruthy,
   NativeFn,
   Null,
+  Seq,
 } from './object';
 import type { VM } from './vm';
 
@@ -43,6 +44,26 @@ export const NATIVE_FNS: NativeFn[] = [
       const items = [];
       for (let i = 0; i < num.value; i++) {
         items.push(new Int(i));
+      }
+      return new Arr(items);
+    },
+  ),
+  new NativeFn(
+    'take',
+    (vm: VM, ...args: BaseObject[]): BaseObject => {
+      const [seq, num] = args;
+      if (
+        args.length !== 2 ||
+        !(seq instanceof Seq) ||
+        !(num instanceof Int)
+      ) {
+        throw new Error(
+          'Function `take` requires a sequence object and an integer',
+        );
+      }
+      const items: BaseObject[] = [];
+      for (let i = 0; i < num.value; i++) {
+        items.push(vm.takeNext(seq) || NULL);
       }
       return new Arr(items);
     },
