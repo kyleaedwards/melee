@@ -24,14 +24,24 @@ if (isThree(a)) {
 } // 50
 ```
 
-However, the sweet spot for Melee happens when we start incorporating generator functions to create new sequences.
+Unlike other general purpose languages, Melee is intended to be used in a runtime environment that can send MIDI messages to a hardware instrument or some other software. Because of that, `note`s are a first-class data type.
+
+```js
+note [C3]
+note [Fb2, 2]
+note [G#7, 4, 64]
+```
+
+The `note` keyword can receive up to three pieces of data: `[pitch, duration, velocity]`. Velocity is a special value that is commonly used to  determine how hard a key is pressed, or how strongly a note should be played. It ranges from 0 to 127 (that's just a MIDI thing), and if left out, it defaults to the smack-dab in the middle (64). Duration is determined by whoever is using Melee, and is a multiple of the main clock. For example, if the program is grabbing a new value every eighth note, then a duration of 2 would be a quarter note, 4 would be a half note, etc...
+
+Functions and notes aside, the real sweet spot for Melee happens when we start incorporating generator functions to create new sequences.
 
 ```js
 seq := gen () {
-  yield note [C3]
-  yield note [D3]
-  yield note [C3]
-  yield note [G3]
+  yield note [C3];
+  yield note [D3];
+  yield note [C3];
+  yield note [G3];
 }
 ```
 
@@ -42,10 +52,10 @@ In this first example, the sequence reaches the G3 note and ends, but this doesn
 ```js
 main := gen () {
   loop {
-    yield note [C3]
-    yield note [D3]
-    yield note [C3]
-    yield note [G3]
+    yield note [C3];
+    yield note [D3];
+    yield note [C3];
+    yield note [G3];
   }
 }
 ```
@@ -55,12 +65,12 @@ Now that it loops forever, we can start making the sequence a bit more complex. 
 ```js
 main := gen() {
   loop {
-    yield note [C3]
-    yield note [D3]
+    yield note [C3];
+    yield note [D3];
     if (rand(3) != 1) {
-      yield note [C3]
+      yield note [C3];
     }
-    yield note [G3]
+    yield note [G3];
   }
 }
 ```
@@ -71,8 +81,6 @@ If that number doesn't match (`!=`) 1, then it yields an extra C, otherwise it s
 
 You don't have to yield `note`s or `cc` messages from generators, they can be any value, which could come in handy as you compose different sequences together in interesting ways. Below we use a second sequence generator to spit out a cycle of `int`s (integer numbers) that we'll use in the note's duration field.
 
-> Notes are intended to be used in a runtime environment that can send MIDI messages to a hardware instrument or some other software. Because of that, the `note` keyword can receive up to three pieces of data: [pitch, duration, velocity]. Velocity is a special value that is commonly used to  determine how hard a key is pressed, or how strongly a note should be played. It ranges from 0 to 127 (that's just a MIDI thing), and if left out, it defaults to the smack-dab in the middle (64). Duration is determined by whoever is using Melee, and is a multiple of the main clock. For example, if the program is grabbing a new value every eighth note, then a duration of 2 would be a quarter note, 4 would be a half note, etc...
-
 ```js
 subseq := gen() {
   loop {
@@ -81,14 +89,19 @@ subseq := gen() {
     yield 3
   }
 }
+duration := subseq();
+
+// You can also do the above with the cycle() built-in function
+// to turn an array of values into a sequence.
+//
+// duration := cycle([1, 2, 3]);
 
 main := gen() {
-  duration := subseq()
   loop {
-    yield note [C3, next duration]
-    yield note [D3, next duration]
-    yield note [C3, next duration]
-    yield note [G3, next duration]
+    yield note [C3, next duration];
+    yield note [D3, next duration];
+    yield note [C3, next duration];
+    yield note [G3, next duration];
   }
 }
 ```
