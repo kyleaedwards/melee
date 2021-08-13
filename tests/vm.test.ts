@@ -725,4 +725,24 @@ describe('VM', () => {
       ],
     ]);
   });
+
+  test('should support `generate` built-in', () => {
+    testInputs([
+      [
+        `seq := generate([1, 2, 3]);
+        take(seq, 5)`,
+        [1, 2, 3, null, null],
+      ],
+    ]);
+  });
+
+  test('should support `cycle` built-in', () => {
+    testInputs([
+      [
+        `seq := cycle([1, 2, 3]);
+        take(seq, 5)`,
+        [1, 2, 3, 1, 2],
+      ],
+    ]);
+  });
 });

@@ -298,24 +298,67 @@ export class Closure implements BaseObject {
 }
 
 /**
+ * Base class for iterable sequences.
+ *
+ * @public
+ */
+export class Iterable implements BaseObject {
+  type: Type = 'sequence';
+  public done = false;
+
+  inspectObject(): string {
+    return `seq::[${this.done ? 'done' : 'ongoing'}]`;
+  }
+}
+
+/**
  * Sequence type, instance of a generator execution.
  *
  * @public
  */
-export class Seq implements BaseObject {
+export class Seq extends Iterable {
   type: Type = 'sequence';
-  public done: boolean;
 
   constructor(
     public generator: Closure,
     public executionState: ExecutionState,
   ) {
-    this.done = false;
+    super();
     this.executionState.seq = this; // Self-reference
   }
+}
 
-  inspectObject(): string {
-    return `seq::[${this.done ? 'done' : 'ongoing'}]`;
+/**
+ * Virtual sequence type, instance of an array of objects with
+ * internal iteration state, so it can be used as a sequence.
+ *
+ * @public
+ */
+export class VirtualSeq extends Iterable {
+  type: Type = 'sequence';
+  private items: BaseObject[];
+  private length: number;
+  private index = 0;
+
+  constructor(arr: Arr, public loop: boolean = false) {
+    super();
+    this.items = [...arr.items];
+    this.length = this.items.length;
+  }
+
+  next(): BaseObject {
+    if (this.done) {
+      return NULL;
+    }
+    const item = this.items[this.index++];
+    if (this.index >= this.length) {
+      if (this.loop) {
+        this.index = 0;
+      } else {
+        this.done = true;
+      }
+    }
+    return item;
   }
 }
 

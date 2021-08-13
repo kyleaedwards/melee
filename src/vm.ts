@@ -538,7 +538,11 @@ export class VM {
         }
         case Opcode.NEXT: {
           const seq = this.pop();
-          this.next(seq);
+          if (seq instanceof obj.VirtualSeq) {
+            this.push(seq.next());
+          } else {
+            this.next(seq);
+          }
           break;
         }
         case Opcode.YIELD: {
@@ -637,6 +641,9 @@ export class VM {
    * @returns Return value
    */
   public takeNext(seq?: obj.BaseObject): obj.BaseObject {
+    if (seq instanceof obj.VirtualSeq) {
+      return seq.next();
+    }
     const exitFrame = this.next(seq);
     if (exitFrame) {
       this.run(exitFrame);

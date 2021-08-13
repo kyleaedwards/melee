@@ -5,9 +5,10 @@ import {
   Closure,
   Int,
   isTruthy,
+  Iterable,
   NativeFn,
   Null,
-  Seq,
+  VirtualSeq,
 } from './object';
 import type { VM } from './vm';
 
@@ -54,7 +55,7 @@ export const NATIVE_FNS: NativeFn[] = [
       const [seq, num] = args;
       if (
         args.length !== 2 ||
-        !(seq instanceof Seq) ||
+        !(seq instanceof Iterable) ||
         !(num instanceof Int)
       ) {
         throw new Error(
@@ -254,6 +255,30 @@ export const NATIVE_FNS: NativeFn[] = [
     (_: VM, ...args: BaseObject[]): BaseObject => {
       console.log(...args.map((arg) => arg.inspectObject()));
       return NULL;
+    },
+  ),
+  new NativeFn(
+    'cycle',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      if (!(arr instanceof Arr)) {
+        throw new Error(
+          'Function `cycle` takes a single array argument',
+        );
+      }
+      return new VirtualSeq(arr, true);
+    },
+  ),
+  new NativeFn(
+    'generate',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const arr = args[0];
+      if (!(arr instanceof Arr)) {
+        throw new Error(
+          'Function `generate` takes a single array argument',
+        );
+      }
+      return new VirtualSeq(arr, false);
     },
   ),
 ];

@@ -117,6 +117,8 @@ Hopefully you're starting to see how with a little bit of code you can build com
 | **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
 | **filter** | `filter(arr, fn)` | Creates a new array of items where `fn(item)` returns *truthy* |
 | **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |
+| **generate** | `generate(arr)` | Converts an array into a sequence |
+| **cycle** | `cycle(arr)` | Converts an array into an infinitely looping sequence |
 | **scale** | `scale(root, interval, scaleArr)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
 
 ### Scales
