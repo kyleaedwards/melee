@@ -22,5 +22,6 @@ export { Parser } from './parser';
 export { VM } from './vm';
 export { Token, TokenType, tokenIs } from './token';
 export { Repl } from './repl';
+export { Runtime } from './runtime';
 
 export { ast, obj };
