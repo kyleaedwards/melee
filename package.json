@@ -1,6 +1,6 @@
 {
   "name": "melee",
-  "version": "0.0.1",
+  "version": "0.1.0-alpha",
   "description": "Domain-specific language for generating musical sequences",
   "author": "Kyle Edwards <edwards.kyle.a@gmail.com>",
   "license": "MIT",
