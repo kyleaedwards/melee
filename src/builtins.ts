@@ -278,7 +278,78 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new VirtualSeq(arr, false);
   }),
+  new NativeFn('scale', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const [scale, root, interval] = args;
+    if (!(scale instanceof Arr) ||
+        !scale.items.every((item) => item instanceof Int)) {
+      throw new Error('Function `scale` requires the first argument to be an array of integers');
+    }
+    if (!(root instanceof Int) || !(interval instanceof Int)) {
+      throw new Error('Function `scale` requires a scale array, an integer root note, and an integer interval');
+    }
+    let base = interval.value;
+    while (base < 0) {
+      base += scale.items.length;
+    }
+    const offset = scale.items[base % scale.items.length] as Int;
+    const octave = Math.floor(interval.value / scale.items.length);
+    return new Int(root.value + octave * 12 + offset.value);
+  }),
+  new NativeFn('quant', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const [scale, root, note] = args;
+    if (!(scale instanceof Arr) ||
+        !scale.items.every((item) => item instanceof Int)) {
+      throw new Error('Function `quant` requires the first argument to be an array of integers');
+    }
+    if (!(root instanceof Int) || !(note instanceof Int)) {
+      throw new Error('Function `quant` requires a scale array, an integer root note, and a note to quantize');
+    }
+    let base = note.value - root.value;
+    const octave = Math.floor(base / 12);
+    while (base < 0) {
+      base += 12;
+    }
+    base %= 12;
+    let quantized = 12;
+    for (let i = 0; i < scale.items.length; i++) {
+      const item = scale.items[i] as Int;
+      if (item.value >= base) {
+        quantized = item.value;
+        break;
+      }
+    }
+    return new Int(root.value + octave * 12 + quantized);
+  }),
 ];
+
+/**
+ * Create a mapping of scale names to arrays of intervals.
+ *
+ * @returns Object containing map of scale arrays by name
+ *
+ * @internal
+ */
+function createScaleMap(): Record<string, BaseObject> {
+  const SCALE_MAP: Record<string, number[]> = {
+    MAJOR: [0, 2, 4, 5, 7, 9, 11],
+    IONIAN: [0, 2, 4, 5, 7, 9, 11],
+    MINOR: [0, 2, 3, 5, 7, 8, 10],
+    AEOLIAN: [0, 2, 3, 5, 7, 8, 10],
+    DORIAN: [0, 2, 3, 5, 7, 9, 10],
+    PENTA_MAJOR: [0, 2, 4, 7, 9],
+    PENTA_MINOR: [0, 3, 5, 7, 10],
+    BLUES: [0, 3, 5, 6, 7, 10],
+    MIXOLYDIAN: [0, 2, 4, 5, 7, 9, 10],
+    PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],
+    LYDIAN: [0, 2, 4, 6, 7, 9, 11],
+    LOCRIAN: [0, 1, 3, 5, 6, 8, 10],
+  };
+
+  return Object.keys(SCALE_MAP).reduce((acc, cur) => ({
+    ...acc,
+    [cur]: new Arr(SCALE_MAP[cur].map(interval => new Int(interval))),
+  }), {});
+}
 
 /**
  * Create a mapping of notes (in scientific pitch notation) to their
@@ -324,4 +395,5 @@ function createMidiMap(): Record<string, BaseObject> {
  */
 export const BUILTINS = {
   ...createMidiMap(),
+  ...createScaleMap(),
 };

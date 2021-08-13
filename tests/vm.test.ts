@@ -745,4 +745,42 @@ describe('VM', () => {
       ],
     ]);
   });
+
+  test('should support `scale` built-in', () => {
+    testInputs([
+      [
+        `scale(MAJOR, C3, 2) == E3`,
+        true,
+      ],
+      [
+        `scale(MAJOR, C3, 9) == E4`,
+        true,
+      ],
+      [
+        `scale(MAJOR, C3, -1) == B2`,
+        true,
+      ],
+    ]);
+  });
+
+  test('should support `quant` built-in', () => {
+    testInputs([
+      [
+        `quant(MAJOR, C3, C#4) == D4`,
+        true,
+      ],
+      [
+        `quant(MAJOR, C3, C#2) == D2`,
+        true,
+      ],
+      [
+        `quant(MAJOR, C3, F#3) == G3`,
+        true,
+      ],
+      [
+        `quant(MAJOR, C3, Bb3) == B3`,
+        true,
+      ],
+    ]);
+  });
 });

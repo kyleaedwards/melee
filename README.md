@@ -142,27 +142,31 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 | **pop** | `pop(arr)` | Pulls an element off the end of an array and returns it |
 | **print** | `print(...)` | Prints arguments to the console |
 | **push** | `push(arr)` | Pushes a new element onto an array |
+| **quant** | `scale(scaleArr, root, note)` | Quantizes a note by snapping it to the next highest pitch in the scale |
 | **range** | `range(n)` | Returns an array of length `n` containing the numbers `0` up to *and not including* `n` |
 | **rand** | `rand(n)` | Generates a random `int` from 0 up to *and not including* `n` |
 | **rev** | `rev(arr)` | Returns a reversed array |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
-| **scale** | `scale(root, interval, scaleArr)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
+| **scale** | `scale(scaleArr, root, interval)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
 | **shift** | `shift(arr)` | Pulls an element off the front of an array and returns it |
 | **sort** | `sort(arr)` | Returns a sorted array |
 | **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |
 
 ### Scales
 
-The `scale()` function converts a base note, an interval, and a scale constant to a MIDI pitch number. The current scales supported are:
+The `scale()` and `quant()` functions convert an interval or note to a MIDI pitch number relative to the provided scale and root note. You can provide any scale by setting an array like `fibonacci := [0, 1, 2, 3, 5, 8]`, however some scales are pre-loaded into the language and can be accessed with the variable names below:
 
 ```
-MAJOR
-MINOR
+MAJOR or IONIAN
+MINOR or AEOLIAN
 PENTA_MAJOR
 PENTA_MINOR
 BLUES
-PHRYGIAN
 DORIAN
+PHRYGIAN
+LYDIAN
+MIXOLYDIAN
+LOCRIAN
 ```
 
 ### Chords
