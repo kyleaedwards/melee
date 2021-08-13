@@ -602,9 +602,9 @@ describe('VM', () => {
     testInputs([
       [
         `g := gen(x) {
-          <- 1;
-          <- 2;
-          <- x;
+          yield 1;
+          yield 2;
+          yield x;
         };
         seq := g(4);
         take(seq, 4)`,
@@ -612,11 +612,11 @@ describe('VM', () => {
       ],
       [
         `g := gen(x) {
-          <- 3;
+          yield 3;
           loop {
-            <- 1;
-            <- 2;
-            <- x;
+            yield 1;
+            yield 2;
+            yield x;
           }
         };
         seq := g(4);
@@ -654,34 +654,34 @@ describe('VM', () => {
   test('should support sequence generators', () => {
     testInputs([
       [
-        `g := gen () { <- 1; <- 2 };
+        `g := gen () { yield 1; yield 2 };
         s := g();
         next s;
         next s;`,
         2,
       ],
       [
-        `g := gen (x, y) { <- x + y; };
+        `g := gen (x, y) { yield x + y; };
         s := g(2, 3);
         next s`,
         5,
       ],
       [
-        `g := gen (x, y) { <- x + y; };
+        `g := gen (x, y) { yield x + y; };
         s := g(2, 3);
         a := next s;
         a + 2`,
         7,
       ],
       [
-        `g := gen (x, y) { <- x + y; };
+        `g := gen (x, y) { yield x + y; };
         s := g(2, 3);
         next s;
         next s;`,
         null,
       ],
       [
-        `g := gen (x, y) { loop { <- x + y; } };
+        `g := gen (x, y) { loop { yield x + y; } };
         s := g(2, 3);
         next s;
         next s;
@@ -726,10 +726,10 @@ describe('VM', () => {
     ]);
   });
 
-  test('should support `generate` built-in', () => {
+  test('should support `conv` built-in', () => {
     testInputs([
       [
-        `seq := generate([1, 2, 3]);
+        `seq := conv([1, 2, 3]);
         take(seq, 5)`,
         [1, 2, 3, null, null],
       ],

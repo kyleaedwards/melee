@@ -255,9 +255,6 @@ export class Lexer {
         if (this.peekChar() == '=') {
           this.readChar();
           token = ['lte', '<='];
-        } else if (this.peekChar() == '-') {
-          this.readChar();
-          token = ['yield', '<-']; // The yield keyword's optional alias <-
         } else {
           token = ['lt', this.char];
         }

@@ -95,7 +95,7 @@ export const NATIVE_FNS: NativeFn[] = [
         !(fn instanceof Closure || fn instanceof NativeFn)
       ) {
         throw new Error(
-          'Function `map` takes an array and a function to transform each element',
+          'Function `filter` requires an array and a function',
         );
       }
       const items = arr.items.filter((item, i) => {
@@ -269,18 +269,15 @@ export const NATIVE_FNS: NativeFn[] = [
       return new VirtualSeq(arr, true);
     },
   ),
-  new NativeFn(
-    'generate',
-    (_: VM, ...args: BaseObject[]): BaseObject => {
-      const arr = args[0];
-      if (!(arr instanceof Arr)) {
-        throw new Error(
-          'Function `generate` takes a single array argument',
-        );
-      }
-      return new VirtualSeq(arr, false);
-    },
-  ),
+  new NativeFn('conv', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const arr = args[0];
+    if (!(arr instanceof Arr)) {
+      throw new Error(
+        'Function `conv` takes a single array argument',
+      );
+    }
+    return new VirtualSeq(arr, false);
+  }),
 ];
 
 /**
