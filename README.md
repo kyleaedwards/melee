@@ -143,8 +143,8 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 | **print** | `print(...)` | Prints arguments to the console |
 | **push** | `push(arr)` | Pushes a new element onto an array |
 | **quant** | `scale(scaleArr, root, note)` | Quantizes a note by snapping it to the next highest pitch in the scale |
-| **range** | `range(n)` | Returns an array of length `n` containing the numbers `0` up to *and not including* `n` |
 | **rand** | `rand(n)` | Generates a random `int` from 0 up to *and not including* `n` |
+| **range** | `range(n)` | Returns an array of length `n` containing the numbers `0` up to *and not including* `n` |
 | **rev** | `rev(arr)` | Returns a reversed array |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
 | **scale** | `scale(scaleArr, root, interval)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
