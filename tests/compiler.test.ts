@@ -673,7 +673,7 @@ describe('Compiler.compile', () => {
         `len([])`,
         [],
         [
-          createInstruction(Opcode.GETN, 0),
+          createInstruction(Opcode.GETN, 4),
           createInstruction(Opcode.ARRAY, 0),
           createInstruction(Opcode.CALL, 1),
           createInstruction(Opcode.POP),

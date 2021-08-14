@@ -55,6 +55,7 @@ export type Type =
   | 'null'
   | 'error'
   | 'note'
+  | 'hold'
   | 'cc'
   | 'return'
   | 'yield'
@@ -331,34 +332,17 @@ export class Seq extends Iterable {
 /**
  * Virtual sequence type, instance of an array of objects with
  * internal iteration state, so it can be used as a sequence.
+ * It just so happens that for this virtual implementation,
+ * the state (aside from the `done` boolean) is maintained
+ * within a closure.
  *
  * @public
  */
 export class VirtualSeq extends Iterable {
   type: Type = 'sequence';
-  private items: BaseObject[];
-  private length: number;
-  private index = 0;
 
-  constructor(arr: Arr, public loop: boolean = false) {
+  constructor(public next: () => BaseObject) {
     super();
-    this.items = [...arr.items];
-    this.length = this.items.length;
-  }
-
-  next(): BaseObject {
-    if (this.done) {
-      return NULL;
-    }
-    const item = this.items[this.index++];
-    if (this.index >= this.length) {
-      if (this.loop) {
-        this.index = 0;
-      } else {
-        this.done = true;
-      }
-    }
-    return item;
   }
 }
 
@@ -410,6 +394,30 @@ export class MidiCC implements BaseObject, MidiObject {
       type: this.type,
       data: [this.key, this.value],
     };
+  }
+}
+
+/**
+ * Sentinel used to notify the runtime to skip over this
+ * particular value (often because they should be obeying
+ * a previous note's duration).
+ *
+ * @public
+ */
+export class Hold implements BaseObject {
+  static self?: Hold;
+
+  type: Type = 'hold';
+
+  constructor() {
+    if (!Hold.self) {
+      Hold.self = this;
+    }
+    return Hold.self;
+  }
+
+  inspectObject(): string {
+    return `hold`;
   }
 }
 

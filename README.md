@@ -139,6 +139,7 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 | **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
 | **max** | `max(arr)` | Returns the maximum value of an array of `int`s |
 | **min** | `min(arr)` | Returns the minimum value of an array of `int`s |
+| **poly** | `poly(seq1, seq2, ..., seqN)` | Polyphony helper; merges multiple sequences together but honors note length |
 | **pop** | `pop(arr)` | Pulls an element off the end of an array and returns it |
 | **print** | `print(...)` | Prints arguments to the console |
 | **push** | `push(arr)` | Pushes a new element onto an array |

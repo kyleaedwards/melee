@@ -6,7 +6,7 @@ import { disassemble } from '../src/bytecode';
 import { VM } from '../src/vm';
 import * as obj from '../src/object';
 
-type TestScalar = number | boolean | null;
+type TestScalar = number | boolean | null | obj.MidiNote | obj.Hold;
 
 type VMTestCase = [
   input: string,
@@ -41,7 +41,7 @@ function assertObjectType<T extends obj.BaseObject>(
 
 function testScalar(
   result: obj.BaseObject,
-  expected: number | boolean | null,
+  expected: number | boolean | null | obj.BaseObject,
 ): void {
   if (typeof expected === 'number') {
     assertObjectType(result, obj.Int);
@@ -51,6 +51,13 @@ function testScalar(
     expect(result.value).toEqual(expected);
   } else if (expected === null) {
     expect(result).toBeInstanceOf(obj.Null);
+  } else if (expected instanceof obj.MidiNote) {
+    assertObjectType(result, obj.MidiNote);
+    expect(result.pitch).toEqual(expected.pitch);
+    expect(result.duration).toEqual(expected.duration);
+    expect(result.velocity).toEqual(expected.velocity);
+  } else if (expected instanceof obj.Hold) {
+    assertObjectType(result, obj.Hold);
   }
 }
 
@@ -75,11 +82,6 @@ function testInputs(inputs: VMTestCase[]): void {
         expected.forEach((exp, i) => {
           testScalar(result.items[i], exp);
         });
-      } else if (expected instanceof obj.MidiNote) {
-        assertObjectType(result, obj.MidiNote);
-        expect(result.pitch).toEqual(expected.pitch);
-        expect(result.duration).toEqual(expected.duration);
-        expect(result.velocity).toEqual(expected.velocity);
       } else if (expected instanceof obj.MidiCC) {
         assertObjectType(result, obj.MidiCC);
         expect(result.key).toEqual(expected.key);
@@ -746,18 +748,49 @@ describe('VM', () => {
     ]);
   });
 
-  test('should support `scale` built-in', () => {
+  test('should support `poly` built-in', () => {
     testInputs([
       [
-        `scale(MAJOR, C3, 2) == E3`,
+        `g1 := cycle([note [C3], note[D3], note[G3]]);
+        g2 := cycle([note [C3], note[D3], note[G3]]);
+        p := poly(g1, g2);
+        next p;
+        next p;`,
+        [
+          new obj.MidiNote(50, 1, 64),
+          new obj.MidiNote(50, 1, 64),
+        ],
+      ],
+      [
+        `g1 := cycle([note [C3], note[D3], note[G3]]);
+        g2 := cycle([note [C3, 2], note[D3, 2], note[G3, 2]]);
+        p := poly(g1, g2);
+        next p;
+        next p;`,
+        [
+          new obj.MidiNote(50, 1, 64),
+          new obj.Hold(),
+        ],
+      ],
+    ]);
+  });
+
+  test('should support `quant` built-in', () => {
+    testInputs([
+      [
+        `quant(MAJOR, C3, C#4) == D4`,
         true,
       ],
       [
-        `scale(MAJOR, C3, 9) == E4`,
+        `quant(MAJOR, C3, C#2) == D2`,
         true,
       ],
       [
-        `scale(MAJOR, C3, -1) == B2`,
+        `quant(MAJOR, C3, F#3) == G3`,
+        true,
+      ],
+      [
+        `quant(MAJOR, C3, Bb3) == B3`,
         true,
       ],
     ]);

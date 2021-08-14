@@ -3,9 +3,11 @@ import {
   BaseObject,
   Bool,
   Closure,
+  Hold,
   Int,
   isTruthy,
   Iterable,
+  MidiNote,
   NativeFn,
   Null,
   VirtualSeq,
@@ -43,7 +45,7 @@ export const NATIVE_FNS: NativeFn[] = [
   ),
 
   /**
-   * conv(Arr): Seq
+   * conv(Arr): VirtualSeq
    * Converts an array into a one-shot sequence.
    */
   new NativeFn('conv', (_: VM, ...args: BaseObject[]): BaseObject => {
@@ -53,11 +55,24 @@ export const NATIVE_FNS: NativeFn[] = [
         'Function `conv` takes a single array argument',
       );
     }
-    return new VirtualSeq(arr, false);
+    const items = arr.items;
+    const length = items.length;
+    let index = 0;
+    const seq = new VirtualSeq(() => {
+      if (seq.done) {
+        return NULL;
+      }
+      const item = items[index++];
+      if (index >= length) {
+        seq.done = true;
+      }
+      return item;
+    });
+    return seq;
   }),
 
   /**
-   * cycle(Arr): Seq
+   * cycle(Arr): VirtualSeq
    * Converts an array into a looping sequence.
    */
   new NativeFn(
@@ -69,7 +84,17 @@ export const NATIVE_FNS: NativeFn[] = [
           'Function `cycle` takes a single array argument',
         );
       }
-      return new VirtualSeq(arr, true);
+      const items = arr.items;
+      const length = items.length;
+      let index = 0;
+      const seq = new VirtualSeq(() => {
+        const item = items[index++];
+        if (index >= length) {
+          index = 0;
+        }
+        return item;
+      });
+      return seq;
     },
   ),
 
@@ -177,6 +202,47 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     return new Int(Math.min.apply(null, items));
   }),
+
+  /**
+   * poly(...Seq): Arr
+   * Polyphony helper to process multiple sequences of notes and
+   * chords at the same time.
+   */
+  new NativeFn(
+    'poly',
+    (vm: VM, ...args: BaseObject[]): BaseObject => {
+      const seqs: Iterable[] = [];
+      args.forEach((arg) => {
+        if (!(arg instanceof Iterable)) {
+          throw new Error(
+            'Function `poly` takes a flexible number of sequence objects',
+          );
+        }
+        seqs.push(arg);
+      });
+      const state = new Array<number>(seqs.length);
+      const seq = new VirtualSeq(() => {
+        const output = new Array<BaseObject>(seqs.length);
+        seqs.forEach((seq, i) => {
+          if (state[i] > 0) {
+            state[i]--;
+            output[i] = new Hold();
+          } else {
+            const note = vm.takeNext(seq);
+            if (note instanceof MidiNote) {
+              state[i] = note.duration - 1;
+              output[i] = note;
+            } else {
+              state[i] = 0;
+              output[i] = note;
+            }
+          }
+        });
+        return new Arr(output);
+      });
+      return seq;
+    },
+  ),
 
   /**
    * pop(Arr): *
