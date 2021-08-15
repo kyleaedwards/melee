@@ -833,4 +833,15 @@ describe('VM', () => {
       ],
     ]);
   });
+
+  test('should support `skip` keyword', () => {
+    testInputs([
+      [`skip`, new obj.MidiNote(-1, 1, 0)],
+      [`skip 10`, new obj.MidiNote(-1, 10, 0)],
+    ]);
+
+    testError(`skip 0`);
+    testError(`skip -1`);
+    testError(`skip fn(){}`);
+  });
 });

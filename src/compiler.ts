@@ -570,6 +570,13 @@ export class Compiler {
       }
       this.compile(node.note);
       this.emit(Opcode.NOTE);
+    } else if (node instanceof ast.SkipExpression) {
+      if (node.duration) {
+        this.compile(node.duration);
+      } else {
+        this.emit(Opcode.CONST, this.addConstant(new Int(1)));
+      }
+      this.emit(Opcode.SKIP);
     } else if (node instanceof ast.CCExpression) {
       if (!node.message) {
         throw new Error(

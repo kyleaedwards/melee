@@ -58,6 +58,7 @@ export enum Opcode {
 
   NOTE = 200, // MIDI note
   CC, // MIDI CC message
+  SKIP, // MIDI note skip
 
   YIELD = 210,
   NEXT,
@@ -117,6 +118,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.SETC, 'SETC', [1]],
     [Opcode.NOTE, 'NOTE'],
     [Opcode.CC, 'CC'],
+    [Opcode.SKIP, 'SKIP'],
     [Opcode.YIELD, 'YIELD'],
     [Opcode.NEXT, 'NEXT'],
   ];
