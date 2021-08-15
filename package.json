@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "yarn build --watch --preserveWatchOutput",
-    "lint": "eslint src --ext ts,js && prettier -w src",
+    "lint": "eslint src --ext ts,js && prettier -c src",
     "test": "jest",
     "cov": "jest --coverage"
   },
