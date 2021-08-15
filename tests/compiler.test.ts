@@ -10,7 +10,7 @@ import { Lexer } from '../src/lexer';
 import { Parser } from '../src/parser';
 import { Compiler } from '../src/compiler';
 import * as obj from '../src/object';
-import { BUILTINS } from '../src/builtins';
+import { BUILTINS, NATIVE_FNS } from '../src/builtins';
 
 const GLOBALS = Object.keys(BUILTINS).length;
 
@@ -668,12 +668,13 @@ describe('Compiler.compile', () => {
   });
 
   test('should compile native built-in functions', () => {
+    const index = NATIVE_FNS.map((fn) => fn.label).indexOf('len');
     const inputs: CompilerTestCase[] = [
       [
         `len([])`,
         [],
         [
-          createInstruction(Opcode.GETN, 4),
+          createInstruction(Opcode.GETN, index),
           createInstruction(Opcode.ARRAY, 0),
           createInstruction(Opcode.CALL, 1),
           createInstruction(Opcode.POP),
@@ -685,12 +686,13 @@ describe('Compiler.compile', () => {
   });
 
   test('should compile midi note keywords', () => {
+    const index = Object.keys(BUILTINS).indexOf('C3');
     const inputs: CompilerTestCase[] = [
       [
         `note [C3]`,
         [],
         [
-          createInstruction(Opcode.GETG, 68),
+          createInstruction(Opcode.GETG, index),
           createInstruction(Opcode.ARRAY, 1),
           createInstruction(Opcode.NOTE),
           createInstruction(Opcode.POP),
@@ -700,7 +702,7 @@ describe('Compiler.compile', () => {
         `note [C3, 4]`,
         [4],
         [
-          createInstruction(Opcode.GETG, 68),
+          createInstruction(Opcode.GETG, index),
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.ARRAY, 2),
           createInstruction(Opcode.NOTE),
@@ -711,7 +713,7 @@ describe('Compiler.compile', () => {
         `note [C3, 4, 64]`,
         [4, 64],
         [
-          createInstruction(Opcode.GETG, 68),
+          createInstruction(Opcode.GETG, index),
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.CONST, 1),
           createInstruction(Opcode.ARRAY, 3),

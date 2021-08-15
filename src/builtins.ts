@@ -24,6 +24,62 @@ const NULL = new Null();
  */
 export const NATIVE_FNS: NativeFn[] = [
   /**
+   * chord(Note, Arr, Int): Arr
+   * (alternatively: chord(Int, Arr, Int): Arr)
+   * Creates a chord of notes or pitches either with an existing
+   * root note or root pitch value.
+   */
+  new NativeFn(
+    'chord',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const [root, chord, inversion] = args;
+
+      let rootPitch: number;
+      if (root instanceof MidiNote) {
+        rootPitch = root.pitch;
+      } else if (root instanceof Int) {
+        rootPitch = root.value;
+      } else {
+        throw new Error('The first argument to `chord` must be an Int pitch or a MIDI note object');
+      }
+
+      if (!(chord instanceof Arr)) {
+        throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
+      }
+      const intervals = chord.items.map((item) => {
+        if (!(item instanceof Int)) {
+          throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
+        }
+        return item.value;
+      });
+
+      let inversionValue = 0;
+      console.log(inversion);
+      if (inversion) {
+        if (!(inversion instanceof Int)) {
+          throw new Error('Inversion must be a number');
+        }
+        inversionValue = inversion.value;
+      }
+
+      while (inversionValue-- > 0) {
+        const interval = intervals.shift();
+        if (interval !== undefined) {
+          intervals.push(interval + 12);
+        }
+      }
+
+      const items = intervals.map((interval) => {
+        if (root instanceof MidiNote) {
+          return new MidiNote(rootPitch + interval, root.duration, root.velocity);
+        }
+        return new Int(rootPitch + interval);
+      });
+      return new Arr(items);
+    },
+  ),
+
+  /**
    * concat(...Arr): Arr
    * Given an arbitrary number of array arguments, returns a new
    * array containing all of the arrays' children.
@@ -182,6 +238,34 @@ export const NATIVE_FNS: NativeFn[] = [
   }),
 
   /**
+   * merge(...Seq): Seq
+   * Given a variable length list of sequences, returns a new sequence
+   * that returns an array of next values for each one.
+   */
+  new NativeFn(
+    'merge',
+    (vm: VM, ...args: BaseObject[]): BaseObject => {
+      const seqs: Iterable[] = [];
+      args.forEach((arg) => {
+        if (!(arg instanceof Iterable)) {
+          throw new Error(
+            'Function `merge` takes a flexible number of sequence objects',
+          );
+        }
+        seqs.push(arg);
+      });
+      const seq = new VirtualSeq(() => {
+        const output = new Array<BaseObject>(seqs.length);
+        seqs.forEach((seq, i) => {
+          output[i] = vm.takeNext(seq);
+        });
+        return new Arr(output);
+      });
+      return seq;
+    },
+  ),
+
+  /**
    * min(Arr): Int | Null
    * Given an array of integers, returns the smallest integer value.
    */
@@ -204,7 +288,7 @@ export const NATIVE_FNS: NativeFn[] = [
   }),
 
   /**
-   * poly(...Seq): Arr
+   * poly(...Seq): Seq
    * Polyphony helper to process multiple sequences of notes and
    * chords at the same time.
    */
@@ -231,11 +315,10 @@ export const NATIVE_FNS: NativeFn[] = [
             const note = vm.takeNext(seq);
             if (note instanceof MidiNote) {
               state[i] = note.duration - 1;
-              output[i] = note;
             } else {
               state[i] = 0;
-              output[i] = note;
             }
+            output[i] = note;
           }
         });
         return new Arr(output);
@@ -285,7 +368,7 @@ export const NATIVE_FNS: NativeFn[] = [
   }),
 
   /**
-   * quant(Arr, Int, Int): Int
+   * quant(Arr, Int | Note, Int | Note): Int | Note
    * Given a scale, a root note, and an input note, calculates and
    * returns the next closest note that fits the scale.
    */
@@ -295,10 +378,25 @@ export const NATIVE_FNS: NativeFn[] = [
         !scale.items.every((item) => item instanceof Int)) {
       throw new Error('Function `quant` requires the first argument to be an array of integers');
     }
-    if (!(root instanceof Int) || !(note instanceof Int)) {
-      throw new Error('Function `quant` requires a scale array, an integer root note, and a note to quantize');
+    let rootPitch;
+    if (root instanceof Int) {
+      rootPitch = root.value;
+    } else if (root instanceof MidiNote) {
+      rootPitch = root.pitch;
+    } else {
+      throw new Error('Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize');
     }
-    let base = note.value - root.value;
+
+    let notePitch;
+    if (note instanceof Int) {
+      notePitch = note.value;
+    } else if (note instanceof MidiNote) {
+      notePitch = note.pitch;
+    } else {
+      throw new Error('Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize');
+    }
+
+    let base = notePitch - rootPitch;
     const octave = Math.floor(base / 12);
     while (base < 0) {
       base += 12;
@@ -312,7 +410,12 @@ export const NATIVE_FNS: NativeFn[] = [
         break;
       }
     }
-    return new Int(root.value + octave * 12 + quantized);
+    quantized += rootPitch + octave * 12;
+
+    if (note instanceof MidiNote) {
+      return new MidiNote(quantized, note.duration, note.velocity);
+    }
+    return new Int(quantized);
   }),
 
   /**
@@ -398,7 +501,7 @@ export const NATIVE_FNS: NativeFn[] = [
   ),
 
   /**
-   * scale(Arr, Int, Int): Int
+   * scale(Arr, Int | Note, Int): Int | Note
    * Given a scale, a root note, and an interval, calculates and returns
    * the pitch value at that interval.
    */
@@ -408,8 +511,16 @@ export const NATIVE_FNS: NativeFn[] = [
         !scale.items.every((item) => item instanceof Int)) {
       throw new Error('Function `scale` requires the first argument to be an array of integers');
     }
-    if (!(root instanceof Int) || !(interval instanceof Int)) {
-      throw new Error('Function `scale` requires a scale array, an integer root note, and an integer interval');
+    let rootPitch;
+    if (root instanceof Int) {
+      rootPitch = root.value;
+    } else if (root instanceof MidiNote) {
+      rootPitch = root.pitch;
+    } else {
+      throw new Error('Function `scale` requires a scale array, a root note or pitch, and an integer interval');
+    }
+    if (!(interval instanceof Int)) {
+      throw new Error('Function `scale` requires a scale array, a root note or pitch, and an integer interval');
     }
     let base = interval.value;
     while (base < 0) {
@@ -417,7 +528,11 @@ export const NATIVE_FNS: NativeFn[] = [
     }
     const offset = scale.items[base % scale.items.length] as Int;
     const octave = Math.floor(interval.value / scale.items.length);
-    return new Int(root.value + octave * 12 + offset.value);
+    const pitch = rootPitch + octave * 12 + offset.value;
+    if (root instanceof MidiNote) {
+      return new MidiNote(pitch, root.duration, root.velocity);
+    }
+    return new Int(pitch);
   }),
 
   /**
@@ -497,6 +612,43 @@ export const NATIVE_FNS: NativeFn[] = [
 ];
 
 /**
+ * Create a mapping of chord names to arrays of pitch intervals.
+ *
+ * @returns Object containing map of chord arrays by name
+ *
+ * @internal
+ */
+function createChordMap(): Record<string, BaseObject> {
+  const CHORD_MAP: Record<string, number[]> = {
+    ROOT_4: [0, 5],
+    ROOT_5: [0, 7],
+    ROOT_6: [0, 9],
+    SUS_2: [0, 2, 7],
+    SUS_4: [0, 5, 7],
+    ROOT_5_ADD_9: [0, 7, 14],
+    ROOT_6_ADD_9: [0, 9, 14],
+    MAJ: [0, 4, 7],
+    MIN: [0, 3, 7],
+    MAJ_7: [0, 4, 7, 11],
+    MIN_7: [0, 3, 7, 10],
+    DOM_7: [0, 4, 7, 10],
+    MIN_MAJ_7: [0, 3, 7, 11],
+    MAJ_9: [0, 4, 7, 11, 14],
+    MAJ_ADD_9: [0, 3, 7, 14],
+    MIN_9: [0, 3, 7, 10, 14],
+    MIN_ADD_9: [0, 3, 7, 14],
+    DOM_9: [0, 4, 7, 10, 14],
+    MAJ_11: [0, 4, 7, 11, 14, 17],
+    MIN_11: [0, 3, 7, 10, 14, 17],
+  };
+
+  return Object.keys(CHORD_MAP).reduce((acc, cur) => ({
+    ...acc,
+    [cur]: new Arr(CHORD_MAP[cur].map(interval => new Int(interval))),
+  }), {});
+}
+
+/**
  * Create a mapping of scale names to arrays of intervals.
  *
  * @returns Object containing map of scale arrays by name
@@ -505,18 +657,18 @@ export const NATIVE_FNS: NativeFn[] = [
  */
 function createScaleMap(): Record<string, BaseObject> {
   const SCALE_MAP: Record<string, number[]> = {
-    MAJOR: [0, 2, 4, 5, 7, 9, 11],
-    IONIAN: [0, 2, 4, 5, 7, 9, 11],
-    MINOR: [0, 2, 3, 5, 7, 8, 10],
-    AEOLIAN: [0, 2, 3, 5, 7, 8, 10],
-    DORIAN: [0, 2, 3, 5, 7, 9, 10],
-    PENTA_MAJOR: [0, 2, 4, 7, 9],
-    PENTA_MINOR: [0, 3, 5, 7, 10],
-    BLUES: [0, 3, 5, 6, 7, 10],
-    MIXOLYDIAN: [0, 2, 4, 5, 7, 9, 10],
-    PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],
-    LYDIAN: [0, 2, 4, 6, 7, 9, 11],
-    LOCRIAN: [0, 1, 3, 5, 6, 8, 10],
+    SCALE_MAJOR: [0, 2, 4, 5, 7, 9, 11],
+    SCALE_IONIAN: [0, 2, 4, 5, 7, 9, 11],
+    SCALE_MINOR: [0, 2, 3, 5, 7, 8, 10],
+    SCALE_AEOLIAN: [0, 2, 3, 5, 7, 8, 10],
+    SCALE_DORIAN: [0, 2, 3, 5, 7, 9, 10],
+    SCALE_PENT_MAJOR: [0, 2, 4, 7, 9],
+    SCALE_PENT_MINOR: [0, 3, 5, 7, 10],
+    SCALE_BLUES: [0, 3, 5, 6, 7, 10],
+    SCALE_MIXOLYDIAN: [0, 2, 4, 5, 7, 9, 10],
+    SCALE_PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],
+    SCALE_LYDIAN: [0, 2, 4, 6, 7, 9, 11],
+    SCALE_LOCRIAN: [0, 1, 3, 5, 6, 8, 10],
   };
 
   return Object.keys(SCALE_MAP).reduce((acc, cur) => ({
@@ -568,6 +720,7 @@ function createMidiMap(): Record<string, BaseObject> {
  * @internal
  */
 export const BUILTINS = {
+  ...createChordMap(),
   ...createMidiMap(),
   ...createScaleMap(),
 };

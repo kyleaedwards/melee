@@ -112,7 +112,114 @@ Hopefully you're starting to see how with a little bit of code you can build com
 
 This barely cracks the surface of what's capable with Melee, so check out the [examples](/examples) for more in-depth demonstrations.
 
-## Data Types
+## Scales
+
+The `scale()` and `quant()` functions convert an interval or note to a MIDI pitch number relative to the provided scale and root note. You can provide any scale by setting an array like `fibonacci := [0, 1, 2, 3, 5, 8]`, however some scales are pre-loaded into the language and can be accessed with the variable names below:
+
+```js
+SCALE_MAJOR // or
+SCALE_IONIAN
+SCALE_MINOR // or
+SCALE_AEOLIAN
+SCALE_PENTA_MAJOR
+SCALE_PENTA_MINOR
+SCALE_BLUES
+SCALE_DORIAN
+SCALE_PHRYGIAN
+SCALE_LYDIAN
+SCALE_MIXOLYDIAN
+SCALE_LOCRIAN
+```
+
+## Chords and Polyphony
+
+In the current design of Melee, polyphony is a bit of a tricky thing. In real human compositions, notes of a chord don't always play for the same length for the same length. To allow users the flexibility of flowing seamlessly between harmony and melody, it's easier for chords to simply be arrays of `note` objects rather than a standalone data type.
+
+That being said, there are a number of helpers to work with groups of notes.
+
+### Chords
+
+The `chord` function can take either a `note` object or a `int` pitch value, an array of chord intervals, and an optional inversion number. This means you can call `chord` a couple of different ways.
+
+```js
+chord(A2, MAJ)    // A2 Maj triad
+> [A2, C#2, E2]
+
+chord(A2, MAJ, 1) // A2 Maj triad, first inversion
+> [C#2, E2, A3]
+
+chord(note[A2, 4, 127], MAJ) // A2 Maj triad, for 4 clock cycles, with full velocity
+> [note [A2, 4, 127], note [C#2, 4, 127], note [E2, 4, 127]]
+
+chord(note[A2, 4, 127], MAJ, 2) // A2 Maj triad, second inversion, for 4 clock cycles, with full velocity
+> [note [E2, 4, 127], note [A3, 4, 127], note [C#3, 4, 127]]
+```
+
+The full list of built-in chords are shown below, but because these chords are just arrays, you can define your own in the Melee code, use scales as chords, chords as scales... whatever you want!
+
+```js
+ROOT_4 // Root + perfect 4th
+ROOT_5 // Root + perfect 5th
+ROOT_6 // Root + sixth
+SUS_2 // Root + 2nd + 5th
+SUS_4 // Root + 4th + 5th
+ROOT_5_ADD_9 // Root + 5th + 9th
+ROOT_6_ADD_9 // Root + 6th + 9th
+MAJ // Root + 3rd + 5th
+MIN // Root + flat 3rd + 5th
+MAJ_7 // Root + 3rd + 5th + 7th
+MIN_7 // Root + flat 3rd + 5th + flat 7th
+DOM_7 // Root + 3rd + 5th + flat 7th
+MIN_MAJ_7 // Root + flat 3rd + 5th + 7th
+MAJ_9 // Root + 3rd + 5th + 7th + 9th
+MAJ_ADD_9 // Root + 3rd + 5th + 9th
+MIN_9 // Root + flat 3rd + 5th + flat 7th + 9th
+MIN_ADD_9 // Root + flat 3rd + 5th + 9th
+DOM_9 // Root + 3rd + 5th + flat 7th + 9th
+MAJ_11 // Root + 3rd + 5th + 7th + 9th + 11th
+MIN_11 // Root + flat 3rd + 5th + flat 7th + 9th + 11th
+```
+
+### Polyphony
+
+Because Melee notes have durations baked into the data type, it can be tough for the runtime to know how long a group of notes should play. More importantly, it can be difficult to know when to pull the next item from the main sequence.
+
+For example, let's say you want to play two sequences in a sort of two-voice sequence, where a melody plays while another note plays every 4 beats to reinforce a bass note.
+
+```
+// Melody  | C5 | A5 | G5 | F#5 | F5 | D5 | G5 | B4 |
+// Bass    | C2                 | F2                |
+
+melody := gen() {
+  yield note [C5]
+  yield note [A5]
+  yield note [G5]
+  yield note [F#5]
+  yield note [D5]
+  yield note [D5]
+  yield note [G5]
+  yield note [B4]
+}
+
+bass := gen() {
+  yield note [C2, 4]
+  yield note [F2, 4]
+}
+
+main := merge(melody(), bass())
+```
+
+If we were to do a plain old `merge` to join these two generators into a single `main` sequence, then on the first beat, the runtime receives the two notes `[note [C5], note [C2, 4]`. The runtime would need to make a choice on whether to the next items after one beat or four. If the runtime pulled another note on the second beat, then the sequence would return `[note [A5], note [F2, 4]]`. That's not what we want.
+
+Hence, the `poly` function is available to provide a way to merge sequences that is aware of note duration. If you were to create a `main` sequence using `poly(melody(), bass())`, rather than the second beat returning both a new melody and bass note, we would recieve the array `[note [A5], HOLD]`.
+
+`HOLD` is a special value useful to runtimes to know not to worry about that particular note, and that whatever its currently doing should be fine.
+
+> As a user, you shouldn't have to worry too much about passing `HOLD` values around, but if you're daring enough to create your own program that uses Melee, you'll want to look out for it.
+
+## Reference
+
+### Data Types
 
 | Type | Example | Description |
 | --- | --- | --- |
@@ -127,10 +234,11 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 | **seq** | `N/A` | A sequence object you get by calling a `gen` function. Iterate over it with `next`.
 | **skip** | `skip 2` | Shorthand for a note with a pitch of -1 |
 
-## Built-in Functions
+### Built-in Functions
 
 | Type | Example | Description |
 | --- | --- | --- |
+| **chord** | `chord(...)` | See [Chords and Polyphony](#chords-and-polyphony) for a full explanation |
 | **concat** | `concat(arr1, arr2, ..., arrN)` | Merge multiple arrays into one |
 | **conv** | `conv(arr)` | Converts an array into a sequence |
 | **cycle** | `cycle(arr)` | Converts an array into an infinitely looping sequence |
@@ -138,8 +246,9 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 | **len** | `len(arr)` | Returns the length of the array |
 | **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
 | **max** | `max(arr)` | Returns the maximum value of an array of `int`s |
+| **merge** | `merge(seq1, seq2, ..., seqN)` | Merges multiple sequences together so that `next` returns an array of each next value of the given sequences |
 | **min** | `min(arr)` | Returns the minimum value of an array of `int`s |
-| **poly** | `poly(seq1, seq2, ..., seqN)` | Polyphony helper; merges multiple sequences together but honors note length |
+| **poly** | `poly(seq1, seq2, ..., seqN)` | Polyphony helper; almost identical to `merge`, honors note duration |
 | **pop** | `pop(arr)` | Pulls an element off the end of an array and returns it |
 | **print** | `print(...)` | Prints arguments to the console |
 | **push** | `push(arr)` | Pushes a new element onto an array |
@@ -152,27 +261,6 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 | **shift** | `shift(arr)` | Pulls an element off the front of an array and returns it |
 | **sort** | `sort(arr)` | Returns a sorted array |
 | **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |
-
-### Scales
-
-The `scale()` and `quant()` functions convert an interval or note to a MIDI pitch number relative to the provided scale and root note. You can provide any scale by setting an array like `fibonacci := [0, 1, 2, 3, 5, 8]`, however some scales are pre-loaded into the language and can be accessed with the variable names below:
-
-```
-MAJOR or IONIAN
-MINOR or AEOLIAN
-PENTA_MAJOR
-PENTA_MINOR
-BLUES
-DORIAN
-PHRYGIAN
-LYDIAN
-MIXOLYDIAN
-LOCRIAN
-```
-
-### Chords
-
-**In progress...**
 
 ## Acknowledgements
 
