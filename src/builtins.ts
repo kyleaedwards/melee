@@ -40,15 +40,21 @@ export const NATIVE_FNS: NativeFn[] = [
       } else if (root instanceof Int) {
         rootPitch = root.value;
       } else {
-        throw new Error('The first argument to `chord` must be an Int pitch or a MIDI note object');
+        throw new Error(
+          'The first argument to `chord` must be an Int pitch or a MIDI note object',
+        );
       }
 
       if (!(chord instanceof Arr)) {
-        throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
+        throw new Error(
+          'Chord requires second argument to be an existing chord variable or an array of note intervals',
+        );
       }
       const intervals = chord.items.map((item) => {
         if (!(item instanceof Int)) {
-          throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
+          throw new Error(
+            'Chord requires second argument to be an existing chord variable or an array of note intervals',
+          );
         }
         return item.value;
       });
@@ -71,7 +77,11 @@ export const NATIVE_FNS: NativeFn[] = [
 
       const items = intervals.map((interval) => {
         if (root instanceof MidiNote) {
-          return new MidiNote(rootPitch + interval, root.duration, root.velocity);
+          return new MidiNote(
+            rootPitch + interval,
+            root.duration,
+            root.velocity,
+          );
         }
         return new Int(rootPitch + interval);
       });
@@ -161,7 +171,9 @@ export const NATIVE_FNS: NativeFn[] = [
   new NativeFn('dur', (_: VM, ...args: BaseObject[]): BaseObject => {
     const note = args[0];
     if (args.length !== 1 || !(note instanceof MidiNote)) {
-      throw new Error('Function `dur` takes a single MIDI note argument');
+      throw new Error(
+        'Function `dur` takes a single MIDI note argument',
+      );
     }
     return new Int(note.duration);
   }),
@@ -303,13 +315,18 @@ export const NATIVE_FNS: NativeFn[] = [
    * pitch(Note): Int
    * Given a MIDI note object, returns its pitch.
    */
-  new NativeFn('pitch', (_: VM, ...args: BaseObject[]): BaseObject => {
-    const note = args[0];
-    if (args.length !== 1 || !(note instanceof MidiNote)) {
-      throw new Error('Function `pitch` takes a single MIDI note argument');
-    }
-    return new Int(note.pitch);
-  }),
+  new NativeFn(
+    'pitch',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const note = args[0];
+      if (args.length !== 1 || !(note instanceof MidiNote)) {
+        throw new Error(
+          'Function `pitch` takes a single MIDI note argument',
+        );
+      }
+      return new Int(note.pitch);
+    },
+  ),
 
   /**
    * poly(...Seq): Seq
@@ -396,51 +413,62 @@ export const NATIVE_FNS: NativeFn[] = [
    * Given a scale, a root note, and an input note, calculates and
    * returns the next closest note that fits the scale.
    */
-  new NativeFn('quant', (_: VM, ...args: BaseObject[]): BaseObject => {
-    const [scale, root, note] = args;
-    if (!(scale instanceof Arr) ||
-        !scale.items.every((item) => item instanceof Int)) {
-      throw new Error('Function `quant` requires the first argument to be an array of integers');
-    }
-    let rootPitch;
-    if (root instanceof Int) {
-      rootPitch = root.value;
-    } else if (root instanceof MidiNote) {
-      rootPitch = root.pitch;
-    } else {
-      throw new Error('Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize');
-    }
-
-    let notePitch;
-    if (note instanceof Int) {
-      notePitch = note.value;
-    } else if (note instanceof MidiNote) {
-      notePitch = note.pitch;
-    } else {
-      throw new Error('Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize');
-    }
-
-    let base = notePitch - rootPitch;
-    const octave = Math.floor(base / 12);
-    while (base < 0) {
-      base += 12;
-    }
-    base %= 12;
-    let quantized = 12;
-    for (let i = 0; i < scale.items.length; i++) {
-      const item = scale.items[i] as Int;
-      if (item.value >= base) {
-        quantized = item.value;
-        break;
+  new NativeFn(
+    'quant',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const [scale, root, note] = args;
+      if (
+        !(scale instanceof Arr) ||
+        !scale.items.every((item) => item instanceof Int)
+      ) {
+        throw new Error(
+          'Function `quant` requires the first argument to be an array of integers',
+        );
       }
-    }
-    quantized += rootPitch + octave * 12;
+      let rootPitch;
+      if (root instanceof Int) {
+        rootPitch = root.value;
+      } else if (root instanceof MidiNote) {
+        rootPitch = root.pitch;
+      } else {
+        throw new Error(
+          'Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize',
+        );
+      }
 
-    if (note instanceof MidiNote) {
-      return new MidiNote(quantized, note.duration, note.velocity);
-    }
-    return new Int(quantized);
-  }),
+      let notePitch;
+      if (note instanceof Int) {
+        notePitch = note.value;
+      } else if (note instanceof MidiNote) {
+        notePitch = note.pitch;
+      } else {
+        throw new Error(
+          'Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize',
+        );
+      }
+
+      let base = notePitch - rootPitch;
+      const octave = Math.floor(base / 12);
+      while (base < 0) {
+        base += 12;
+      }
+      base %= 12;
+      let quantized = 12;
+      for (let i = 0; i < scale.items.length; i++) {
+        const item = scale.items[i] as Int;
+        if (item.value >= base) {
+          quantized = item.value;
+          break;
+        }
+      }
+      quantized += rootPitch + octave * 12;
+
+      if (note instanceof MidiNote) {
+        return new MidiNote(quantized, note.duration, note.velocity);
+      }
+      return new Int(quantized);
+    },
+  ),
 
   /**
    * rand(Int): Int
@@ -529,35 +557,46 @@ export const NATIVE_FNS: NativeFn[] = [
    * Given a scale, a root note, and an interval, calculates and returns
    * the pitch value at that interval.
    */
-  new NativeFn('scale', (_: VM, ...args: BaseObject[]): BaseObject => {
-    const [scale, root, interval] = args;
-    if (!(scale instanceof Arr) ||
-        !scale.items.every((item) => item instanceof Int)) {
-      throw new Error('Function `scale` requires the first argument to be an array of integers');
-    }
-    let rootPitch;
-    if (root instanceof Int) {
-      rootPitch = root.value;
-    } else if (root instanceof MidiNote) {
-      rootPitch = root.pitch;
-    } else {
-      throw new Error('Function `scale` requires a scale array, a root note or pitch, and an integer interval');
-    }
-    if (!(interval instanceof Int)) {
-      throw new Error('Function `scale` requires a scale array, a root note or pitch, and an integer interval');
-    }
-    let base = interval.value;
-    while (base < 0) {
-      base += scale.items.length;
-    }
-    const offset = scale.items[base % scale.items.length] as Int;
-    const octave = Math.floor(interval.value / scale.items.length);
-    const pitch = rootPitch + octave * 12 + offset.value;
-    if (root instanceof MidiNote) {
-      return new MidiNote(pitch, root.duration, root.velocity);
-    }
-    return new Int(pitch);
-  }),
+  new NativeFn(
+    'scale',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const [scale, root, interval] = args;
+      if (
+        !(scale instanceof Arr) ||
+        !scale.items.every((item) => item instanceof Int)
+      ) {
+        throw new Error(
+          'Function `scale` requires the first argument to be an array of integers',
+        );
+      }
+      let rootPitch;
+      if (root instanceof Int) {
+        rootPitch = root.value;
+      } else if (root instanceof MidiNote) {
+        rootPitch = root.pitch;
+      } else {
+        throw new Error(
+          'Function `scale` requires a scale array, a root note or pitch, and an integer interval',
+        );
+      }
+      if (!(interval instanceof Int)) {
+        throw new Error(
+          'Function `scale` requires a scale array, a root note or pitch, and an integer interval',
+        );
+      }
+      let base = interval.value;
+      while (base < 0) {
+        base += scale.items.length;
+      }
+      const offset = scale.items[base % scale.items.length] as Int;
+      const octave = Math.floor(interval.value / scale.items.length);
+      const pitch = rootPitch + octave * 12 + offset.value;
+      if (root instanceof MidiNote) {
+        return new MidiNote(pitch, root.duration, root.velocity);
+      }
+      return new Int(pitch);
+    },
+  ),
 
   /**
    * shift(Arr): *
@@ -641,7 +680,9 @@ export const NATIVE_FNS: NativeFn[] = [
   new NativeFn('vel', (_: VM, ...args: BaseObject[]): BaseObject => {
     const note = args[0];
     if (args.length !== 1 || !(note instanceof MidiNote)) {
-      throw new Error('Function `vel` takes a single MIDI note argument');
+      throw new Error(
+        'Function `vel` takes a single MIDI note argument',
+      );
     }
     return new Int(note.velocity);
   }),
@@ -678,10 +719,15 @@ function createChordMap(): Record<string, BaseObject> {
     MIN_11: [0, 3, 7, 10, 14, 17],
   };
 
-  return Object.keys(CHORD_MAP).reduce((acc, cur) => ({
-    ...acc,
-    [cur]: new Arr(CHORD_MAP[cur].map(interval => new Int(interval))),
-  }), {});
+  return Object.keys(CHORD_MAP).reduce(
+    (acc, cur) => ({
+      ...acc,
+      [cur]: new Arr(
+        CHORD_MAP[cur].map((interval) => new Int(interval)),
+      ),
+    }),
+    {},
+  );
 }
 
 /**
@@ -707,10 +753,15 @@ function createScaleMap(): Record<string, BaseObject> {
     SCALE_LOCRIAN: [0, 1, 3, 5, 6, 8, 10],
   };
 
-  return Object.keys(SCALE_MAP).reduce((acc, cur) => ({
-    ...acc,
-    [cur]: new Arr(SCALE_MAP[cur].map(interval => new Int(interval))),
-  }), {});
+  return Object.keys(SCALE_MAP).reduce(
+    (acc, cur) => ({
+      ...acc,
+      [cur]: new Arr(
+        SCALE_MAP[cur].map((interval) => new Int(interval)),
+      ),
+    }),
+    {},
+  );
 }
 
 /**

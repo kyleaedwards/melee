@@ -554,9 +554,10 @@ export class VM {
         }
         case Opcode.SKIP: {
           const duration = this.pop();
-          if (!(duration instanceof obj.Int) ||
-              duration.value <= 0) {
-            throw new Error('Cannot use `skip` keyword with a non-integer duration or a duration less than 1');
+          if (!(duration instanceof obj.Int) || duration.value <= 0) {
+            throw new Error(
+              'Cannot use `skip` keyword with a non-integer duration or a duration less than 1',
+            );
           }
           this.push(new obj.MidiNote(-1, duration.value, 0));
           break;

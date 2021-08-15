@@ -43,7 +43,9 @@ export class Runtime {
 
     const main = this.symbolTable.get('main');
     if (!main) {
-      throw new Error('Runtime environment requires a top-level `main` object');
+      throw new Error(
+        'Runtime environment requires a top-level `main` object',
+      );
     }
 
     let seq = this.constants[main.index];
@@ -51,7 +53,9 @@ export class Runtime {
       seq = vm.callAndReturn(seq, []);
     }
     if (!(seq instanceof Seq)) {
-      throw new Error('Top level `main` object must be a sequence or a sequence generator')
+      throw new Error(
+        'Top level `main` object must be a sequence or a sequence generator',
+      );
     }
 
     this.seq = seq;
