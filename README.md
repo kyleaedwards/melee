@@ -242,12 +242,14 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **concat** | `concat(arr1, arr2, ..., arrN)` | Merge multiple arrays into one |
 | **conv** | `conv(arr)` | Converts an array into a sequence |
 | **cycle** | `cycle(arr)` | Converts an array into an infinitely looping sequence |
+| **dur** | `dur(note)` | Returns a note's duration |
 | **filter** | `filter(arr, fn)` | Creates a new array of items where `fn(item)` returns *truthy* |
 | **len** | `len(arr)` | Returns the length of the array |
 | **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
 | **max** | `max(arr)` | Returns the maximum value of an array of `int`s |
 | **merge** | `merge(seq1, seq2, ..., seqN)` | Merges multiple sequences together so that `next` returns an array of each next value of the given sequences |
 | **min** | `min(arr)` | Returns the minimum value of an array of `int`s |
+| **pitch** | `pitch(note)` | Returns a note's pitch |
 | **poly** | `poly(seq1, seq2, ..., seqN)` | Polyphony helper; almost identical to `merge`, honors note duration |
 | **pop** | `pop(arr)` | Pulls an element off the end of an array and returns it |
 | **print** | `print(...)` | Prints arguments to the console |
@@ -261,6 +263,7 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **shift** | `shift(arr)` | Pulls an element off the front of an array and returns it |
 | **sort** | `sort(arr)` | Returns a sorted array |
 | **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |
+| **vel** | `vel(note)` | Returns a note's velocity |
 
 ## Acknowledgements
 

@@ -155,6 +155,18 @@ export const NATIVE_FNS: NativeFn[] = [
   ),
 
   /**
+   * dur(Note): Int
+   * Given a MIDI note object, returns its duration.
+   */
+  new NativeFn('dur', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const note = args[0];
+    if (args.length !== 1 || !(note instanceof MidiNote)) {
+      throw new Error('Function `dur` takes a single MIDI note argument');
+    }
+    return new Int(note.duration);
+  }),
+
+  /**
    * filter(Arr, Fn): Arr
    * Given an array and a function, returns a new array containing
    * only the elements that return truthy when provided to the function.
@@ -285,6 +297,18 @@ export const NATIVE_FNS: NativeFn[] = [
       return NULL;
     }
     return new Int(Math.min.apply(null, items));
+  }),
+
+  /**
+   * pitch(Note): Int
+   * Given a MIDI note object, returns its pitch.
+   */
+  new NativeFn('pitch', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const note = args[0];
+    if (args.length !== 1 || !(note instanceof MidiNote)) {
+      throw new Error('Function `pitch` takes a single MIDI note argument');
+    }
+    return new Int(note.pitch);
   }),
 
   /**
@@ -609,6 +633,18 @@ export const NATIVE_FNS: NativeFn[] = [
       return new Arr(items);
     },
   ),
+
+  /**
+   * vel(Note): Int
+   * Given a MIDI note object, returns its velocity.
+   */
+  new NativeFn('vel', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const note = args[0];
+    if (args.length !== 1 || !(note instanceof MidiNote)) {
+      throw new Error('Function `vel` takes a single MIDI note argument');
+    }
+    return new Int(note.velocity);
+  }),
 ];
 
 /**

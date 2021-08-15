@@ -816,4 +816,21 @@ describe('VM', () => {
       ],
     ]);
   });
+
+  test('should support `pitch`, `dur`, and `vel` built-ins', () => {
+    testInputs([
+      [
+        `pitch(note [C4, 3, 50])`,
+        60,
+      ],
+      [
+        `dur(note [C4, 3, 50])`,
+        3,
+      ],
+      [
+        `vel(note [C4, 3, 50])`,
+        50,
+      ],
+    ]);
+  });
 });
