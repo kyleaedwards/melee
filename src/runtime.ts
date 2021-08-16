@@ -48,7 +48,7 @@ export class Runtime {
       );
     }
 
-    let seq = this.constants[main.index];
+    let seq = this.globals[main.index];
     if (seq instanceof Closure) {
       seq = vm.callAndReturn(seq, []);
     }
