@@ -644,7 +644,6 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.POP),
           createInstruction(Opcode.JMP, 0),
           createInstruction(Opcode.JMP, 0),
-          createInstruction(Opcode.POP),
         ],
       ],
       [
@@ -659,7 +658,6 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.JMP, 13),
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.JMP, 0),
-          createInstruction(Opcode.POP),
         ],
       ],
     ];

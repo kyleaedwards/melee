@@ -484,17 +484,14 @@ describe('Parser', () => {
       expect(stmts).toHaveLength(1);
 
       const stmt = stmts[0];
-      assertNodeType(stmt, ast.ExpressionStatement);
+      assertNodeType(stmt, ast.WhileStatement);
 
-      const expr = stmt.value;
-      assertNodeType(expr, ast.WhileExpression);
+      testInfixExpression(stmt.condition, 'y', '==', 'z');
 
-      testInfixExpression(expr.condition, 'y', '==', 'z');
+      assertNodeType(stmt.block, ast.BlockStatement);
 
-      assertNodeType(expr.block, ast.BlockStatement);
-
-      expect(expr.block.statements).toHaveLength(1);
-      const subStmt = expr.block.statements[0];
+      expect(stmt.block.statements).toHaveLength(1);
+      const subStmt = stmt.block.statements[0];
 
       assertNodeType(subStmt, ast.ExpressionStatement);
       testLiteral(subStmt.value, 'x');
@@ -508,17 +505,14 @@ describe('Parser', () => {
       expect(stmts).toHaveLength(1);
 
       const stmt = stmts[0];
-      assertNodeType(stmt, ast.ExpressionStatement);
+      assertNodeType(stmt, ast.WhileStatement);
 
-      const expr = stmt.value;
-      assertNodeType(expr, ast.WhileExpression);
+      testLiteral(stmt.condition, true);
 
-      testLiteral(expr.condition, true);
+      assertNodeType(stmt.block, ast.BlockStatement);
 
-      assertNodeType(expr.block, ast.BlockStatement);
-
-      expect(expr.block.statements).toHaveLength(1);
-      const subStmt = expr.block.statements[0];
+      expect(stmt.block.statements).toHaveLength(1);
+      const subStmt = stmt.block.statements[0];
 
       assertNodeType(subStmt, ast.ExpressionStatement);
       testLiteral(subStmt.value, 'x');

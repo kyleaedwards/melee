@@ -219,6 +219,30 @@ export class ForStatement implements Statement {
 }
 
 /**
+ * AST node type representing a `while` or `loop` expression.
+ *
+ * @public
+ */
+export class WhileStatement implements Statement {
+  nodeType: 'statement';
+
+  constructor(
+    public token: Token,
+    public condition: Expression,
+    public block: BlockStatement,
+  ) {
+    this.nodeType = 'statement';
+  }
+
+  toString(): string {
+    if (this.token[0] === 'loop') {
+      return `loop ${this.block.toString()}`;
+    }
+    return `while (${this.condition.toString()}) ${this.block.toString()}`;
+  }
+}
+
+/**
  * Expressions
  */
 
@@ -411,30 +435,6 @@ export class IfExpression implements Expression {
       str += ` else ${this.alternative.toString()}`;
     }
     return str;
-  }
-}
-
-/**
- * AST node type representing a `while` or `loop` expression.
- *
- * @public
- */
-export class WhileExpression implements Expression {
-  nodeType: 'expression';
-
-  constructor(
-    public token: Token,
-    public condition: Expression,
-    public block: BlockStatement,
-  ) {
-    this.nodeType = 'expression';
-  }
-
-  toString(): string {
-    if (this.token[0] === 'loop') {
-      return `loop ${this.block.toString()}`;
-    }
-    return `while (${this.condition.toString()}) ${this.block.toString()}`;
   }
 }
 

@@ -530,7 +530,7 @@ export class Compiler {
       }
       this.breaks.pop();
       this.loopStarts.pop();
-    } else if (node instanceof ast.WhileExpression) {
+    } else if (node instanceof ast.WhileStatement) {
       this.loopStarts.push(this.instructions().length);
       this.breaks.push([]);
       this.compile(node.condition);

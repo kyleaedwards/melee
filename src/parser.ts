@@ -101,8 +101,6 @@ export class Parser {
       lparen: this.parseParentheticalExpression.bind(this),
       lbracket: this.parseArrayLiteral.bind(this),
       if: this.parseConditional.bind(this),
-      while: this.parseWhile.bind(this),
-      loop: this.parseWhile.bind(this),
       next: this.parseNext.bind(this),
       note: this.parseNoteExpression.bind(this),
       skip: this.parseSkipExpression.bind(this),
@@ -190,12 +188,13 @@ export class Parser {
         this.nextToken();
         return stmt;
       }
-      case 'for': {
+      case 'for':
         return this.parseFor();
-      }
-      default: {
+      case 'while':
+      case 'loop':
+        return this.parseWhile();
+      default:
         return this.parseExpressionStatement();
-      }
     }
   }
 
@@ -512,7 +511,7 @@ export class Parser {
     return new ast.ForStatement(token, identifier, collection, block);
   }
 
-  private parseWhile(): ast.WhileExpression | undefined {
+  private parseWhile(): ast.WhileStatement | undefined {
     const token = this.curr;
 
     // If using the syntactic sugar `loop` keyword, just
@@ -531,7 +530,7 @@ export class Parser {
     if (!condition) return;
 
     const block = this.parseBlockStatement();
-    return new ast.WhileExpression(token, condition, block);
+    return new ast.WhileStatement(token, condition, block);
   }
 
   private parseCallExpression(
