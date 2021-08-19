@@ -80,7 +80,7 @@ export class Runtime {
   getBytecode(): string {
     let bytecode = 'Constants:\n\n';
     this.constants.forEach((obj, i) => {
-      bytecode += `${i}: ${obj.inspectObject()}\n`
+      bytecode += `${i}: ${obj.inspectObject()}\n`;
     });
     if (this.instructions) {
       bytecode += '\n\n';
@@ -90,7 +90,7 @@ export class Runtime {
           bytecode += `\n\nFn[${i}]\n`;
           bytecode += disassemble(obj.instructions);
         }
-      })
+      });
       return bytecode;
     }
     return 'No bytecode found.';

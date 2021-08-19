@@ -749,7 +749,10 @@ export class VM {
       } else if (fn instanceof obj.Gen) {
         const args = this.gatherArgs(numArgs);
         this.push(
-          new obj.Seq(callee, this.createCoroutine(callee, args, fn.numLocals)),
+          new obj.Seq(
+            callee,
+            this.createCoroutine(callee, args, fn.numLocals),
+          ),
         );
       }
     } else if (callee instanceof obj.NativeFn) {

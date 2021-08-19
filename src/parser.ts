@@ -509,12 +509,7 @@ export class Parser {
     if (!this.expectPeek('lbrace')) return;
     const block = this.parseBlockStatement();
 
-    return new ast.ForStatement(
-      token,
-      identifier,
-      collection,
-      block,
-    );
+    return new ast.ForStatement(token, identifier, collection, block);
   }
 
   private parseWhile(): ast.WhileExpression | undefined {
