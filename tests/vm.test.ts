@@ -844,4 +844,43 @@ describe('VM', () => {
     testError(`skip -1`);
     testError(`skip fn(){}`);
   });
+
+  test('should support nested sequence generators', () => {
+    testInputs([
+      [
+        `g := gen () {
+          loop {
+            yield 1;
+            yield 2;
+            loop {
+              yield 3;
+            }
+          }
+        };
+        s := g();
+        next s;
+        next s;
+        next s;
+        next s;`,
+        3,
+      ],
+      [
+        `g := gen () {
+          loop {
+            yield 1;
+            yield 2;
+            for i in range(3) {
+              yield 3;
+            }
+          }
+        };
+        s := g();
+        next s;
+        next s;
+        next s;
+        next s;`,
+        3,
+      ],
+    ]);
+  });
 });

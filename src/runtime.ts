@@ -1,6 +1,7 @@
+import { Bytecode, disassemble } from './bytecode';
 import { Compiler } from './compiler';
 import { Lexer } from './lexer';
-import { BaseObject, Closure, Seq, Null } from './object';
+import { BaseObject, Closure, Seq, Null, Gen, Fn } from './object';
 import { Parser } from './parser';
 import { SymbolTable } from './symbols';
 import { VM, createGlobalVariables } from './vm';
@@ -14,6 +15,7 @@ export class Runtime {
   private constants: BaseObject[] = [];
   private globals: (BaseObject | undefined)[];
   private symbolTable: SymbolTable;
+  private instructions?: Bytecode;
   private vm?: VM;
   private seq?: Seq;
 
@@ -37,6 +39,7 @@ export class Runtime {
 
     const compiler = new Compiler(this.constants, this.symbolTable);
     compiler.compile(program);
+    this.instructions = compiler.instructions();
 
     const vm = new VM(compiler, this.globals);
     vm.run();
@@ -72,5 +75,24 @@ export class Runtime {
       return NULL;
     }
     return this.vm.takeNext(this.seq);
+  }
+
+  getBytecode(): string {
+    let bytecode = 'Constants:\n\n';
+    this.constants.forEach((obj, i) => {
+      bytecode += `${i}: ${obj.inspectObject()}\n`
+    });
+    if (this.instructions) {
+      bytecode += '\n\n';
+      bytecode += disassemble(this.instructions);
+      this.constants.forEach((obj, i) => {
+        if (obj instanceof Fn || obj instanceof Gen) {
+          bytecode += `\n\nFn[${i}]\n`;
+          bytecode += disassemble(obj.instructions);
+        }
+      })
+      return bytecode;
+    }
+    return 'No bytecode found.';
   }
 }

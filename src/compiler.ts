@@ -471,7 +471,7 @@ export class Compiler {
         this.emit(Opcode.NULL);
       }
       this.emit(Opcode.RET);
-    } else if (node instanceof ast.ForExpression) {
+    } else if (node instanceof ast.ForStatement) {
       const identifier = this.symbolTable.add(node.identifier.value);
       const setter =
         this.symbolTable.type === ScopeType.GLOBAL

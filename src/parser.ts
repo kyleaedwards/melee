@@ -101,7 +101,6 @@ export class Parser {
       lparen: this.parseParentheticalExpression.bind(this),
       lbracket: this.parseArrayLiteral.bind(this),
       if: this.parseConditional.bind(this),
-      for: this.parseFor.bind(this),
       while: this.parseWhile.bind(this),
       loop: this.parseWhile.bind(this),
       next: this.parseNext.bind(this),
@@ -190,6 +189,9 @@ export class Parser {
         const stmt = new ast.BreakStatement(this.curr);
         this.nextToken();
         return stmt;
+      }
+      case 'for': {
+        return this.parseFor();
       }
       default: {
         return this.parseExpressionStatement();
@@ -484,7 +486,7 @@ export class Parser {
     );
   }
 
-  private parseFor(): ast.ForExpression | undefined {
+  private parseFor(): ast.ForStatement | undefined {
     const token = this.curr;
 
     if (!this.expectPeek('identifier')) {
@@ -507,7 +509,7 @@ export class Parser {
     if (!this.expectPeek('lbrace')) return;
     const block = this.parseBlockStatement();
 
-    return new ast.ForExpression(
+    return new ast.ForStatement(
       token,
       identifier,
       collection,

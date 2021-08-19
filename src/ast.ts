@@ -197,6 +197,28 @@ export class BreakStatement implements Statement {
 }
 
 /**
+ * AST node type representing a `for x in arr {}` expression.
+ *
+ * @public
+ */
+export class ForStatement implements Statement {
+  nodeType: 'statement';
+
+  constructor(
+    public token: Token,
+    public identifier: Identifier,
+    public collection: Expression,
+    public block: BlockStatement,
+  ) {
+    this.nodeType = 'statement';
+  }
+
+  toString(): string {
+    return `for ${this.identifier.toString()} in ${this.collection.toString()} ${this.block.toString()}`;
+  }
+}
+
+/**
  * Expressions
  */
 
@@ -389,28 +411,6 @@ export class IfExpression implements Expression {
       str += ` else ${this.alternative.toString()}`;
     }
     return str;
-  }
-}
-
-/**
- * AST node type representing a `for x in arr {}` expression.
- *
- * @public
- */
-export class ForExpression implements Expression {
-  nodeType: 'expression';
-
-  constructor(
-    public token: Token,
-    public identifier: Identifier,
-    public collection: Expression,
-    public block: BlockStatement,
-  ) {
-    this.nodeType = 'expression';
-  }
-
-  toString(): string {
-    return `for ${this.identifier.toString()} in ${this.collection.toString()} ${this.block.toString()}`;
   }
 }
 

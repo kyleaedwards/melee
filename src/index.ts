@@ -19,9 +19,11 @@ import * as obj from './object';
 
 export { Lexer } from './lexer';
 export { Parser } from './parser';
+export { Compiler } from './compiler';
 export { VM } from './vm';
 export { Token, TokenType, tokenIs } from './token';
 export { Repl } from './repl';
 export { Runtime } from './runtime';
+export { disassemble } from './bytecode';
 
 export { ast, obj };

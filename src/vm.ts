@@ -130,6 +130,7 @@ export class VM {
   private createCoroutine(
     closure: obj.Closure,
     args: obj.BaseObject[],
+    numLocals: number,
   ): obj.ExecutionState {
     const parentExecutionState = {
       stack: this.stack,
@@ -146,7 +147,7 @@ export class VM {
     const stack = new Array<obj.BaseObject | undefined>(
       MAX_STACK_SIZE,
     );
-    const sp = args.length;
+    const sp = numLocals;
     for (let i = 0; i < args.length; i++) {
       stack[i] = args[i];
     }
@@ -748,7 +749,7 @@ export class VM {
       } else if (fn instanceof obj.Gen) {
         const args = this.gatherArgs(numArgs);
         this.push(
-          new obj.Seq(callee, this.createCoroutine(callee, args)),
+          new obj.Seq(callee, this.createCoroutine(callee, args, fn.numLocals)),
         );
       }
     } else if (callee instanceof obj.NativeFn) {
