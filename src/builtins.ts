@@ -60,7 +60,6 @@ export const NATIVE_FNS: NativeFn[] = [
       });
 
       let inversionValue = 0;
-      console.log(inversion);
       if (inversion) {
         if (!(inversion instanceof Int)) {
           throw new Error('Inversion must be a number');
