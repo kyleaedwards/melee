@@ -95,8 +95,8 @@ export class ReturnStatement implements Statement {
 
   toString(): string {
     return this.value
-      ? `${this.token[1]} ${this.value.toString()};`
-      : `${this.token[1]};`;
+      ? `${this.token.literal} ${this.value.toString()};`
+      : `${this.token.literal};`;
   }
 }
 
@@ -115,8 +115,8 @@ export class YieldStatement implements Statement {
 
   toString(): string {
     return this.value
-      ? `${this.token[1]} ${this.value.toString()};`
-      : `${this.token[1]};`;
+      ? `${this.token.literal} ${this.value.toString()};`
+      : `${this.token.literal};`;
   }
 }
 
@@ -235,7 +235,7 @@ export class WhileStatement implements Statement {
   }
 
   toString(): string {
-    if (this.token[0] === 'loop') {
+    if (this.token.tokenType === 'loop') {
       return `loop ${this.block.toString()}`;
     }
     return `while (${this.condition.toString()}) ${this.block.toString()}`;
@@ -503,7 +503,7 @@ export class CommentLiteral implements Expression {
   public body: string;
 
   constructor(public token: Token) {
-    this.body = token[1];
+    this.body = token.literal;
     this.nodeType = 'expression';
   }
 
@@ -592,7 +592,7 @@ export class NoteExpression implements Expression {
   }
 
   toString(): string {
-    return `${this.token[1]} ${
+    return `${this.token.literal} ${
       this.note ? this.note.toString() : ''
     }`;
   }
@@ -614,7 +614,7 @@ export class SkipExpression implements Expression {
   }
 
   toString(): string {
-    return `${this.token[1]} ${
+    return `${this.token.literal} ${
       this.duration ? this.duration.toString() : ''
     }`;
   }
@@ -636,7 +636,7 @@ export class CCExpression implements Expression {
   }
 
   toString(): string {
-    return `${this.token[1]} ${
+    return `${this.token.literal} ${
       this.message ? this.message.toString() : ''
     }`;
   }

@@ -1,4 +1,4 @@
-import { Token, lookupIdentifier } from './token';
+import { Token, lookupIdentifier, TokenType } from './token';
 
 /**
  * Returns if the provided character is alphabetic.
@@ -41,8 +41,10 @@ function isAlphaNumeric(char: string): boolean {
  * Lexer class to create tokens from code string.
  */
 export class Lexer {
-  private position: number;
-  private readPosition: number;
+  private position: number = 0;
+  private readPosition: number = 0;
+  private line: number = 0;
+  private column: number = -1;
   private char: string;
 
   /**
@@ -56,10 +58,7 @@ export class Lexer {
      */
     public input: string,
   ) {
-    this.position = 0;
-    this.readPosition = 0;
     this.char = '';
-
     this.readChar();
   }
 
@@ -73,6 +72,12 @@ export class Lexer {
       this.char = '';
     } else {
       this.char = this.input[this.readPosition];
+    }
+    if (this.char === '\n') {
+      this.line++;
+      this.column = -1;
+    } else {
+      this.column++;
     }
     this.position = this.readPosition;
     this.readPosition++;
@@ -134,6 +139,20 @@ export class Lexer {
     }
     return this.input.slice(start, this.position);
   }
+  
+  /**
+   * Creates a new token with the current cursor position.
+   *
+   * @returns New token
+   */
+  private createToken(tokenType: TokenType, literal: string): Token {
+    return {
+      tokenType,
+      literal,
+      line: this.line,
+      column: this.column,
+    };
+  }
 
   /**
    * Iterates over characters until it can determine the next
@@ -151,126 +170,126 @@ export class Lexer {
       case '=':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['eq', '=='];
+          token = this.createToken('eq', '==');
         } else {
-          token = ['assign', this.char];
+          token = this.createToken('assign', this.char);
         }
         break;
       case ';':
-        token = ['semicolon', this.char];
+        token = this.createToken('semicolon', this.char);
         break;
       case ':':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['declare', ':='];
+          token = this.createToken('declare', ':=');
         } else {
-          token = ['colon', this.char];
+          token = this.createToken('colon', this.char);
         }
         break;
       case '(':
-        token = ['lparen', this.char];
+        token = this.createToken('lparen', this.char);
         break;
       case ')':
-        token = ['rparen', this.char];
+        token = this.createToken('rparen', this.char);
         break;
       case '{':
-        token = ['lbrace', this.char];
+        token = this.createToken('lbrace', this.char);
         break;
       case '}':
-        token = ['rbrace', this.char];
+        token = this.createToken('rbrace', this.char);
         break;
       case '[':
-        token = ['lbracket', this.char];
+        token = this.createToken('lbracket', this.char);
         break;
       case ']':
-        token = ['rbracket', this.char];
+        token = this.createToken('rbracket', this.char);
         break;
       case ',':
-        token = ['comma', this.char];
+        token = this.createToken('comma', this.char);
         break;
       case '+':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['pluseq', '+='];
+          token = this.createToken('pluseq', '+=');
         } else {
-          token = ['plus', this.char];
+          token = this.createToken('plus', this.char);
         }
         break;
       case '-':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['minuseq', '-='];
+          token = this.createToken('minuseq', '-=');
         } else {
-          token = ['minus', this.char];
+          token = this.createToken('minus', this.char);
         }
         break;
       case '*':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['asteriskeq', '*='];
+          token = this.createToken('asteriskeq', '*=');
         } else {
-          token = ['asterisk', this.char];
+          token = this.createToken('asterisk', this.char);
         }
         break;
       case '/':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['rslasheq', '/='];
+          token = this.createToken('rslasheq', '/=');
         } else if (this.peekChar() == '/') {
           this.readChar();
           let literal = '//';
           while (this.peekChar() != '\n' && this.peekChar() != '') {
             literal += this.readChar();
           }
-          token = ['comment', literal];
+          token = this.createToken('comment', literal);
         } else {
-          token = ['rslash', this.char];
+          token = this.createToken('rslash', this.char);
         }
         break;
       case '%':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['percenteq', '%='];
+          token = this.createToken('percenteq', '%=');
         } else {
-          token = ['percent', this.char];
+          token = this.createToken('percent', this.char);
         }
         break;
       case '!':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['noteq', '!='];
+          token = this.createToken('noteq', '!=');
         } else {
-          token = ['bang', this.char];
+          token = this.createToken('bang', this.char);
         }
         break;
       case '>':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['gte', '>='];
+          token = this.createToken('gte', '>=');
         } else {
-          token = ['gt', this.char];
+          token = this.createToken('gt', this.char);
         }
         break;
       case '<':
         if (this.peekChar() == '=') {
           this.readChar();
-          token = ['lte', '<='];
+          token = this.createToken('lte', '<=');
         } else {
-          token = ['lt', this.char];
+          token = this.createToken('lt', this.char);
         }
         break;
       case '':
-        token = ['eof', ''];
+        token = this.createToken('eof', '');
         break;
       default:
         if (isAlpha(this.char)) {
           const literal = this.readIdentifier();
-          return [lookupIdentifier(literal), literal];
+          return this.createToken(lookupIdentifier(literal), literal);
         }
         if (isNumeric(this.char)) {
-          return ['int', this.readNumber()];
+          return this.createToken('int', this.readNumber());
         }
-        token = ['illegal', this.char];
+        token = this.createToken('illegal', this.char);
     }
 
     this.readChar();

@@ -167,7 +167,7 @@ export class Parser {
   /** Statements **/
 
   private parseStatement(): ast.Statement | undefined {
-    switch (this.curr[0]) {
+    switch (this.curr.tokenType) {
       case 'return':
         return this.parseReturnStatement();
       case 'yield':
@@ -199,7 +199,7 @@ export class Parser {
   }
 
   private parseDeclareStatement(): ast.DeclareStatement | undefined {
-    const name = new ast.Identifier(this.curr, this.curr[1]);
+    const name = new ast.Identifier(this.curr, this.curr.literal);
     this.nextToken();
     const declare = this.curr;
     this.nextToken();
@@ -270,9 +270,9 @@ export class Parser {
     precedence: number,
   ): ast.Expression | undefined {
     // Attempt to parse a prefix expression
-    const prefixFn = this.prefixParseFns[this.curr[0]];
+    const prefixFn = this.prefixParseFns[this.curr.tokenType];
     if (!prefixFn) {
-      this.errors.push(`No prefix parser for \`${this.curr[0]}\``);
+      this.errors.push(`No prefix parser for \`${this.curr.tokenType}\``);
       return;
     }
 
@@ -282,7 +282,7 @@ export class Parser {
       !tokenIs(this.peek, 'semicolon') &&
       precedence < this.peekPrecedence()
     ) {
-      const infixFn = this.infixParseFns[this.peek[0]];
+      const infixFn = this.infixParseFns[this.peek.tokenType];
       if (!infixFn) {
         return left;
       }
@@ -298,7 +298,7 @@ export class Parser {
 
   private parsePrefixExpression(): ast.Expression | undefined {
     const token = this.curr;
-    const operator = this.curr[1];
+    const operator = this.curr.literal;
 
     this.nextToken();
     const right = this.parseExpression(precedence.PRF);
@@ -310,7 +310,7 @@ export class Parser {
     left?: ast.Expression,
   ): ast.Expression | undefined {
     const token = this.curr;
-    const operator = this.curr[1];
+    const operator = this.curr.literal;
 
     const leftPrecedence = this.currPrecedence();
     this.nextToken();
@@ -329,7 +329,7 @@ export class Parser {
     }
 
     const token = this.curr;
-    const operator = this.curr[1];
+    const operator = this.curr.literal;
 
     this.nextToken();
     const right = this.parseExpression(precedence.NIL);
@@ -409,17 +409,17 @@ export class Parser {
   }
 
   private parseIdentifier(): ast.Identifier {
-    return new ast.Identifier(this.curr, this.curr[1]);
+    return new ast.Identifier(this.curr, this.curr.literal);
   }
 
   private parseBooleanLiteral(): ast.BooleanLiteral {
-    return new ast.BooleanLiteral(this.curr, this.curr[1] === 'true');
+    return new ast.BooleanLiteral(this.curr, this.curr.literal === 'true');
   }
 
   private parseIntegerLiteral(): ast.IntegerLiteral {
     return new ast.IntegerLiteral(
       this.curr,
-      parseInt(this.curr[1], 10),
+      parseInt(this.curr.literal, 10),
     );
   }
 
@@ -517,8 +517,12 @@ export class Parser {
     // If using the syntactic sugar `loop` keyword, just
     // create a true boolean conditional.
     let condition;
-    if (token[0] === 'loop') {
-      condition = new ast.BooleanLiteral(['true', 'true'], true);
+    if (token.tokenType === 'loop') {
+      condition = new ast.BooleanLiteral({
+        ...token,
+        tokenType: 'true',
+        literal: 'true',
+      }, true);
     } else {
       if (!this.expectPeek('lparen')) return;
       this.nextToken();
@@ -548,14 +552,14 @@ export class Parser {
   /** Utilities **/
 
   private peekPrecedence(): precedence {
-    return PRECEDENCE_MAP[this.peek[0]]
-      ? PRECEDENCE_MAP[this.peek[0]]
+    return PRECEDENCE_MAP[this.peek.tokenType]
+      ? PRECEDENCE_MAP[this.peek.tokenType]
       : precedence.NIL;
   }
 
   private currPrecedence(): precedence {
-    return PRECEDENCE_MAP[this.curr[0]]
-      ? PRECEDENCE_MAP[this.curr[0]]
+    return PRECEDENCE_MAP[this.curr.tokenType]
+      ? PRECEDENCE_MAP[this.curr.tokenType]
       : precedence.NIL;
   }
 
@@ -620,7 +624,7 @@ export class Parser {
       this.nextToken();
       return true;
     } else {
-      const msg = `Expected next token to be ${t}, got ${this.peek[0]} instead`;
+      const msg = `Expected next token to be ${t}, got ${this.peek.tokenType} instead`;
       this.errors.push(msg);
       return false;
     }

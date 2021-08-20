@@ -1,7 +1,11 @@
 /**
  * Token tuple
  */
-export type Token = [tokenType: TokenType, literal: string];
+export interface Token {
+  tokenType: TokenType;
+  literal: string;
+  position: number;
+};
 
 /**
  * List of allowed token types
@@ -116,5 +120,5 @@ export function lookupIdentifier(str: string): TokenType {
  * @returns True if token type matches
  */
 export function tokenIs(token: Token, tokenType: TokenType): boolean {
-  return token[0] === tokenType;
+  return token.tokenType === tokenType;
 }

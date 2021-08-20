@@ -3,7 +3,7 @@ import { Token } from '../src/token';
 
 describe('Lexer', () => {
   test('should tokenize identifiers and identify illegal patterns', () => {
-    const inputs: Record<string, Token[]> = {
+    const inputs: Record<string, string[][]> = {
       'a3': [['identifier', 'a3']],
       '3a': [
         ['int', '3'],
@@ -22,12 +22,13 @@ describe('Lexer', () => {
       const tokens = [];
 
       let token: Token = l.nextToken();
-      while (token[0] !== 'eof') {
+      while (token.tokenType !== 'eof') {
+        const [tokenType, literal] = inputs[input].shift();
+        expect(token.tokenType).toEqual(tokenType);
+        expect(token.literal).toEqual(literal);
         tokens.push(token);
         token = l.nextToken();
       }
-
-      expect(tokens).toEqual(inputs[input]);
     });
   });
 
@@ -50,7 +51,7 @@ describe('Lexer', () => {
       e %= 7;
     `;
 
-    const expected: Token[] = [
+    const expected: string[][] = [
       ['identifier', 'a'],
       ['declare', ':='],
       ['int', '3'],
@@ -128,10 +129,11 @@ describe('Lexer', () => {
 
     const l = new Lexer(input);
     let token: Token = l.nextToken();
-    while (token[0] !== 'eof') {
-      expect(token).toEqual(expected.shift());
+    while (token.tokenType !== 'eof') {
+      const [tokenType, literal] = expected.shift();
+      expect(token.tokenType).toEqual(tokenType);
+      expect(token.literal).toEqual(literal);
       token = l.nextToken();
     }
-    expect(token).toEqual(['eof', '']);
   });
 });

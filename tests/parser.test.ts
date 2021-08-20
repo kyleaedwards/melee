@@ -122,7 +122,7 @@ describe('Parser', () => {
 
       const dec = stmts[0];
       assertNodeType(dec, ast.DeclareStatement);
-      expect(dec.token).toEqual(['declare', ':=']);
+      expect(dec.token.tokenType).toEqual('declare');
 
       const left = dec.name;
       assertNodeType(left, ast.Identifier);
@@ -175,7 +175,7 @@ describe('Parser', () => {
 
       const dec = stmt.value;
       assertNodeType(dec, ast.AssignExpression);
-      expect(dec.token).toEqual(['assign', '=']);
+      expect(dec.token.tokenType).toEqual('assign');
 
       const left = dec.name;
       assertNodeType(left, ast.Identifier);
@@ -227,7 +227,7 @@ describe('Parser', () => {
 
       const dec = stmt.value;
       assertNodeType(dec, ast.CompoundAssignExpression);
-      expect(dec.token[1]).toEqual(operator);
+      expect(dec.token.literal).toEqual(operator);
 
       const left = dec.name;
       assertNodeType(left, ast.Identifier);
@@ -257,7 +257,7 @@ describe('Parser', () => {
 
       const stmt = stmts[0];
       assertNodeType(stmt, ast.ReturnStatement);
-      expect(stmt.token).toEqual(['return', 'return']);
+      expect(stmt.token.tokenType).toEqual('return');
       testLiteral(stmt.value, value);
     });
   });
@@ -276,7 +276,7 @@ describe('Parser', () => {
 
       const stmt = stmts[0];
       assertNodeType(stmt, ast.YieldStatement);
-      expect(stmt.token).toEqual(['yield', 'yield']);
+      expect(stmt.token.tokenType).toEqual('yield');
       testLiteral(stmt.value, value);
     });
   });
