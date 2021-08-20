@@ -411,7 +411,10 @@ export class Compiler {
       }
       const instructions = this.popScope();
       if (!instructions) {
-        throw new CompilerError('Error compiling function', node.token);
+        throw new CompilerError(
+          'Error compiling function',
+          node.token,
+        );
       }
 
       freeSymbols.forEach((sym) => {
@@ -468,7 +471,10 @@ export class Compiler {
       this.emit(Opcode.NEXT);
     } else if (node instanceof ast.CallExpression) {
       if (!node.fn) {
-        throw new CompilerError('Invalid call expression', node.token);
+        throw new CompilerError(
+          'Invalid call expression',
+          node.token,
+        );
       }
       this.compile(node.fn);
       node.args.forEach(this.compile.bind(this));
@@ -565,7 +571,10 @@ export class Compiler {
       );
     } else if (node instanceof ast.ContinueStatement) {
       if (!this.loopStarts.length) {
-        throw new CompilerError('Cannot use continue outside of a loop', node.token);
+        throw new CompilerError(
+          'Cannot use continue outside of a loop',
+          node.token,
+        );
       }
       this.emit(
         Opcode.JMP,

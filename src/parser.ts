@@ -305,7 +305,12 @@ export class Parser {
     ) {
       const infixFn = this.infixParseFns[this.peek.tokenType];
       if (!infixFn) {
-        this.errors.push(new SynError(`Unexpected token ${this.curr.literal}`, this.curr))
+        this.errors.push(
+          new SynError(
+            `Unexpected token ${this.curr.literal}`,
+            this.curr,
+          ),
+        );
         return left;
       }
       this.nextToken();
@@ -658,9 +663,7 @@ export class Parser {
     } else {
       const { tokenType } = this.peek;
       const msg = `Expected next token to be ${t}, got ${tokenType} instead`;
-      this.errors.push(
-        new SynError(msg, this.peek),
-      );
+      this.errors.push(new SynError(msg, this.peek));
       return false;
     }
   }
