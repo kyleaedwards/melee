@@ -139,7 +139,7 @@ export class Lexer {
     }
     return this.input.slice(start, this.position);
   }
-  
+
   /**
    * Creates a new token with the current cursor position.
    *

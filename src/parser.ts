@@ -1,5 +1,6 @@
 import { Lexer } from './lexer';
 import { Token, TokenType, tokenIs } from './token';
+import { SynError } from './errors';
 import * as ast from './ast';
 
 type prefixParseFn = () => ast.Expression | undefined;
@@ -65,7 +66,7 @@ export class Parser {
   /**
    * Collection of errors incurred during the parsing process.
    */
-  public errors: string[];
+  public errors: SynError[];
 
   /**
    * Mapping of tokens to prefix parser methods.
@@ -141,6 +142,17 @@ export class Parser {
    * @internal
    */
   nextToken(): void {
+    const { tokenType, literal, line, column } = this.peek;
+    if (tokenType === 'illegal') {
+      this.errors.push(
+        new SynError(
+          `Unexpected token ${literal}`,
+          line,
+          column,
+          literal.length,
+        ),
+      );
+    }
     this.curr = this.peek;
     this.peek = this.lexer.nextToken();
   }
@@ -270,9 +282,17 @@ export class Parser {
     precedence: number,
   ): ast.Expression | undefined {
     // Attempt to parse a prefix expression
+    const { line, column, literal } = this.curr;
     const prefixFn = this.prefixParseFns[this.curr.tokenType];
     if (!prefixFn) {
-      this.errors.push(`No prefix parser for \`${this.curr.tokenType}\``);
+      this.errors.push(
+        new SynError(
+          `No prefix parser for \`${this.curr.tokenType}\``,
+          line,
+          column,
+          literal.length,
+        ),
+      );
       return;
     }
 
@@ -413,7 +433,10 @@ export class Parser {
   }
 
   private parseBooleanLiteral(): ast.BooleanLiteral {
-    return new ast.BooleanLiteral(this.curr, this.curr.literal === 'true');
+    return new ast.BooleanLiteral(
+      this.curr,
+      this.curr.literal === 'true',
+    );
   }
 
   private parseIntegerLiteral(): ast.IntegerLiteral {
@@ -497,10 +520,16 @@ export class Parser {
     if (!this.expectPeek('in')) return;
     this.nextToken();
 
+    const { line, column, literal } = this.curr;
     const collection = this.parseExpression(precedence.NIL);
     if (!collection) {
       this.errors.push(
-        '`for` expression must follow the `for var in collection {}` syntax',
+        new SynError(
+          '`for` expression must follow the `for var in collection {}` syntax',
+          line,
+          column,
+          literal.length,
+        ),
       );
       return;
     }
@@ -518,11 +547,14 @@ export class Parser {
     // create a true boolean conditional.
     let condition;
     if (token.tokenType === 'loop') {
-      condition = new ast.BooleanLiteral({
-        ...token,
-        tokenType: 'true',
-        literal: 'true',
-      }, true);
+      condition = new ast.BooleanLiteral(
+        {
+          ...token,
+          tokenType: 'true',
+          literal: 'true',
+        },
+        true,
+      );
     } else {
       if (!this.expectPeek('lparen')) return;
       this.nextToken();
@@ -624,8 +656,11 @@ export class Parser {
       this.nextToken();
       return true;
     } else {
-      const msg = `Expected next token to be ${t}, got ${this.peek.tokenType} instead`;
-      this.errors.push(msg);
+      const { tokenType, literal, line, column } = this.peek;
+      const msg = `Expected next token to be ${t}, got ${tokenType} instead`;
+      this.errors.push(
+        new SynError(msg, line, column, literal.length),
+      );
       return false;
     }
   }

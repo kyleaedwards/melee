@@ -5,7 +5,7 @@ export interface Token {
   tokenType: TokenType;
   literal: string;
   position: number;
-};
+}
 
 /**
  * List of allowed token types
