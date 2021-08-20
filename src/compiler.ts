@@ -3,6 +3,7 @@ import { Opcode, Bytecode, createInstruction } from './bytecode';
 import { BaseObject, Int, Fn, Gen } from './object';
 import { ScopeType, SymbolTable } from './symbols';
 import { NATIVE_FNS } from './builtins';
+import { CompilerError } from './errors';
 
 /**
  * Instruction occurence at a given position in the bytecode.
@@ -138,14 +139,16 @@ export class Compiler {
           this.emit(Opcode.INDEX);
           return;
         }
-        throw new Error(
+        throw new CompilerError(
           'Left-hand of assignment must be a variable or an array index expression',
+          name.token,
         );
       }
       const sym = this.symbolTable.get(name.value);
       if (!sym) {
-        throw new Error(
+        throw new CompilerError(
           `Cannot assign undefined variable ${name.value}`,
+          name.token,
         );
       }
       if (node.value) {
@@ -167,8 +170,9 @@ export class Compiler {
           fetch = Opcode.GETG;
           break;
         default:
-          throw new Error(
+          throw new CompilerError(
             `Cannot assign unassigned variable ${name.value}`,
+            name.token,
           );
       }
       this.emit(opcode, sym.index);
@@ -210,14 +214,16 @@ export class Compiler {
           this.emit(Opcode.INDEX);
           return;
         }
-        throw new Error(
+        throw new CompilerError(
           'Left-hand of assignment must be a variable or an array index expression',
+          name.token,
         );
       }
       const sym = this.symbolTable.get(name.value);
       if (!sym) {
-        throw new Error(
+        throw new CompilerError(
           `Cannot assign undefined variable ${name.value}`,
+          name.token,
         );
       }
       this.compile(name);
@@ -258,8 +264,9 @@ export class Compiler {
           fetch = Opcode.GETG;
           break;
         default:
-          throw new Error(
+          throw new CompilerError(
             `Cannot assign unassigned variable ${name.value}`,
+            name.token,
           );
       }
       this.emit(opcode, sym.index);
@@ -267,8 +274,9 @@ export class Compiler {
     } else if (node instanceof ast.Identifier) {
       const sym = this.symbolTable.get(node.value);
       if (typeof sym === 'undefined') {
-        throw new Error(
+        throw new CompilerError(
           `Attempting to use undefined variable ${node.value}`,
+          node.token,
         );
       }
       let opcode: Opcode;
@@ -403,7 +411,7 @@ export class Compiler {
       }
       const instructions = this.popScope();
       if (!instructions) {
-        throw new Error('Error compiling function');
+        throw new CompilerError('Error compiling function', node.token);
       }
 
       freeSymbols.forEach((sym) => {
@@ -450,8 +458,9 @@ export class Compiler {
       this.emit(Opcode.YIELD);
     } else if (node instanceof ast.NextExpression) {
       if (!node.right) {
-        throw new Error(
+        throw new CompilerError(
           'Cannot use the `next` keyword without an operand',
+          node.token,
         );
       } else {
         this.compile(node.right);
@@ -459,7 +468,7 @@ export class Compiler {
       this.emit(Opcode.NEXT);
     } else if (node instanceof ast.CallExpression) {
       if (!node.fn) {
-        throw new Error('Invalid call expression');
+        throw new CompilerError('Invalid call expression', node.token);
       }
       this.compile(node.fn);
       node.args.forEach(this.compile.bind(this));
@@ -556,7 +565,7 @@ export class Compiler {
       );
     } else if (node instanceof ast.ContinueStatement) {
       if (!this.loopStarts.length) {
-        throw new Error('Cannot use continue outside of a loop');
+        throw new CompilerError('Cannot use continue outside of a loop', node.token);
       }
       this.emit(
         Opcode.JMP,
@@ -564,8 +573,9 @@ export class Compiler {
       );
     } else if (node instanceof ast.NoteExpression) {
       if (!node.note) {
-        throw new Error(
+        throw new CompilerError(
           'Cannot use the `note` keyword without an operand',
+          node.token,
         );
       }
       this.compile(node.note);
@@ -579,8 +589,9 @@ export class Compiler {
       this.emit(Opcode.SKIP);
     } else if (node instanceof ast.CCExpression) {
       if (!node.message) {
-        throw new Error(
+        throw new CompilerError(
           'Cannot use the `cc` keyword without an operand',
+          node.token,
         );
       }
       this.compile(node.message);

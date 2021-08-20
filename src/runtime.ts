@@ -1,5 +1,6 @@
 import { Bytecode, disassemble } from './bytecode';
 import { Compiler } from './compiler';
+import { MeleeError } from './errors';
 import { Lexer } from './lexer';
 import { BaseObject, Closure, Seq, Null, Gen, Fn } from './object';
 import { Parser } from './parser';
@@ -20,6 +21,11 @@ export class Runtime {
   private seq?: Seq;
 
   /**
+   * Syntax, compiler, and runtime errors found during execution.
+   */
+  public errors: MeleeError[] = [];
+
+  /**
    * Constructs a new runtime instance.
    */
   constructor() {
@@ -36,9 +42,15 @@ export class Runtime {
     const lexer = new Lexer(input);
     const parser = new Parser(lexer);
     const program = parser.parse();
+    this.errors = [...parser.errors];
 
     const compiler = new Compiler(this.constants, this.symbolTable);
-    compiler.compile(program);
+    try {
+      compiler.compile(program);
+    } catch (e) {
+      this.errors.push(e);
+      throw e;
+    }
     this.instructions = compiler.instructions();
 
     const vm = new VM(compiler, this.globals);

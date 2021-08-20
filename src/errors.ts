@@ -1,3 +1,5 @@
+import { Token } from "./token";
+
 /**
  * Base language error class.
  */
@@ -19,11 +21,10 @@ export class MeleeError extends Error {
 export class SynError extends MeleeError {
   constructor(
     message: string,
-    public line: number,
-    public column: number,
-    public length: number,
+    token: Token,
   ) {
-    super(message, line, column, length);
+    const { line, column, literal } = token;
+    super(message, line, column, literal.length);
     this.name = 'SynError';
   }
 }
@@ -34,11 +35,10 @@ export class SynError extends MeleeError {
 export class CompilerError extends MeleeError {
   constructor(
     message: string,
-    public line: number,
-    public column: number,
-    public length: number,
+    token: Token,
   ) {
-    super(message, line, column, length);
+    const { line, column, literal } = token;
+    super(message, line, column, literal.length);
     this.name = 'CompilerError';
   }
 }

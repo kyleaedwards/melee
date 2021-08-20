@@ -41,10 +41,10 @@ function isAlphaNumeric(char: string): boolean {
  * Lexer class to create tokens from code string.
  */
 export class Lexer {
-  private position: number = 0;
-  private readPosition: number = 0;
-  private line: number = 0;
-  private column: number = -1;
+  private position = 0;
+  private readPosition = 0;
+  private line = 0;
+  private column = -1;
   private char: string;
 
   /**
@@ -75,7 +75,7 @@ export class Lexer {
     }
     if (this.char === '\n') {
       this.line++;
-      this.column = -1;
+      this.column = 0;
     } else {
       this.column++;
     }

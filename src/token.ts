@@ -4,7 +4,8 @@
 export interface Token {
   tokenType: TokenType;
   literal: string;
-  position: number;
+  line: number;
+  column: number;
 }
 
 /**

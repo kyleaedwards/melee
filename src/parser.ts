@@ -22,6 +22,7 @@ enum precedence {
   PRF,
   FNC,
   IDX,
+  ERR,
 }
 
 /**
@@ -47,6 +48,9 @@ const PRECEDENCE_MAP: Record<string, precedence> = {
   percent: precedence.MUL,
   lparen: precedence.FNC,
   lbracket: precedence.IDX,
+  identifier: precedence.ERR,
+  number: precedence.ERR,
+  note: precedence.ERR,
 };
 
 /**
@@ -142,14 +146,11 @@ export class Parser {
    * @internal
    */
   nextToken(): void {
-    const { tokenType, literal, line, column } = this.peek;
-    if (tokenType === 'illegal') {
+    if (this.peek.tokenType === 'illegal') {
       this.errors.push(
         new SynError(
-          `Unexpected token ${literal}`,
-          line,
-          column,
-          literal.length,
+          `Unexpected token ${this.peek.literal}`,
+          this.peek,
         ),
       );
     }
@@ -179,11 +180,17 @@ export class Parser {
   /** Statements **/
 
   private parseStatement(): ast.Statement | undefined {
+    while (this.curr.tokenType === 'semicolon') {
+      this.nextToken();
+    }
     switch (this.curr.tokenType) {
       case 'return':
         return this.parseReturnStatement();
       case 'yield':
         return this.parseYieldStatement();
+      case 'while':
+      case 'loop':
+        return this.parseWhile();
       case 'identifier': {
         if (tokenIs(this.peek, 'declare')) {
           return this.parseDeclareStatement();
@@ -202,9 +209,6 @@ export class Parser {
       }
       case 'for':
         return this.parseFor();
-      case 'while':
-      case 'loop':
-        return this.parseWhile();
       default:
         return this.parseExpressionStatement();
     }
@@ -282,15 +286,12 @@ export class Parser {
     precedence: number,
   ): ast.Expression | undefined {
     // Attempt to parse a prefix expression
-    const { line, column, literal } = this.curr;
     const prefixFn = this.prefixParseFns[this.curr.tokenType];
     if (!prefixFn) {
       this.errors.push(
         new SynError(
-          `No prefix parser for \`${this.curr.tokenType}\``,
-          line,
-          column,
-          literal.length,
+          `Unexpected token \`${this.curr.literal}\``,
+          this.curr,
         ),
       );
       return;
@@ -304,6 +305,7 @@ export class Parser {
     ) {
       const infixFn = this.infixParseFns[this.peek.tokenType];
       if (!infixFn) {
+        this.errors.push(new SynError(`Unexpected token ${this.curr.literal}`, this.curr))
         return left;
       }
       this.nextToken();
@@ -520,15 +522,13 @@ export class Parser {
     if (!this.expectPeek('in')) return;
     this.nextToken();
 
-    const { line, column, literal } = this.curr;
+    const collToken = this.curr;
     const collection = this.parseExpression(precedence.NIL);
     if (!collection) {
       this.errors.push(
         new SynError(
           '`for` expression must follow the `for var in collection {}` syntax',
-          line,
-          column,
-          literal.length,
+          collToken,
         ),
       );
       return;
@@ -656,10 +656,10 @@ export class Parser {
       this.nextToken();
       return true;
     } else {
-      const { tokenType, literal, line, column } = this.peek;
+      const { tokenType } = this.peek;
       const msg = `Expected next token to be ${t}, got ${tokenType} instead`;
       this.errors.push(
-        new SynError(msg, line, column, literal.length),
+        new SynError(msg, this.peek),
       );
       return false;
     }
