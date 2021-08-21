@@ -49,6 +49,8 @@ describe('Lexer', () => {
       c *= 5;
       d /= 6;
       e %= 7;
+      true && false;
+      true || false;
     `;
 
     const expected: string[][] = [
@@ -124,6 +126,14 @@ describe('Lexer', () => {
       ['identifier', 'e'],
       ['percenteq', '%='],
       ['int', '7'],
+      ['semicolon', ';'],
+      ['true', 'true'],
+      ['and', '&&'],
+      ['false', 'false'],
+      ['semicolon', ';'],
+      ['true', 'true'],
+      ['or', '||'],
+      ['false', 'false'],
       ['semicolon', ';'],
     ];
 

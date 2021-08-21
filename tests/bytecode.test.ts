@@ -124,6 +124,8 @@ describe('disassemble', () => {
       ...[Opcode.YIELD],
       ...[Opcode.NEXT],
       ...[Opcode.SET_INDEX],
+      ...[Opcode.AND],
+      ...[Opcode.OR],
       ...[Opcode.HALT],
     ]);
     const expected = [
@@ -163,7 +165,9 @@ describe('disassemble', () => {
       '0055 YIELD',
       '0056 NEXT',
       '0057 SET_INDEX',
-      '0058 HALT',
+      '0058 AND',
+      '0059 OR',
+      '0060 HALT',
     ];
     expect(disassemble(bytecode).trim()).toEqual(expected.join('\n'));
   });

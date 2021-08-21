@@ -244,6 +244,26 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.POP),
         ],
       ],
+      [
+        'true && false',
+        [],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.FALSE),
+          createInstruction(Opcode.AND),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        'true || false',
+        [],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.FALSE),
+          createInstruction(Opcode.OR),
+          createInstruction(Opcode.POP),
+        ],
+      ],
     ];
 
     testCompilerResult(inputs);

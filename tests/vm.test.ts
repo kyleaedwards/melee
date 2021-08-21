@@ -96,6 +96,7 @@ function testInputs(inputs: VMTestCase[]): void {
           console.log(disassemble(c.instructions));
         }
       });
+      console.log(input);
       throw e;
     }
   });
@@ -154,6 +155,12 @@ describe('VM', () => {
       ['true != true', false],
       ['true == false', false],
       ['true != false', true],
+      ['true && true', true],
+      ['true || false', true],
+      ['true && false', false],
+      ['false || false', false],
+      ['1 > 2 || 2 > 1', true],
+      ['1 > 2 && 2 > 1', false],
       ['(1 > 2) == false', true],
     ]);
   });

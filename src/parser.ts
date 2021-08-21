@@ -14,6 +14,8 @@ type infixParseFn = (
  */
 enum precedence {
   NIL = 1,
+  OR,
+  AND,
   ASN,
   EQL,
   CMP,
@@ -35,6 +37,8 @@ const PRECEDENCE_MAP: Record<string, precedence> = {
   asteriskeq: precedence.ASN,
   rslasheq: precedence.ASN,
   percenteq: precedence.ASN,
+  'or': precedence.OR,
+  'and': precedence.AND,
   eq: precedence.EQL,
   noteq: precedence.EQL,
   lt: precedence.CMP,
@@ -119,6 +123,8 @@ export class Parser {
       asterisk: this.parseInfixExpression.bind(this),
       rslash: this.parseInfixExpression.bind(this),
       percent: this.parseInfixExpression.bind(this),
+      'and': this.parseInfixExpression.bind(this),
+      'or': this.parseInfixExpression.bind(this),
       eq: this.parseInfixExpression.bind(this),
       noteq: this.parseInfixExpression.bind(this),
       lt: this.parseInfixExpression.bind(this),

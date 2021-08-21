@@ -32,28 +32,31 @@ export enum Opcode {
   BANG = 30,
   MINUS,
 
-  EQ = 40,
+  AND = 40,
+  OR,
+
+  EQ = 50,
   NOT_EQ,
   GT,
   GTE,
 
-  GETN = 50, // Get native
+  GETN = 60, // Get native
 
-  SETG = 60, // Set global
+  SETG = 70, // Set global
   GETG, // Get global
 
-  SET = 70, // Set local
+  SET = 80, // Set local
   GET, // Get local
 
-  CLOSURE = 80, // Wrap function in closure
+  CLOSURE = 90, // Wrap function in closure
   SELF, // Current closure
   GETC, // Get free variable from closure
   SETC, // Set free variable from closure
 
-  RET = 90, // Return
+  RET = 100, // Return
   CALL, // Call function
 
-  JMP = 100, // Jump
+  JMP = 110, // Jump
   JMP_IF_NOT, // Jump conditional
 
   NOTE = 200, // MIDI note
@@ -96,6 +99,8 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.MUL, 'MUL'],
     [Opcode.DIV, 'DIV'],
     [Opcode.MOD, 'MOD'],
+    [Opcode.AND, 'AND'],
+    [Opcode.OR, 'OR'],
     [Opcode.BANG, 'BANG'],
     [Opcode.MINUS, 'MINUS'],
     [Opcode.EQ, 'EQ'],

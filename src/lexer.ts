@@ -162,7 +162,7 @@ export class Lexer {
    * @returns Next token
    */
   nextToken(this: Lexer): Token {
-    let token: Token;
+    let token = this.createToken('illegal', this.char);
 
     this.skipWhitespace();
 
@@ -262,6 +262,18 @@ export class Lexer {
           token = this.createToken('bang', this.char);
         }
         break;
+      case '&':
+        if (this.peekChar() == '&') {
+          this.readChar();
+          token = this.createToken('and', '&&');
+        }
+        break;
+      case '|':
+        if (this.peekChar() == '|') {
+          this.readChar();
+          token = this.createToken('or', '||');
+        }
+        break;
       case '>':
         if (this.peekChar() == '=') {
           this.readChar();
@@ -289,7 +301,6 @@ export class Lexer {
         if (isNumeric(this.char)) {
           return this.createToken('int', this.readNumber());
         }
-        token = this.createToken('illegal', this.char);
     }
 
     this.readChar();

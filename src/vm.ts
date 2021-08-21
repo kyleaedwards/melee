@@ -492,6 +492,36 @@ export class VM {
         case Opcode.GTE:
           this.execComparison(op);
           break;
+        case Opcode.AND: {
+          const left = this.stack[this.sp - 2];
+          const right = this.stack[this.sp - 1];
+          this.sp -= 2;
+
+          if (!left || !right) {
+            throw new Error(
+              'Cannot perform binary operation without two operands',
+            );
+          }
+
+          const res = obj.isTruthy(left) && obj.isTruthy(right);
+          this.push(res ? TRUE : FALSE);
+          break;
+        }
+        case Opcode.OR: {
+          const left = this.stack[this.sp - 2];
+          const right = this.stack[this.sp - 1];
+          this.sp -= 2;
+
+          if (!left || !right) {
+            throw new Error(
+              'Cannot perform binary operation without two operands',
+            );
+          }
+
+          const res = obj.isTruthy(left) || obj.isTruthy(right);
+          this.push(res ? TRUE : FALSE);
+          break;
+        }
         case Opcode.JMP:
           this.jump();
           break;

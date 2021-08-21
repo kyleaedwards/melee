@@ -20,6 +20,8 @@ export type TokenType =
   | 'false'
   | 'if'
   | 'else'
+  | 'and'
+  | 'or'
   | 'for'
   | 'in'
   | 'while'

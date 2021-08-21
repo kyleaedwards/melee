@@ -367,6 +367,8 @@ describe('Parser', () => {
         ['100 <= 50', 100, '<=', 50],
         ['1 == false', 1, '==', false],
         ['1 != false', 1, '!=', false],
+        ['1 || false', 1, '||', false],
+        ['1 && false', 1, '&&', false],
       ];
 
       cases.forEach(([input, left, operator, right]) => {
@@ -390,6 +392,8 @@ describe('Parser', () => {
       ['-a * b', '((-a) * b)'],
       ['-(a * b)', '(-(a * b))'],
       ['a > b != b <= a', '((a > b) != (b <= a))'],
+      ['a > b && b <= a', '((a > b) && (b <= a))'],
+      ['a > b || b <= a', '((a > b) || (b <= a))'],
       [
         'x + y * z - 1 / 2 == 3 / 4 + a * b',
         '(((x + (y * z)) - (1 / 2)) == ((3 / 4) + (a * b)))',

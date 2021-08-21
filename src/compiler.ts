@@ -354,6 +354,12 @@ export class Compiler {
         case '>=':
           this.emit(Opcode.GTE);
           break;
+        case '&&':
+          this.emit(Opcode.AND);
+          break;
+        case '||':
+          this.emit(Opcode.OR);
+          break;
       }
     } else if (node instanceof ast.IfExpression) {
       this.compile(node.condition);
