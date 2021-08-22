@@ -25,5 +25,6 @@ export { Token, TokenType, tokenIs } from './token';
 export { Repl } from './repl';
 export { Runtime } from './runtime';
 export { disassemble } from './bytecode';
+export { KNOWN_LABELS } from './builtins';
 
 export { ast, obj };

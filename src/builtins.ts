@@ -810,3 +810,10 @@ export const BUILTINS = {
   ...createMidiMap(),
   ...createScaleMap(),
 };
+
+export const BUILTIN_KEYS = Object.keys(BUILTINS);
+export const NATIVE_FN_KEYS = NATIVE_FNS.map(fn => fn.label);
+export const KNOWN_LABELS = [
+  ...BUILTIN_KEYS,
+  ...NATIVE_FN_KEYS,
+];
