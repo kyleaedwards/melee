@@ -239,7 +239,8 @@ export class Lexer {
           this.readChar();
           let literal = '//';
           while (this.peekChar() != '\n' && this.peekChar() != '') {
-            literal += this.readChar();
+            this.readChar();
+            literal += this.char;
           }
           token = this.createToken('comment', literal);
         } else {
