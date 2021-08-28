@@ -881,4 +881,77 @@ describe('VM', () => {
       ],
     ]);
   });
+
+  test('should support nested sequence generators', () => {
+    testInputs([
+      [
+        `g := gen () {
+          yield 1;
+          yield 2;
+        };
+        main := gen (x) {
+          s := g();
+          yield (next s) * x;
+          a := next s;
+          yield a * x;
+        }
+        m := main(2);
+        b := next m;
+        c := next m;
+        b + c`,
+        6,
+      ],
+      [
+        `g := gen () {
+          yield 1;
+          yield 2;
+        };
+        s := g();
+        main := gen (x) {
+          yield (next s) * x;
+          a := next s;
+          yield a * x;
+        }
+        m := main(2);
+        b := next m;
+        c := next m;
+        b + c`,
+        6,
+      ],
+      [
+        `g := gen () {
+          // First comment.
+          yield 1;
+          yield 2;
+        };
+        s := g();
+        // Another comment...
+        main := gen (x) {
+          // What is this?
+          yield (next s) * x;
+          a := next s;
+          yield a * x;
+        }
+        m := main(2);
+        b := next m;
+        c := next m;
+        b + c`,
+        6,
+      ],
+      [
+        `main := gen (x) {
+          loop {
+            // What is this?
+            yield x;
+          }
+        }
+        m := main(2);
+        b := next m;
+        c := next m;
+        d := next m;
+        b + c + d`,
+        6,
+      ],
+    ]);
+  });
 });

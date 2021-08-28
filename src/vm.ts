@@ -1,6 +1,6 @@
 import { AssertionError } from 'assert';
 import { BUILTINS, NATIVE_FNS } from './builtins';
-import { Opcode, unpackBigEndian } from './bytecode';
+import { Opcode, OPCODES, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
 import * as obj from './object';
 import { clamp } from './utils';
@@ -169,15 +169,14 @@ export class VM {
    * @internal
    */
   private enterCoroutine(executionState: obj.ExecutionState): void {
-    if (!executionState.parent) {
-      throw new Error('Cannot enter a root-level coroutine');
+    const { stack, sp, frames, fp, coroutine } = this;
+    if (coroutine) {
+      executionState.parent = coroutine;
+      executionState.parent.stack = stack;
+      executionState.parent.sp = sp;
+      executionState.parent.frames = frames;
+      executionState.parent.fp = fp;
     }
-    const { stack, sp, frames, fp } = this;
-    executionState.parent.stack = stack;
-    executionState.parent.sp = sp;
-    executionState.parent.frames = frames;
-    executionState.parent.fp = fp;
-
     this.stack = executionState.stack;
     this.sp = executionState.sp;
     this.frames = executionState.frames;
@@ -885,7 +884,7 @@ export class VM {
     }
 
     throw new Error(
-      `Cannot perform binary operation between types ${left.type} and ${right.type}`,
+      `Cannot perform binary operation (${OPCODES[op].name}) between types ${left.type} and ${right.type}`,
     );
   }
 

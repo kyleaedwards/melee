@@ -680,6 +680,21 @@ describe('Compiler.compile', () => {
           createInstruction(Opcode.JMP, 0),
         ],
       ],
+      [
+        `loop {
+          // With comment...
+          break;
+          3;
+        }`,
+        [3],
+        [
+          createInstruction(Opcode.TRUE),
+          createInstruction(Opcode.JMP_IF_NOT, 13),
+          createInstruction(Opcode.JMP, 13),
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.JMP, 0),
+        ],
+      ],
     ];
 
     testCompilerResult(inputs);

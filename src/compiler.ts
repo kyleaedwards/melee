@@ -107,10 +107,12 @@ export class Compiler {
         this.compile(node.statements[i]);
       }
     } else if (node instanceof ast.ExpressionStatement) {
-      if (node.value) {
-        this.compile(node.value);
+      if (!(node.value instanceof ast.CommentLiteral)) {
+        if (node.value) {
+          this.compile(node.value);
+        }
+        this.emit(Opcode.POP);
       }
-      this.emit(Opcode.POP);
     } else if (node instanceof ast.DeclareStatement) {
       const index = this.symbolTable.add(node.name.value);
       if (node.value) {
@@ -611,8 +613,6 @@ export class Compiler {
       }
       this.compile(node.message);
       this.emit(Opcode.CC);
-    } else if (node instanceof ast.CommentLiteral) {
-      this.removeInstructionIf(Opcode.POP);
     }
   }
 

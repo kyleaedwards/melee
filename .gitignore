@@ -120,3 +120,7 @@ dist
 # API Extractor/Documenter
 temp/
 docs/
+
+# Miscellaneous files
+.DS_Store
+src/run.ts
