@@ -8,6 +8,7 @@ import {
   isTruthy,
   Iterable,
   MidiNote,
+  MIDI_VALUES,
   NativeFn,
   Null,
   VirtualSeq,
@@ -764,56 +765,16 @@ function createScaleMap(): Record<string, BaseObject> {
 }
 
 /**
- * Create a mapping of notes (in scientific pitch notation) to their
- * corresponding integer MIDI pitch value.
- *
- * @returns Object containing integer MIDI value by note name
- *
- * @internal
- */
-function createMidiMap(): Record<string, BaseObject> {
-  const NOTE_NAMES: string[][] = [
-    ['C'],
-    ['C#', 'Db'],
-    ['D'],
-    ['D#', 'Eb'],
-    ['E'],
-    ['F'],
-    ['F#', 'Gb'],
-    ['G'],
-    ['G#', 'Ab'],
-    ['A'],
-    ['A#', 'Bb'],
-    ['B'],
-  ];
-  const midiMap: Record<string, BaseObject> = {};
-  for (let midi = 0; midi < 128; midi++) {
-    const oct = Math.floor(midi / 12) - 1;
-    const names = NOTE_NAMES[midi % 12];
-    if (!names) {
-      continue;
-    }
-    names.forEach((n) => {
-      midiMap[`${n}${oct < 0 ? '_1' : oct}`] = new Int(midi);
-    });
-  }
-  return midiMap;
-}
-
-/**
  * Default global variables placed in scope on startup.
  *
  * @internal
  */
 export const BUILTINS = {
   ...createChordMap(),
-  ...createMidiMap(),
+  ...MIDI_VALUES,
   ...createScaleMap(),
 };
 
 export const BUILTIN_KEYS = Object.keys(BUILTINS);
-export const NATIVE_FN_KEYS = NATIVE_FNS.map(fn => fn.label);
-export const KNOWN_LABELS = [
-  ...BUILTIN_KEYS,
-  ...NATIVE_FN_KEYS,
-];
+export const NATIVE_FN_KEYS = NATIVE_FNS.map((fn) => fn.label);
+export const KNOWN_LABELS = [...BUILTIN_KEYS, ...NATIVE_FN_KEYS];

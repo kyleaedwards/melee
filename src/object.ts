@@ -373,6 +373,10 @@ export class MidiNote implements BaseObject, MidiObject {
       data: [this.pitch, this.duration, this.velocity],
     };
   }
+
+  scientificNotation(): string {
+    return NOTES[this.pitch];
+  }
 }
 
 /**
@@ -440,3 +444,39 @@ export function isTruthy(obj: BaseObject | undefined): boolean {
   }
   return !(!obj || obj === NULL || obj === FALSE);
 }
+
+/**
+ * Create a mapping of notes (in scientific pitch notation) to their
+ * corresponding integer MIDI pitch value.
+ */
+const NOTE_NAMES: string[][] = [
+  ['C'],
+  ['C#', 'Db'],
+  ['D'],
+  ['D#', 'Eb'],
+  ['E'],
+  ['F'],
+  ['F#', 'Gb'],
+  ['G'],
+  ['G#', 'Ab'],
+  ['A'],
+  ['A#', 'Bb'],
+  ['B'],
+];
+const midi: Record<string, BaseObject> = {};
+const notes: string[] = [];
+for (let index = 0; index < 128; index++) {
+  const oct = Math.floor(index / 12) - 1;
+  const octStr = `${oct < 0 ? '_1' : oct}`;
+  const names = NOTE_NAMES[index % 12];
+  if (!names) {
+    continue;
+  }
+  names.forEach((n) => {
+    midi[`${n}${octStr}`] = new Int(index);
+  });
+  notes.push(`${names[0]}${octStr}`);
+}
+
+export const MIDI_VALUES = midi;
+export const NOTES = notes;
