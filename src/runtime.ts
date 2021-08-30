@@ -14,13 +14,14 @@ import {
 } from './object';
 import { Parser } from './parser';
 import { SymbolTable } from './symbols';
-import { VM, createGlobalVariables } from './vm';
+import { VM, createGlobalVariables, VMCallbackFn } from './vm';
 
 const NULL = new Null();
 
 export interface ClockUpdate {
   on: BaseObject[];
   off: number[];
+  done: boolean;
 }
 
 /**
@@ -43,7 +44,10 @@ export class Runtime {
   /**
    * Constructs a new runtime instance.
    */
-  constructor(public active: boolean = true) {
+  constructor(
+    public active: boolean = true,
+    private callbacks?: Record<string, VMCallbackFn>,
+  ) {
     this.reset();
   }
 
@@ -88,7 +92,7 @@ export class Runtime {
     }
     this.instructions = compiler.instructions();
 
-    const vm = new VM(compiler, this.globals);
+    const vm = new VM(compiler, this.globals, this.callbacks);
     vm.run();
 
     const main = this.symbolTable.get('main');
@@ -171,7 +175,7 @@ export class Runtime {
       if (note.pitch >= 0) {
         playable = true;
       }
-      this.queue.push(note);
+      this.queue.push(new MidiNote(note.pitch, note.duration, note.velocity));
     }
     return playable;
   }
@@ -186,7 +190,7 @@ export class Runtime {
     let notesOn: BaseObject[] = [];
     if (this.active) {
       let nextValue;
-      if (!this.queue.length) {
+      if (!this.queue.length || notesOff.length) {
         nextValue = this.getNextValue();
       }
       if (nextValue instanceof Arr) {
@@ -200,6 +204,7 @@ export class Runtime {
     return {
       on: notesOn,
       off: notesOff,
+      done: this.seq ? this.seq.done : true,
     };
   }
 

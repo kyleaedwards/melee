@@ -20,6 +20,11 @@ const TRUE = new obj.Bool(true);
 const FALSE = new obj.Bool(false);
 
 /**
+ * Runtime callback function hooks into the VM.
+ */
+export type VMCallbackFn = (...args: obj.BaseObject[]) => void;
+
+/**
  * Asserts stack object is defined.
  *
  * @param obj - Object to be compared
@@ -97,6 +102,12 @@ export class VM {
   private coroutine?: obj.ExecutionState;
 
   /**
+   * Additional hooks supplied by the runtime. Can be used to introduce
+   * new builtin functions, etc.
+   */
+  public callbacks: Record<string, VMCallbackFn>;
+
+  /**
    * Constructs a new VM instance.
    *
    * @param compiler - Compiler instance
@@ -104,6 +115,7 @@ export class VM {
   constructor(
     compiler: Compiler,
     variables?: (obj.BaseObject | undefined)[],
+    callbacks?: Record<string, (...args: obj.BaseObject[]) => void>,
   ) {
     this.constants = compiler.constants;
     this.frames = new Array<obj.Frame>(MAX_FRAME_SIZE);
@@ -111,6 +123,7 @@ export class VM {
       MAX_STACK_SIZE,
     );
     this.variables = variables || createGlobalVariables();
+    this.callbacks = callbacks || {};
     this.fp = 1;
     this.sp = 0;
 

@@ -350,18 +350,21 @@ export const NATIVE_FNS: NativeFn[] = [
         const output = new Array<BaseObject>(seqs.length);
         seqs.forEach((seq, i) => {
           if (state[i] > 0) {
-            state[i]--;
             output[i] = new Hold();
           } else {
             const note = vm.takeNext(seq);
             if (note instanceof MidiNote) {
-              state[i] = note.duration - 1;
+              state[i] = note.duration;
             } else {
               state[i] = 0;
             }
             output[i] = note;
           }
         });
+        const min = Math.min(...state);
+        for (let i = 0; i < seqs.length; i++) {
+          state[i] = Math.max(0, state[i] - min);
+        }
         return new Arr(output);
       });
       return seq;
@@ -386,8 +389,10 @@ export const NATIVE_FNS: NativeFn[] = [
    */
   new NativeFn(
     'print',
-    (_: VM, ...args: BaseObject[]): BaseObject => {
-      console.log(...args.map((arg) => arg.inspectObject()));
+    (vm: VM, ...args: BaseObject[]): BaseObject => {
+      if (vm.callbacks && vm.callbacks.print) {
+        vm.callbacks.print(...args);
+      }
       return NULL;
     },
   ),
