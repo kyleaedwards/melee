@@ -1,6 +1,6 @@
 import { Bytecode, disassemble } from './bytecode';
 import { Compiler } from './compiler';
-import { MeleeError } from './errors';
+import { MeleeError, RuntimeError } from './errors';
 import { Lexer } from './lexer';
 import {
   BaseObject,
@@ -75,9 +75,52 @@ export class Runtime {
   }
 
   /**
+   * Stage changes to check for errors.
+   *
+   * @param input - Code snippet
+   * @returns Lexer, parser, compiler, and runtime errors
+   */
+  stageChanges(input: string): MeleeError[] {
+    const lexer = new Lexer(input);
+    const parser = new Parser(lexer);
+    const program = parser.parse();
+    const errors: MeleeError[] = [...parser.errors];
+
+    const symbolTable = SymbolTable.createGlobalSymbolTable();
+    const compiler = new Compiler([], symbolTable);
+    try {
+      compiler.compile(program);
+    } catch (e) {
+      errors.push(e);
+    }
+
+    if (errors.length) return errors;
+
+    const globals = createGlobalVariables();
+    const vm = new VM(compiler, globals, this.callbacks);
+    vm.run();
+
+    const main = symbolTable.get('main');
+    if (!main) {
+      errors.push(new RuntimeError(
+        'Runtime environment requires a top-level `main` object', 0, 0, 0,
+      ));
+    } else {
+      let seq = globals[main.index];
+      if (!(seq instanceof Closure)) {
+        errors.push(new RuntimeError(
+          'Top level `main` object must be a sequence generator', 0, 0, 0,
+        ));
+      }
+    }
+    return errors;
+  }
+
+  /**
    * Applies a new snippet of code passed through the runtime.
    *
    * @param input - Code snippet
+   * @param args - Arguments to main generator
    */
   apply(input: string, args: BaseObject[]): void {
     const lexer = new Lexer(input);
