@@ -29,7 +29,6 @@ main := gen () {
   m := poly(bass(), melody());
   loop {
     n := next m;
-    print(n);
     yield n;
   }
 };
