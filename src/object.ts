@@ -409,19 +409,16 @@ export class MidiCC implements BaseObject, MidiObject {
  * @public
  */
 export class Hold implements BaseObject {
-  static self?: Hold;
-
   type: Type = 'hold';
 
-  constructor() {
-    if (!Hold.self) {
-      Hold.self = this;
-    }
-    return Hold.self;
+  constructor(
+    public pitch: number,
+    public duration: number,
+  ) {
   }
 
   inspectObject(): string {
-    return `hold`;
+    return `hold::${this.duration}`;
   }
 }
 

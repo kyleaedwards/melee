@@ -107,12 +107,10 @@ export class Compiler {
         this.compile(node.statements[i]);
       }
     } else if (node instanceof ast.ExpressionStatement) {
-      if (!(node.value instanceof ast.CommentLiteral)) {
-        if (node.value) {
-          this.compile(node.value);
-        }
-        this.emit(Opcode.POP);
+      if (node.value) {
+        this.compile(node.value);
       }
+      this.emit(Opcode.POP);
     } else if (node instanceof ast.DeclareStatement) {
       const index = this.symbolTable.add(node.name.value);
       if (node.value) {

@@ -345,25 +345,32 @@ export const NATIVE_FNS: NativeFn[] = [
         }
         seqs.push(arg);
       });
-      const state = new Array<number>(seqs.length);
+      const durations = new Array<number>(seqs.length).fill(-1);
+      const pitches = new Array<number>(seqs.length).fill(-1);
       const seq = new VirtualSeq(() => {
         const output = new Array<BaseObject>(seqs.length);
         seqs.forEach((seq, i) => {
-          if (state[i] > 0) {
-            output[i] = new Hold();
+          if (durations[i] > 0) {
+            output[i] = new Hold(pitches[i], durations[i]);
           } else {
             const note = vm.takeNext(seq);
             if (note instanceof MidiNote) {
-              state[i] = note.duration;
+              durations[i] = note.duration;
+              pitches[i] = note.pitch;
             } else {
-              state[i] = 0;
+              durations[i] = -1;
+              pitches[i] = -1;
             }
             output[i] = note;
           }
         });
-        const min = Math.min(...state);
+        const min = Math.min(...durations.filter(d => d > 0));
         for (let i = 0; i < seqs.length; i++) {
-          state[i] = Math.max(0, state[i] - min);
+          durations[i] = Math.max(0, durations[i] - min);
+          const hold = output[i];
+          if (hold instanceof Hold) {
+            hold.duration = min;
+          }
         }
         return new Arr(output);
       });

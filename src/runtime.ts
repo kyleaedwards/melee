@@ -11,6 +11,7 @@ import {
   Fn,
   MidiNote,
   Arr,
+  Hold,
 } from './object';
 import { Parser } from './parser';
 import { SymbolTable } from './symbols';
@@ -59,6 +60,7 @@ export class Runtime {
     this.symbolTable = SymbolTable.createGlobalSymbolTable();
     this.constants = [];
     this.errors = [];
+    this.queue = [];
   }
 
   /**
@@ -146,14 +148,14 @@ export class Runtime {
     while (this.queue.length) {
       // Grab the next available note.
       const item = this.queue.shift();
-      if (!(item instanceof MidiNote)) break;
+      if (!(item instanceof MidiNote) && !(item instanceof Hold)) break;
 
       // Decrement remaining note duration.
       item.duration--;
 
       if (item.duration) {
         newQueue.push(item);
-      } else if (item.pitch >= 0) {
+      } else {
         // Prune if out of remaining note duration.
         notesOff.push(item.pitch);
       }
@@ -203,7 +205,7 @@ export class Runtime {
     }
     return {
       on: notesOn,
-      off: notesOff,
+      off: notesOff.filter(n => n >= 0),
       done: this.seq ? this.seq.done : true,
     };
   }

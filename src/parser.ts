@@ -9,6 +9,19 @@ type infixParseFn = (
 ) => ast.Expression | undefined;
 
 /**
+ * AST child markers to detect unstable code.
+ */
+class ChildMarker {
+  constructor(
+    public hasYield = false,
+    public hasBreak = false,
+    public hasContinue = false,
+    public hasReturn = false,
+    public isLoop = false,
+  ) {}
+}
+
+/**
  * Defines a precedence order for operations
  * when evaluating an expression.
  */
@@ -90,6 +103,13 @@ export class Parser {
    */
   private infixParseFns: Record<string, infixParseFn>;
 
+  /**
+   * Current parsing branch's child markers.
+   *
+   * @internal
+   */
+  private childMarkers: ChildMarker[] = [new ChildMarker()];
+
   constructor(
     /**
      * Lexer instantiated with code to be parsed.
@@ -114,7 +134,6 @@ export class Parser {
       note: this.parseNoteExpression.bind(this),
       skip: this.parseSkipExpression.bind(this),
       cc: this.parseCCExpression.bind(this),
-      comment: this.parseComment.bind(this),
     };
 
     this.infixParseFns = {
@@ -160,6 +179,10 @@ export class Parser {
         ),
       );
     }
+    while (this.peek.tokenType === 'comment') {
+      this.curr = this.peek;
+      this.peek = this.lexer.nextToken();
+    }
     this.curr = this.peek;
     this.peek = this.lexer.nextToken();
   }
@@ -191,12 +214,29 @@ export class Parser {
     }
     switch (this.curr.tokenType) {
       case 'return':
+        this.childMarker().hasReturn = true;
         return this.parseReturnStatement();
       case 'yield':
+        this.childMarker().hasYield = true;
         return this.parseYieldStatement();
       case 'while':
-      case 'loop':
-        return this.parseWhile();
+      case 'loop': {
+        this.childMarkers.push(new ChildMarker());
+        const token = this.curr;
+        const result = this.parseWhile();
+        const { hasBreak, hasReturn, hasYield } = this.childMarker();
+        this.childMarkers.pop();
+        if (token.tokenType === 'while') {
+          return result;
+        }
+        if (!hasBreak && !hasReturn && !hasYield) {
+          this.errors.push(new SynError(
+            'Infinite loops must either `yield`, `return`, or `break`.',
+            token,
+          ));
+        }
+        return result;
+      }
       case 'identifier': {
         if (tokenIs(this.peek, 'declare')) {
           return this.parseDeclareStatement();
@@ -204,17 +244,21 @@ export class Parser {
         return this.parseExpressionStatement();
       }
       case 'continue': {
+        this.childMarker().hasContinue = true;
         const stmt = new ast.ContinueStatement(this.curr);
         this.nextToken();
         return stmt;
       }
       case 'break': {
+        this.childMarker().hasBreak = true;
         const stmt = new ast.BreakStatement(this.curr);
         this.nextToken();
         return stmt;
       }
       case 'for':
         return this.parseFor();
+      case 'comment':
+        return;
       default:
         return this.parseExpressionStatement();
     }
@@ -313,7 +357,7 @@ export class Parser {
       if (!infixFn) {
         this.errors.push(
           new SynError(
-            `Unexpected token ${this.curr.literal}`,
+            `Unexpected token in infix expression ${this.curr.literal}`,
             this.curr,
           ),
         );
@@ -418,7 +462,10 @@ export class Parser {
     const token = this.curr;
 
     this.nextToken();
-    const duration = this.parseExpression(precedence.NIL);
+    let duration;
+    if (this.curr.tokenType !== 'semicolon') {
+      duration = this.parseExpression(precedence.NIL);
+    }
 
     return new ast.SkipExpression(token, duration);
   }
@@ -509,8 +556,17 @@ export class Parser {
 
     if (tokenIs(this.peek, 'else')) {
       this.nextToken();
-      if (!this.expectPeek('lbrace')) return;
-      alternative = this.parseBlockStatement();
+      if (tokenIs(this.peek, 'if')) {
+        this.nextToken();
+        const stmt = this.parseStatement();
+        if (!stmt) {
+          throw new SynError('Invalid `else if` clause', this.peek);
+        }
+        alternative = new ast.BlockStatement(this.curr, [stmt]);
+      } else {
+        if (!this.expectPeek('lbrace')) return;
+        alternative = this.parseBlockStatement();
+      }
     }
 
     return new ast.IfExpression(
@@ -586,10 +642,6 @@ export class Parser {
     const token = this.curr;
     const args = this.parseExpressionList('rparen');
     return new ast.CallExpression(token, left, args);
-  }
-
-  private parseComment(): ast.CommentLiteral {
-    return new ast.CommentLiteral(this.curr);
   }
 
   /** Utilities **/
@@ -678,5 +730,14 @@ export class Parser {
     if (tokenIs(this.peek, 'semicolon')) {
       this.nextToken();
     }
+  }
+
+  private childMarker(): ChildMarker {
+    if (this.childMarkers.length) {
+      return this.childMarkers[this.childMarkers.length - 1];
+    }
+    const childMarker = new ChildMarker();
+    this.childMarkers.push(childMarker);
+    return childMarker;
   }
 }
