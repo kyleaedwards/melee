@@ -364,7 +364,7 @@ export const NATIVE_FNS: NativeFn[] = [
             output[i] = note;
           }
         });
-        const min = Math.min(...durations.filter(d => d > 0));
+        const min = Math.min(...durations.filter((d) => d > 0));
         for (let i = 0; i < seqs.length; i++) {
           durations[i] = Math.max(0, durations[i] - min);
           const hold = output[i];

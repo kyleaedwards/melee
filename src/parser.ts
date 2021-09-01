@@ -230,10 +230,12 @@ export class Parser {
           return result;
         }
         if (!hasBreak && !hasReturn && !hasYield) {
-          this.errors.push(new SynError(
-            'Infinite loops must either `yield`, `return`, or `break`.',
-            token,
-          ));
+          this.errors.push(
+            new SynError(
+              'Infinite loops must either `yield`, `return`, or `break`.',
+              token,
+            ),
+          );
         }
         return result;
       }

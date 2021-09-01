@@ -411,11 +411,7 @@ export class MidiCC implements BaseObject, MidiObject {
 export class Hold implements BaseObject {
   type: Type = 'hold';
 
-  constructor(
-    public pitch: number,
-    public duration: number,
-  ) {
-  }
+  constructor(public pitch: number, public duration: number) {}
 
   inspectObject(): string {
     return `hold::${this.duration}`;

@@ -102,15 +102,25 @@ export class Runtime {
 
     const main = symbolTable.get('main');
     if (!main) {
-      errors.push(new RuntimeError(
-        'Runtime environment requires a top-level `main` object', 0, 0, 0,
-      ));
+      errors.push(
+        new RuntimeError(
+          'Runtime environment requires a top-level `main` object',
+          0,
+          0,
+          0,
+        ),
+      );
     } else {
       let seq = globals[main.index];
       if (!(seq instanceof Closure)) {
-        errors.push(new RuntimeError(
-          'Top level `main` object must be a sequence generator', 0, 0, 0,
-        ));
+        errors.push(
+          new RuntimeError(
+            'Top level `main` object must be a sequence generator',
+            0,
+            0,
+            0,
+          ),
+        );
       }
     }
     return errors;
@@ -191,7 +201,8 @@ export class Runtime {
     while (this.queue.length) {
       // Grab the next available note.
       const item = this.queue.shift();
-      if (!(item instanceof MidiNote) && !(item instanceof Hold)) break;
+      if (!(item instanceof MidiNote) && !(item instanceof Hold))
+        break;
 
       // Decrement remaining note duration.
       item.duration--;
@@ -220,7 +231,9 @@ export class Runtime {
       if (note.pitch >= 0) {
         playable = true;
       }
-      this.queue.push(new MidiNote(note.pitch, note.duration, note.velocity));
+      this.queue.push(
+        new MidiNote(note.pitch, note.duration, note.velocity),
+      );
     }
     return playable;
   }
@@ -248,7 +261,7 @@ export class Runtime {
     }
     return {
       on: notesOn,
-      off: notesOff.filter(n => n >= 0),
+      off: notesOff.filter((n) => n >= 0),
       done: this.seq ? this.seq.done : true,
     };
   }
