@@ -357,9 +357,29 @@ export const NATIVE_FNS: NativeFn[] = [
             if (note instanceof MidiNote) {
               durations[i] = note.duration;
               pitches[i] = note.pitch;
+            } else if (note instanceof Arr) {
+              let minDuration = -1;
+              let pitch = -1;
+              for (let j = 0; j < note.items.length; j++) {
+                const item = note.items[j];
+                if (!(item instanceof MidiNote)) {
+                  throw new Error(
+                    '`poly` sequences must yield MIDI notes or chords',
+                  );
+                }
+                if (minDuration < 0) {
+                  minDuration = item.duration;
+                } else {
+                  minDuration = Math.min(minDuration, item.duration);
+                }
+                pitch = item.pitch;
+              }
+              durations[i] = minDuration;
+              pitches[i] = pitch;
             } else {
-              durations[i] = -1;
-              pitches[i] = -1;
+              throw new Error(
+                '`poly` sequences must yield MIDI notes or chords',
+              );
             }
             output[i] = note;
           }
@@ -372,7 +392,16 @@ export const NATIVE_FNS: NativeFn[] = [
             hold.duration = min;
           }
         }
-        return new Arr(output);
+        const flattenedNotes = output.reduce(
+          (acc: BaseObject[], cur: BaseObject) => {
+            if (cur instanceof Arr) {
+              return [...acc, ...cur.items];
+            }
+            return [...acc, cur];
+          },
+          [],
+        );
+        return new Arr(flattenedNotes);
       });
       return seq;
     },
