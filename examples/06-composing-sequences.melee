@@ -1,0 +1,43 @@
+// Example: Composing Sequences
+//
+// We can compose sequences out of random notes by introducing
+// repetition into the mix. Here we're taking a generator that
+// creates random notes of a scale, and pulling out four 8-note
+// sequences. Each time through the loop, we repeat each
+// sequence 4 times to give more structure to the melody.
+
+createNotes := gen (root) { // We've given this generator an
+                            // argument, so it's easy to change
+                            // the root note from main().
+  loop {
+    vl := rand(127);
+    pt := scale(SCALE_PENT_MINOR, root, rand(18));
+    yield note [pt, 1, vl];
+  }
+};
+
+main := gen () {
+  // Create a generator to pull random notes from.
+  notes := createNotes(C3);
+  
+  // Create 4 sets of 8 notes up front to use in the main loop.
+  sets := [];
+  for i in range(4) {
+    // take(seq, n) pulls the next n notes from the sequence.
+    push(sets, take(notes, 8));
+  }
+
+  loop {
+    // Repeat for each of the 4 sets.
+    for i in range(4) {
+      set := sets[i];
+  
+      // Loop four times over each 8-note sequence.
+      for j in range(4) {
+        for n in set {
+          yield n;
+        }
+      }
+    }
+  }
+};

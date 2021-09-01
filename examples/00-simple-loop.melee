@@ -1,0 +1,16 @@
+// Example: Simple Loop
+//
+// We're barely scratching the surface of what Melee can
+// do. While it can sometimes be useful to have quick loops
+// like this, the real magic happens when we use more of the
+// features (like probability, randomization, scales, etc...)
+// together.
+
+main := gen () {
+  loop {
+    yield note [C3];
+    yield note [D3];
+    yield note [F3];
+    yield note [G3];
+  }
+};

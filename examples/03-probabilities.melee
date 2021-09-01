@@ -1,0 +1,23 @@
+// Example: Probabilities
+//
+// On each cycle through the main loop, we step through
+// each note in order, giving E4 a 1 in 2 chance to play,
+// F#4 a 1 in 3 chance, G4 a 1 in 4 chance, and B4 a 1
+// in 5.
+
+main := gen () {
+  loop {
+    if (rand(2) == 0) {
+      yield note [E4];
+    }
+    if (rand(3) == 0) {
+      yield note [F#4];
+    }
+    if (rand(4) == 0) {
+      yield note [G4];
+    }
+    if (rand(5) == 0) {
+      yield note [B4];
+    }
+  }
+};

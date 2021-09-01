@@ -1,0 +1,34 @@
+// Example: It's All Generators...
+//
+// We can use multiple generators to create subsequences
+// looping with different frequencies.
+
+// We start out with a generator that loops forever, picking a random note
+// out of an array.
+notePitch := gen () {
+  loop {
+    yield [D2, A2, G2, C3, F3, E4][rand(6)];
+  }
+}(); // If we don't need arguments, we can call the generator immediately.
+
+// Lets check out some built-in functions! First we'll use the
+// range(n) function to create an array of numbers from 0 to n.
+nums := range(5);
+
+// Now we'll map() over them, returning a new array using the
+// transform function we provide.
+biggerNums := map(nums, fn(x) { return x + 1; });
+
+// Rather than define generators with the gen keyword, we can
+// also convert arrays to sequences using conv() to create a
+// one-shot sequence, or cycle() to have it loop forever.
+noteDuration := cycle(biggerNums);
+
+main := gen () {
+  loop {
+    // Every time through the loop, we take the next item out
+    // of each sequence, but since their loops have different
+    // numbers of elements, they quickly get out of sync.
+    yield note [next notePitch, next noteDuration];
+  }
+};

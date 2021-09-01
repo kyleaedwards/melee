@@ -1,0 +1,50 @@
+// Example: BOC
+//
+// Not much to this one. If you know you know.
+
+main := gen () {
+  loop {
+    yield note [G#2, 2];
+    yield skip 1;
+    yield note [A#2];
+    yield note [B3];
+    yield note [B3];
+    yield note [G#2];
+    yield note [B3];
+    yield note [G#2];
+    yield note [A#3];
+    yield note [F#3];
+    yield note [G#2];
+    yield note [B1, 2];
+    yield note [A#2];
+    yield note [G#2];
+    yield note [C#3, 4];
+    yield note [C#2, 6];
+    yield note [F#3, 4];
+    yield note [G#3, 2];
+    yield note [G#1, 3];
+    yield note [A#2];
+    yield note [D#3];
+    yield note [A#2];
+    yield note [D#3];
+    yield note [A#2];
+    yield note [F#2];
+    yield note [F#3];
+    yield note [F#3];
+    yield note [A#2];
+    yield note [F#3];
+    yield note [G#3];
+    yield note [G#3, 2];
+    yield note [C#2, 2];
+    yield note [D#2];
+    yield note [F3];
+    yield note [D#2, 2];
+    yield note [F3, 2];
+    yield note [B3, 2];
+    yield note [F3];
+    yield note [B3];
+    yield note [F3];
+    yield note [A#3];
+    yield note [F#3, 2];
+  }
+};

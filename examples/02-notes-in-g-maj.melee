@@ -1,0 +1,14 @@
+// Example: Notes in G maj
+//
+// Here we're just using random number generators rand()
+// and rrand(), as well as the scale() function to create
+// a generative sequence of notes with different lengths
+// that still conform to a G major scale.
+
+main := gen () {
+  loop {
+    noteDuration := rrand(1, 5);
+    notePitch := scale(SCALE_MAJOR, G2, rand(24));
+    yield note [notePitch, noteDuration];
+  }
+};

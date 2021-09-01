@@ -1,0 +1,14 @@
+// Example: One-shot Sequence
+//
+// Not all sequences need to be loops. This is especially
+// useful in the Max for Live version, as each sequence can
+// be triggered (and repeated) with incoming MIDI notes.
+// This makes sequences more playable and active than
+// simply looping indefinitely.
+
+main := gen () {
+  yield note [C3];
+  yield note [D3];
+  yield note [F3];
+  yield note [G3];
+};
