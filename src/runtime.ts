@@ -112,7 +112,7 @@ export class Runtime {
         ),
       );
     } else {
-      let seq = globals[main.index];
+      const seq = globals[main.index];
       if (!(seq instanceof Closure)) {
         errors.push(
           createRuntimeError(

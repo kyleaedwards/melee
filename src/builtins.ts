@@ -345,8 +345,10 @@ export const NATIVE_FNS: NativeFn[] = [
         }
         seqs.push(arg);
       });
-      const durations = new Array<number>(seqs.length).fill(-1);
-      const pitches = new Array<number>(seqs.length).fill(-1);
+      const durations: number[] = [];
+      for (let i = 0; i < seqs.length; i++) durations[i] = -1;
+      const pitches: number[] = [];
+      for (let i = 0; i < seqs.length; i++) pitches[i] = -1;
       const seq = new VirtualSeq(() => {
         const output = new Array<BaseObject>(seqs.length);
         seqs.forEach((seq, i) => {

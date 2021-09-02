@@ -501,9 +501,20 @@ describe('Parser', () => {
       testLiteral(subStmt.value, 'x');
     });
 
+    test('should catch possible infinite loop expression', () => {
+      const input = `loop {
+        x;
+      }`;
+      const lexer = new Lexer(input);
+      const parser = new Parser(lexer);
+      parser.parse();
+      expect(parser.errors).toHaveLength(1);
+      expect(parser.errors[0].message).toEqual('Infinite loops must either `yield`, `return`, or `break`.');
+    });
+
     test('should parse valid loop expression', () => {
       const input = `loop {
-        x
+        break
       }`;
       const stmts = parseProgramStatements(input);
       expect(stmts).toHaveLength(1);
@@ -518,8 +529,7 @@ describe('Parser', () => {
       expect(stmt.block.statements).toHaveLength(1);
       const subStmt = stmt.block.statements[0];
 
-      assertNodeType(subStmt, ast.ExpressionStatement);
-      testLiteral(subStmt.value, 'x');
+      assertNodeType(subStmt, ast.BreakStatement);
     });
   });
 
