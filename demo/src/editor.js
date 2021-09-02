@@ -1,7 +1,7 @@
 /**
  * Imports
  */
-const { Runtime, obj, errors: meleeErrors } = require('../..');
+const { Runtime, obj, errors: meleeErrors } = require('../../dist');
 const prepareMeleeHighlighting = require('./syntax');
 const {
   $$,
