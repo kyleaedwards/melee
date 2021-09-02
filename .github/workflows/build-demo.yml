@@ -24,6 +24,11 @@ jobs:
       - name: Build Demo
         run: yarn build-demo
 
+      - name: Replace Relative Paths
+        run: |
+          sed -i bak 's|src="/|src="/melee/|' demo/public/index.html
+          sed -i bak 's|href="/|href="/melee/|' demo/public/index.html
+
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@4.1.4
         with:
