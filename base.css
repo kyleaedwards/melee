@@ -1,0 +1,306 @@
+* {
+  box-sizing: border-box;
+}
+
+body { 
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 10px;
+  background-color: #111;
+  font-family: 'Space Grotesk', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  font-size: 16px;
+  overflow: hidden;
+}
+
+header {
+  position: relative;
+  height: 44px;
+}
+
+h1 {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  color: #f0f0f0;
+  line-height: 40px;
+  font-size: 18px;
+}
+
+/* Editor */
+
+#editorWrapper {
+  height: calc(100% - 44px);
+  border-radius: 3px;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  box-sizing: content-box;
+}
+
+.CodeMirror {
+  width: 100% !important;
+  height: 100% !important;
+  padding: 8px 0;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+} 
+
+.cm-s-dracula span.cm-atom {
+  color: #79ecff;
+}
+
+.show-console #editorWrapper {
+  height: calc(100% - 254px);
+}
+
+.loaded #editorWrapper {
+  transition: height 0.5s;
+}
+
+.syntax-error {
+  background-color: red;
+}
+
+/* Console */
+
+#console {
+  position: absolute;
+  bottom: -200px;
+  height: 200px;
+  width: calc(100% - 20px);
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 3px;
+  background-color: #282a36;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  line-height: 1.5;
+  color: #f0f0f0;
+  z-index: 10;
+}
+
+.show-console #console {
+  bottom: 10px;
+}
+
+.loaded #console {
+  transition: bottom 0.5s;
+}
+
+#consoleBody {
+  height: 100%;
+  overflow: scroll;
+}
+
+#consoleBody pre {
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+#toggleConsole {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  height: 40px;
+  padding: 0 15px;
+  background-color: #21232d;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-style: italic;
+  line-height: 40px;
+  color: #686971;
+  user-select: none;
+  cursor: pointer;
+}
+
+.err {
+  color: #e28e9a;
+}
+
+.sys {
+  opacity: 0.5;
+}
+
+/* Helptext */
+
+#helptext {
+  position: absolute;
+  top: 75px;
+  right: 30px;
+  max-height: calc(100vh - 145px);
+  width: 25%;
+  min-width: 250px;
+  padding: 25px 10px 25px 25px;
+  background-color: #1b1c24;
+  font-size: 0.88em;
+  color: #f0f0f0;
+  overflow: hidden;
+  z-index: 9;
+}
+
+#helptextToggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 30px;
+  width: 30px;
+  background-color: rgb(99, 108, 132);
+  line-height: 30px;
+  text-align: center;
+  color: #f0f0f0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.loaded #helptextToggle {
+  transition: all 0.2s;
+}
+
+#helptext.hidden {
+  height: 40px;
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+#helptextToggle:before {
+  content: '✕';
+}
+
+#helptext.hidden #helptextToggle {
+  height: 40px;
+  width: 40px;
+  font-size: 24px;
+  line-height: 40px;
+}
+
+#helptext.hidden #helptextToggle:before {
+  content: '?';
+}
+
+.show-console #helptext {
+  max-height: calc(100vh - 355px);
+}
+
+#helptextInner {
+  max-height: calc(100vh - 197px);
+  padding-right: 15px;
+  overflow: scroll;
+}
+
+.hidden #helptextInner {
+  opacity: 0;
+}
+
+.show-console #helptextInner {
+  max-height: calc(100vh - 407px);
+}
+
+#helptext h3 {
+  margin: 0;
+  padding: 0;
+}
+
+#helptext p {
+  margin-top: 1em;
+  margin-bottom: 0;
+}
+
+#helptext a,
+#helptext a:visited,
+#helptext a:active,
+#helptext a:hover {
+  color: #f0f0f0;
+}
+
+/* Examples */
+
+#examples {
+  margin-bottom: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#examples li {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Loading Panel */
+
+#loadingPanel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background: linear-gradient(270deg, #000000, #282a36);
+  background-size: 400% 400%;
+  font-size: 50px;
+  line-height: 100vh;
+  text-align: center;
+  color: rgb(149, 163, 182);
+  z-index: 1000;
+  transition: opacity 0.4s;
+  -webkit-animation: loader 2s ease infinite;
+  -moz-animation: loader 2s ease infinite;
+  animation: loader 2s ease infinite;
+}
+
+.loaded #loadingPanel {
+  opacity: 0;
+}
+
+#loadingPanel span {
+  -webkit-animation: blink 1s ease infinite;
+  -moz-animation: blink 1s ease infinite;
+  animation: blink 1s ease infinite;
+}
+
+#loadingPanel span:nth-of-type(2) {
+  animation-delay: 0.2s;
+}
+
+#loadingPanel span:nth-of-type(3) {
+  animation-delay: 0.4s;
+}
+
+
+/* Animations */
+
+@-webkit-keyframes loader {
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+@-moz-keyframes loader {
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+@keyframes loader {
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+@-webkit-keyframes blink {
+  0%{opacity:100%}
+  50%{opacity:0%}
+  100%{opacity:100%}
+}
+
+@-moz-keyframes blink {
+  0%{opacity:100%}
+  50%{opacity:0%}
+  100%{opacity:100%}
+}
+
+@keyframes blink {
+  0%{opacity:100%}
+  50%{opacity:0%}
+  100%{opacity:100%}
+}
