@@ -13,6 +13,11 @@
 import * as ast from './ast';
 
 /**
+ * Melee error types.
+ */
+import * as errors from './errors';
+
+/**
  * Melee object types.
  */
 import * as obj from './object';
@@ -27,4 +32,4 @@ export { Runtime } from './runtime';
 export { disassemble } from './bytecode';
 export { KNOWN_LABELS } from './builtins';
 
-export { ast, obj };
+export { ast, errors, obj };

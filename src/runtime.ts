@@ -25,6 +25,10 @@ export interface ClockUpdate {
   done: boolean;
 }
 
+function createRuntimeError(msg: string): RuntimeError {
+  return new RuntimeError(msg, 0, 0, 0);
+}
+
 /**
  * Opinionated runtime environment for generating MIDI sequences.
  */
@@ -103,22 +107,16 @@ export class Runtime {
     const main = symbolTable.get('main');
     if (!main) {
       errors.push(
-        new RuntimeError(
+        createRuntimeError(
           'Runtime environment requires a top-level `main` object',
-          0,
-          0,
-          0,
         ),
       );
     } else {
       let seq = globals[main.index];
       if (!(seq instanceof Closure)) {
         errors.push(
-          new RuntimeError(
+          createRuntimeError(
             'Top level `main` object must be a sequence generator',
-            0,
-            0,
-            0,
           ),
         );
       }
@@ -143,7 +141,7 @@ export class Runtime {
       compiler.compile(program);
     } catch (e) {
       this.errors.push(e);
-      throw e;
+      return;
     }
     this.instructions = compiler.instructions();
 
@@ -152,23 +150,32 @@ export class Runtime {
 
     const main = this.symbolTable.get('main');
     if (!main) {
-      throw new Error(
-        'Runtime environment requires a top-level `main` object',
+      this.errors.push(
+        createRuntimeError(
+          'Runtime environment requires a top-level `main` object',
+        ),
       );
+      return;
     }
 
     let seq = this.globals[main.index];
     if (seq instanceof Closure) {
       seq = vm.callAndReturn(seq, args);
     } else {
-      throw new Error(
-        'Top level `main` object must be a sequence generator',
+      this.errors.push(
+        createRuntimeError(
+          'Top level `main` object must be a sequence generator',
+        ),
       );
+      return;
     }
     if (!(seq instanceof Seq)) {
-      throw new Error(
-        'Top level `main` object must return a sequence',
+      this.errors.push(
+        createRuntimeError(
+          'Top level `main` object must return a sequence',
+        ),
       );
+      return;
     }
 
     this.seq = seq;

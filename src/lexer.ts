@@ -44,7 +44,8 @@ export class Lexer {
   private position = 0;
   private readPosition = 0;
   private line = 0;
-  private column = -1;
+  private column = 0;
+  private lastLineLength = 0;
   private char: string;
 
   /**
@@ -74,6 +75,7 @@ export class Lexer {
       this.char = this.input[this.readPosition];
     }
     if (this.char === '\n') {
+      this.lastLineLength = this.column;
       this.line++;
       this.column = 0;
     } else {
@@ -145,12 +147,22 @@ export class Lexer {
    *
    * @returns New token
    */
-  private createToken(tokenType: TokenType, literal: string): Token {
+  private createToken(
+    tokenType: TokenType,
+    literal: string,
+    colOffset = 0,
+  ): Token {
+    let column = this.column - literal.length - colOffset;
+    let { line } = this;
+    if (column < 0) {
+      column = this.lastLineLength - literal.length;
+      line--;
+    }
     return {
       tokenType,
       literal,
-      line: this.line,
-      column: this.column,
+      line,
+      column,
     };
   }
 
@@ -297,10 +309,14 @@ export class Lexer {
       default:
         if (isAlpha(this.char)) {
           const literal = this.readIdentifier();
-          return this.createToken(lookupIdentifier(literal), literal);
+          return this.createToken(
+            lookupIdentifier(literal),
+            literal,
+            1,
+          );
         }
         if (isNumeric(this.char)) {
-          return this.createToken('int', this.readNumber());
+          return this.createToken('int', this.readNumber(), 1);
         }
     }
 

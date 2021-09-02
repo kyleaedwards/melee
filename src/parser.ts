@@ -175,7 +175,7 @@ export class Parser {
       this.errors.push(
         new SynError(
           `Unexpected token ${this.peek.literal}`,
-          this.peek,
+          this.curr,
         ),
       );
     }
