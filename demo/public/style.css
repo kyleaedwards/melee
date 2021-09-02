@@ -1,0 +1,174 @@
+/* App-specific Controls */
+
+#webControls {
+  position: absolute;
+  top: 3px;
+  right: 0px;
+  height: 30px;
+  padding: 0 15px;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 30px;
+  color: #f0f0f0;
+  user-select: none;
+}
+
+#webControls button {
+  position: absolute;
+  top: 0px;
+  right: 1px;
+  height: 30px;
+  width: 30px;
+  padding: 1px 0 0 1px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border: none;
+  font-family: 'Space Grotesk', 'Helvetica Neue';
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 30px;
+  color: #111;
+  user-select: none;
+  cursor: pointer;
+}
+
+#webControls button > span {
+  position: absolute;
+  visibility: hidden;
+}
+
+.sync-state {
+  position: absolute;
+  right: 170px;
+  width: 360px;
+  font-size: 0.8em;
+  line-height: 27px;
+  text-align: right;
+  display: none;
+}
+
+#sync {
+  color: #fafaa0;
+}
+
+#syncError {
+  color: #faa;
+}
+
+#synced {
+  opacity: 0.5;
+  color: #afb;
+}
+
+#tempo {
+  position: absolute;
+  top: 0;
+  right: 100px;
+}
+
+#tempo i {
+  font-size: 0.7em;
+  opacity: 0.5;
+}
+
+#tempoValue {
+  cursor: text;
+  outline: none;
+}
+
+#tempoValue:focus {
+  border-bottom: solid 2px;
+}
+
+#webControls button#play,
+#webControls button#pause {
+  right: 40px;
+}
+
+.playing #play {
+  display: none;
+}
+
+#pause {
+  display: none;
+}
+
+#pause i {
+  display: block;
+  height: 14px;
+  width: 6px;
+  background-color: #111;
+  position: absolute;
+  top: 8px;
+}
+
+#pause i:first-of-type {
+  left: 8px;
+}
+
+#pause i:last-of-type {
+  right: 8px;
+}
+
+.playing #pause {
+  display: block;
+}
+
+#stop i {
+  content: " ";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  display: block;
+  background-color: #111;
+  top: 8px;
+  left: 8px;
+}
+
+#indicator {
+  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  background-color: rgb(75, 75, 75);
+  position: absolute;
+  top: 12px;
+  right: 82px;
+}
+
+#indicator.on {
+  animation: indicator 0.1s;
+}
+
+#webControls button#play:hover {
+  background-color: rgb(83, 207, 89);
+}
+
+#webControls button#pause:hover {
+  background-color: rgb(207, 199, 83);
+}
+
+#webControls button#stop:hover {
+  background-color: rgb(207, 83, 83);
+}
+
+#webControls button:disabled {
+  background-color: rgb(75, 75, 75) !important;
+  opacity: 0.5;
+}
+
+@-webkit-keyframes indicator {
+  0%{background-color: rgb(75, 75, 75)}
+  5%{background-color: rgb(161, 255, 166)}
+  100%{background-color: rgb(75, 75, 75)}
+}
+
+@-moz-keyframes indicator {
+  0%{background-color: rgb(75, 75, 75)}
+  5%{background-color: rgb(161, 255, 166)}
+  100%{background-color: rgb(75, 75, 75)}
+}
+
+@keyframes indicator {
+  0%{background-color: rgb(75, 75, 75)}
+  5%{background-color: rgb(161, 255, 166)}
+  100%{background-color: rgb(75, 75, 75)}
+}

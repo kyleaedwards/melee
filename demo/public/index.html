@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Melee Code Editor" />
+    <title>Melee</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital@0;1&display=swap" rel="stylesheet">
+    <script src="/vendor/codemirror-5.62.2/codemirror.min.js"></script>
+    <link rel="stylesheet" href="/vendor/codemirror-5.62.2/codemirror.min.css" />
+    <link rel="stylesheet" href="/vendor/codemirror-5.62.2/theme/dracula.min.css" />
+    <script src="https://unpkg.com/hotkeys-js/dist/hotkeys.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.26/Tone.js" integrity="sha512-+esjJ8NSEfoB5Sr8R7jTcYxCR1Bd6q9C+WQC0JA2UXVPT8Mlo/TJqqyp0qeeoxFzkAaa8t6tZCHLGmw3oNI2Qg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" type="text/css" href="/base.css" />
+    <link rel="stylesheet" type="text/css" href="/style.css" />
+    <script type="module" src="/js/index.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Melee</h1>
+      <div id="webControls">
+        <div id="synced" class="sync-state">Synced</div>
+        <div id="sync" class="sync-state">Press Ctrl-S (or Cmd-S) to sync your changes.</div>
+        <div id="syncError" class="sync-state">Cannot sync until errors are resolved.</div>
+        <div id="tempo"><span id="tempoValue" contenteditable="true">120</span><i>bpm</i></div>
+        <div id="indicator"></div>
+        <button id="play"><span>Play</span>▶</button>
+        <button id="pause"><span>Pause</span><i></i><i></i></button>
+        <button id="stop"><span>Stop</span><i></i></button>
+      </div>
+    </header>
+    <div id="editorWrapper">
+      <textarea id="editor"></textarea>
+    </div>
+    <div id="console">
+      <div id="toggleConsole">Show Console</div>
+      <div id="consoleBody"></div>
+    </div>
+    <div id="helptext">
+      <div id="helptextInner">
+        <h3>Thanks for using Melee!</h3>
+        <p>Melee is a simple-ish domain-specific language for generating MIDI sequences. Make anything from simple loops to complex, generative music!</p>
+        <p>There are plenty of features and built-in functions you can use, so check out <a target="_blank" href="https://github.com/kyleaedwards/melee/blob/main/README.md">the manual</a> or the examples below:</p>
+        <ul id="examples"></ul>
+      </div>
+      <div id="helptextToggle"></div>
+    </div>
+    <div id="loadingPanel">
+      Loading<span>.</span><span>.</span><span>.</span>
+    </div>
+  </body>
+</html>

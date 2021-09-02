@@ -1,0 +1,28 @@
+name: Build Demo
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14
+
+      - name: Install Node.js dependencies
+        run: yarn install
+
+      - name: Build Demo
+        run: yarn build-demo
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: demo/public
