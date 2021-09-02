@@ -1,7 +1,7 @@
 /**
  * Imports
  */
-const { obj } = require('melee');
+const { obj } = require('../..');
 const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
 const { createSynth, disconnect } = require('./synth');

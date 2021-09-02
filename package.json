@@ -11,8 +11,8 @@
     "lint": "eslint src --ext ts,js && prettier -c src",
     "test": "jest",
     "cov": "jest --coverage",
-    "build-demo": "browserify ./demo/src/index.js -o ./public/js/index.js",
-    "watch-demo": "watchify ./demo/src/index.js -o ./public/js/index.js &",
+    "build-demo": "browserify ./demo/src/index.js -o ./demo/public/js/index.js",
+    "watch-demo": "watchify ./demo/src/index.js -o ./demo/public/js/index.js &",
     "start-demo": "yarn watch && serve public"
   },
   "typings": "./dist/melee.d.ts",

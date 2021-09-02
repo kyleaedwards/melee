@@ -1,7 +1,7 @@
 /**
  * Imports
  */
-const { KNOWN_LABELS } = require('melee');
+const { KNOWN_LABELS } = require('../..');
 
 module.exports = (CodeMirror) => {
   CodeMirror.defineMode('melee', (config) => {
