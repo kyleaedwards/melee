@@ -308,7 +308,7 @@ export class Iterable implements BaseObject {
   public done = false;
 
   inspectObject(): string {
-    return `seq::[${this.done ? 'done' : 'ongoing'}]`;
+    return `{seq status=${this.done ? 'done' : 'ongoing'}}`;
   }
 }
 
@@ -362,9 +362,11 @@ export class MidiNote implements BaseObject, MidiObject {
 
   inspectObject(): string {
     if (this.pitch < 0) {
-      return `skip::${this.duration}`;
+      return `{skip ${this.duration}}`;
     }
-    return `note::[${this.pitch}, ${this.duration}, ${this.velocity}]`;
+    return `{${NOTES[this.pitch]} for ${this.duration} vel=${
+      this.velocity
+    }}`;
   }
 
   midiValue(): MidiValue {
@@ -390,7 +392,7 @@ export class MidiCC implements BaseObject, MidiObject {
   constructor(public key: number, public value: number) {}
 
   inspectObject(): string {
-    return `cc::[${this.key}, ${this.value}]`;
+    return `{cc key=${this.key} val=${this.value}}`;
   }
 
   midiValue(): MidiValue {
@@ -414,7 +416,7 @@ export class Hold implements BaseObject {
   constructor(public pitch: number, public duration: number) {}
 
   inspectObject(): string {
-    return `hold::${this.duration}`;
+    return `{hold ${this.duration}}`;
   }
 }
 

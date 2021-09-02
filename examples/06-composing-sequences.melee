@@ -6,11 +6,15 @@
 // sequences. Each time through the loop, we repeat each
 // sequence 4 times to give more structure to the melody.
 
+// With `cycle` we're making a sequence of velocities that give
+// some rhythmic consistency to our sequence.
+velocity := cycle([127, 0, 101, 33, 47, 75, 120, 55]);
+
 createNotes := gen (root) { // We've given this generator an
                             // argument, so it's easy to change
                             // the root note from main().
   loop {
-    vl := rand(127);
+    vl := next velocity; // Pull off next item from velocity seq.
     pt := scale(SCALE_PENT_MINOR, root, rand(18));
     yield note [pt, 1, vl];
   }
