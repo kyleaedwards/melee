@@ -136,4 +136,8 @@ pauseBtn.addEventListener('click', () => {
 
 stopBtn.addEventListener('click', () => stop());
 
-setTimeout(() => ui.initialize(), 250);
+setTimeout(async () => {
+  Tone.setContext(new Tone.Context({ latencyHint: 'playback' }))
+  // await Tone.start();
+  ui.initialize()
+}, 250);

@@ -13,7 +13,7 @@
     "cov": "jest --coverage",
     "build-demo": "browserify ./demo/src/index.js -o ./demo/public/js/index.js",
     "watch-demo": "watchify ./demo/src/index.js -o ./demo/public/js/index.js &",
-    "start-demo": "yarn watch && serve public"
+    "start-demo": "yarn watch-demo && serve demo/public"
   },
   "typings": "./dist/melee.d.ts",
   "dependencies": {},
