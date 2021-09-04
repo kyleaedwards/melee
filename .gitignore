@@ -124,3 +124,4 @@ docs/
 # Miscellaneous files
 .DS_Store
 src/run.ts
+demo/public/js/index.js
