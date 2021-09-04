@@ -11,6 +11,7 @@ import {
   MIDI_VALUES,
   NativeFn,
   Null,
+  provisionHold,
   VirtualSeq,
 } from './object';
 import type { VM } from './vm';
@@ -51,14 +52,6 @@ export const NATIVE_FNS: NativeFn[] = [
           'Chord requires second argument to be an existing chord variable or an array of note intervals',
         );
       }
-      const intervals = chord.items.map((item) => {
-        if (!(item instanceof Int)) {
-          throw new Error(
-            'Chord requires second argument to be an existing chord variable or an array of note intervals',
-          );
-        }
-        return item.value;
-      });
 
       let inversionValue = 0;
       if (inversion) {
@@ -68,12 +61,24 @@ export const NATIVE_FNS: NativeFn[] = [
         inversionValue = inversion.value;
       }
 
-      while (inversionValue-- > 0) {
-        const interval = intervals.shift();
-        if (interval !== undefined) {
-          intervals.push(interval + 12);
+      const len = chord.items.length;
+      const inversionOcts = Math.floor(inversionValue / len);
+
+      const intervals = chord.items.map((item, i) => {
+        if (!(item instanceof Int)) {
+          throw new Error(
+            'Chord requires second argument to be an existing chord variable or an array of note intervals',
+          );
         }
-      }
+        return item.value + 12 * (inversionOcts + i % len);
+      });
+
+      // while (inversionValue-- > 0) {
+      //   const interval = intervals.shift();
+      //   if (interval !== undefined) {
+      //     intervals.push(interval + 12);
+      //   }
+      // }
 
       const items = intervals.map((interval) => {
         if (root instanceof MidiNote) {
@@ -83,7 +88,7 @@ export const NATIVE_FNS: NativeFn[] = [
             root.velocity,
           );
         }
-        return new Int(rootPitch + interval);
+        return Int.from(rootPitch + interval);
       });
       return new Arr(items);
     },
@@ -175,7 +180,7 @@ export const NATIVE_FNS: NativeFn[] = [
         'Function `dur` takes a single MIDI note argument',
       );
     }
-    return new Int(note.duration);
+    return Int.from(note.duration);
   }),
 
   /**
@@ -197,7 +202,7 @@ export const NATIVE_FNS: NativeFn[] = [
         );
       }
       const items = arr.items.filter((item, i) => {
-        const res = vm.callAndReturn(fn, [item, new Int(i)]);
+        const res = vm.callAndReturn(fn, [item, Int.from(i)]);
         return isTruthy(res);
       });
       return new Arr(items);
@@ -213,7 +218,7 @@ export const NATIVE_FNS: NativeFn[] = [
     if (!(arr instanceof Arr)) {
       throw new Error('Function `len` takes a single array argument');
     }
-    return new Int(arr.items.length);
+    return Int.from(arr.items.length);
   }),
 
   /**
@@ -234,7 +239,7 @@ export const NATIVE_FNS: NativeFn[] = [
       );
     }
     const items = arr.items.map((item, i) =>
-      vm.callAndReturn(fn, [item, new Int(i)]),
+      vm.callAndReturn(fn, [item, Int.from(i)]),
     );
     return new Arr(items);
   }),
@@ -258,7 +263,7 @@ export const NATIVE_FNS: NativeFn[] = [
     if (!items.length) {
       return NULL;
     }
-    return new Int(Math.max.apply(null, items));
+    return Int.from(Math.max.apply(null, items));
   }),
 
   /**
@@ -308,7 +313,7 @@ export const NATIVE_FNS: NativeFn[] = [
     if (!items.length) {
       return NULL;
     }
-    return new Int(Math.min.apply(null, items));
+    return Int.from(Math.min.apply(null, items));
   }),
 
   /**
@@ -324,7 +329,7 @@ export const NATIVE_FNS: NativeFn[] = [
           'Function `pitch` takes a single MIDI note argument',
         );
       }
-      return new Int(note.pitch);
+      return Int.from(note.pitch);
     },
   ),
 
@@ -353,7 +358,7 @@ export const NATIVE_FNS: NativeFn[] = [
         const output = new Array<BaseObject>(seqs.length);
         seqs.forEach((seq, i) => {
           if (durations[i] > 0) {
-            output[i] = new Hold(pitches[i], durations[i]);
+            output[i] = provisionHold(pitches[i], durations[i]);
           } else {
             const note = vm.takeNext(seq);
             if (note instanceof MidiNote) {
@@ -509,7 +514,7 @@ export const NATIVE_FNS: NativeFn[] = [
       if (note instanceof MidiNote) {
         return new MidiNote(quantized, note.duration, note.velocity);
       }
-      return new Int(quantized);
+      return Int.from(quantized);
     },
   ),
 
@@ -524,7 +529,7 @@ export const NATIVE_FNS: NativeFn[] = [
         'Function `rand(num)` takes a single integer argument, which returns a number from 0 up to, but not including, num',
       );
     }
-    return new Int(Math.floor(Math.random() * hi.value));
+    return Int.from(Math.floor(Math.random() * hi.value));
   }),
 
   /**
@@ -548,7 +553,7 @@ export const NATIVE_FNS: NativeFn[] = [
       }
       const items = [];
       for (let i = 0; i < num.value; i++) {
-        items.push(new Int(i));
+        items.push(Int.from(i));
       }
       return new Arr(items);
     },
@@ -591,7 +596,7 @@ export const NATIVE_FNS: NativeFn[] = [
       }
       const x = Math.min(lo.value, hi.value);
       const y = Math.max(lo.value, hi.value);
-      return new Int(x + Math.floor(Math.random() * (y - x)));
+      return Int.from(x + Math.floor(Math.random() * (y - x)));
     },
   ),
 
@@ -637,7 +642,7 @@ export const NATIVE_FNS: NativeFn[] = [
       if (root instanceof MidiNote) {
         return new MidiNote(pitch, root.duration, root.velocity);
       }
-      return new Int(pitch);
+      return Int.from(pitch);
     },
   ),
 
@@ -727,7 +732,7 @@ export const NATIVE_FNS: NativeFn[] = [
         'Function `vel` takes a single MIDI note argument',
       );
     }
-    return new Int(note.velocity);
+    return Int.from(note.velocity);
   }),
 ];
 
@@ -766,7 +771,7 @@ function createChordMap(): Record<string, BaseObject> {
     (acc, cur) => ({
       ...acc,
       [cur]: new Arr(
-        CHORD_MAP[cur].map((interval) => new Int(interval)),
+        CHORD_MAP[cur].map((interval) => Int.from(interval)),
       ),
     }),
     {},
@@ -800,7 +805,7 @@ function createScaleMap(): Record<string, BaseObject> {
     (acc, cur) => ({
       ...acc,
       [cur]: new Arr(
-        SCALE_MAP[cur].map((interval) => new Int(interval)),
+        SCALE_MAP[cur].map((interval) => Int.from(interval)),
       ),
     }),
     {},

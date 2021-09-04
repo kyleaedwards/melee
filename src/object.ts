@@ -174,6 +174,7 @@ export class Yield implements BaseObject {
  * @public
  */
 export class Int implements BaseObject {
+  static SMALL_VALUES: Int[] = new Array<Int>(512);
   type: Type = 'integer';
 
   constructor(public value: number) {}
@@ -181,7 +182,22 @@ export class Int implements BaseObject {
   inspectObject(): string {
     return this.value.toString();
   }
+
+  static from(value: number): Int {
+    if (value < -256 || value > 255) {
+      return new Int(value);
+    }
+    return Int.SMALL_VALUES[value + 256];
+  }
 }
+
+for (let i = 0; i < 512; i++) {
+  Int.SMALL_VALUES[i] = new Int(i - 256);
+}
+
+/**
+ * Pre-generated integers
+ */
 
 /**
  * Boolean type, contains a `value` property containing the implementation
@@ -195,19 +211,19 @@ export class Bool implements BaseObject {
 
   type: Type = 'boolean';
 
-  constructor(public value: boolean) {
-    if (value) {
-      if (!Bool.t) Bool.t = this;
-      return Bool.t;
-    }
-    if (!Bool.f) Bool.f = this;
-    return Bool.f;
-  }
+  constructor(public value: boolean) {}
 
   inspectObject(): string {
     return this.value ? 'true' : 'false';
   }
+
+  static from(value: boolean): Bool {
+    return value ? Bool.t! : Bool.f!;
+  }
 }
+
+Bool.t = new Bool(true);
+Bool.f = new Bool(false);
 
 /**
  * Array type, contains an array (in the implementation language) containing
@@ -468,10 +484,47 @@ for (let index = 0; index < 128; index++) {
     continue;
   }
   names.forEach((n) => {
-    midi[`${n}${octStr}`] = new Int(index);
+    midi[`${n}${octStr}`] = Int.from(index);
   });
   notes.push(`${names[0]}${octStr}`);
 }
 
 export const MIDI_VALUES = midi;
 export const NOTES = notes;
+
+const MIDI_POOL_SIZE = 1000;
+const MIDI_POOL: MidiNote[] = new Array<MidiNote>(MIDI_POOL_SIZE);
+
+for (let i = 0; i < MIDI_POOL_SIZE; i++) {
+  MIDI_POOL[i] = new MidiNote(-1, 1, 0);
+}
+
+let MIDI_POOL_INDEX = 0;
+export function provisionMidiNote(pitch: number, duration: number, velocity: number) {
+  const note = MIDI_POOL[MIDI_POOL_INDEX++];
+  if (MIDI_POOL_INDEX >= MIDI_POOL_SIZE) {
+    MIDI_POOL_INDEX = 0;
+  }
+  note.pitch = pitch;
+  note.duration = duration;
+  note.velocity = velocity;
+  return note;
+}
+
+const HOLD_POOL_SIZE = 1000;
+const HOLD_POOL: Hold[] = new Array<Hold>(HOLD_POOL_SIZE);
+
+for (let i = 0; i < HOLD_POOL_SIZE; i++) {
+  HOLD_POOL[i] = new Hold(-1, 0);
+}
+
+let HOLD_POOL_INDEX = 0;
+export function provisionHold(pitch: number, duration: number) {
+  const note = HOLD_POOL[HOLD_POOL_INDEX++];
+  if (HOLD_POOL_INDEX >= HOLD_POOL_SIZE) {
+    HOLD_POOL_INDEX = 0;
+  }
+  note.pitch = pitch;
+  note.duration = duration;
+  return note;
+}

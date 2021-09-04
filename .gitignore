@@ -125,3 +125,4 @@ docs/
 .DS_Store
 src/run.ts
 demo/public/js/index.js
+*.0x
