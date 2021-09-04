@@ -941,7 +941,6 @@ export class VM {
         throw new Error(`Unhandled binary integer operator: ${op}`);
     }
 
-    console.log(result);
     this.push(obj.Int.from(result));
   }
 

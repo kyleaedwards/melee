@@ -439,7 +439,7 @@ export class Hold implements BaseObject {
 /* Utilities */
 
 const NULL = new Null();
-const FALSE = new Bool(false);
+const FALSE = Bool.from(false);
 
 /**
  * Returns false if 0, null, or false, otherwise true.
