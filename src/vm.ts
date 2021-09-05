@@ -537,16 +537,13 @@ export class VM {
         case Opcode.JMP:
           this.jump();
           break;
-        case Opcode.JMP_IF_NOT: {
-          const x = this.pop();
-          // console.log(x)
-          if (!obj.isTruthy(x)) {
+        case Opcode.JMP_IF_NOT:
+          if (!obj.isTruthy(this.pop())) {
             this.jump();
           } else {
             frame.ip += 2;
           }
           break;
-        }
         case Opcode.CALL: {
           const numArgs = this.readOperand(1);
           const o = this.stack[this.sp - 1 - numArgs];

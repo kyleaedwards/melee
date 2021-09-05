@@ -206,8 +206,8 @@ for (let i = 0; i < 512; i++) {
  * @public
  */
 export class Bool implements BaseObject {
-  static t?: Bool;
-  static f?: Bool;
+  static t: Bool = new Bool(true);
+  static f: Bool = new Bool(false);
 
   type: Type = 'boolean';
 
@@ -218,12 +218,9 @@ export class Bool implements BaseObject {
   }
 
   static from(value: boolean): Bool {
-    return value ? Bool.t! : Bool.f!;
+    return value ? Bool.t : Bool.f;
   }
 }
-
-Bool.t = new Bool(true);
-Bool.f = new Bool(false);
 
 /**
  * Array type, contains an array (in the implementation language) containing
@@ -504,7 +501,7 @@ export function provisionMidiNote(
   pitch: number,
   duration: number,
   velocity: number,
-) {
+): MidiNote {
   const note = MIDI_POOL[MIDI_POOL_INDEX++];
   if (MIDI_POOL_INDEX >= MIDI_POOL_SIZE) {
     MIDI_POOL_INDEX = 0;
@@ -523,7 +520,7 @@ for (let i = 0; i < HOLD_POOL_SIZE; i++) {
 }
 
 let HOLD_POOL_INDEX = 0;
-export function provisionHold(pitch: number, duration: number) {
+export function provisionHold(pitch: number, duration: number): Hold {
   const note = HOLD_POOL[HOLD_POOL_INDEX++];
   if (HOLD_POOL_INDEX >= HOLD_POOL_SIZE) {
     HOLD_POOL_INDEX = 0;
