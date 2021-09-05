@@ -23,13 +23,15 @@ melee.exec(`
 `);
 
 const before = Date.now();
+let iterations = 0;
 try {
   let x;
   for (let i = 0; i < ITERS; i++) {
     x = melee.clock();
+    iterations++;
   }
   console.log(x);
 } catch (e) {
   console.log(e);
 }
-console.log(`Done in ${Date.now() - before}ms`);
+console.log(`Done ${iterations} iters in ${Date.now() - before}ms`);
