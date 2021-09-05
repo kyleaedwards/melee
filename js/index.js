@@ -5041,8 +5041,8 @@ exports.MAX_VARIABLES = 65536;
  * Literals
  */
 const NULL = new obj.Null();
-const TRUE = new obj.Bool(true);
-const FALSE = new obj.Bool(false);
+const TRUE = obj.Bool.from(true);
+const FALSE = obj.Bool.from(false);
 /**
  * Asserts stack object is defined.
  *
@@ -5471,14 +5471,17 @@ class VM {
                 case bytecode_1.Opcode.JMP:
                     this.jump();
                     break;
-                case bytecode_1.Opcode.JMP_IF_NOT:
-                    if (!obj.isTruthy(this.pop())) {
+                case bytecode_1.Opcode.JMP_IF_NOT: {
+                    const x = this.pop();
+                    // console.log(x)
+                    if (!obj.isTruthy(x)) {
                         this.jump();
                     }
                     else {
                         frame.ip += 2;
                     }
                     break;
+                }
                 case bytecode_1.Opcode.CALL: {
                     const numArgs = this.readOperand(1);
                     const o = this.stack[this.sp - 1 - numArgs];
