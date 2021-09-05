@@ -1639,7 +1639,7 @@ exports.NATIVE_FNS = [
             if (!(item instanceof object_1.Int)) {
                 throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
             }
-            return item.value + 12 * (inversionOcts + i % len);
+            return item.value + 12 * (inversionOcts + (i % len));
         });
         // while (inversionValue-- > 0) {
         //   const interval = intervals.shift();
@@ -3903,7 +3903,7 @@ for (let index = 0; index < 128; index++) {
     notes.push(`${names[0]}${octStr}`);
 }
 exports.MIDI_VALUES = midi;
-exports.NOTES = notes.map(n => n.replace(/_/g, '-'));
+exports.NOTES = notes.map((n) => n.replace(/_/g, '-'));
 const MIDI_POOL_SIZE = 1000;
 const MIDI_POOL = new Array(MIDI_POOL_SIZE);
 for (let i = 0; i < MIDI_POOL_SIZE; i++) {
