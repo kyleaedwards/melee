@@ -385,7 +385,7 @@ export class Compiler {
     } else if (node instanceof ast.IntegerLiteral) {
       // TODO: Why use constants for MIDI Ints, could we just bake them
       // into the bytecode instead?
-      const o = new Int(node.value);
+      const o = Int.from(node.value);
       this.emit(Opcode.CONST, this.addConstant(o));
     } else if (node instanceof ast.BooleanLiteral) {
       this.emit(node.value ? Opcode.TRUE : Opcode.FALSE);
@@ -504,10 +504,10 @@ export class Compiler {
           : Opcode.GET;
       const counter = this.symbolTable.addIota();
       const collection = this.symbolTable.addIota();
-      const incr = this.addConstant(new Int(1));
+      const incr = this.addConstant(Int.from(1));
 
       // Set counter
-      this.emit(Opcode.CONST, this.addConstant(new Int(0)));
+      this.emit(Opcode.CONST, this.addConstant(Int.from(0)));
       this.emit(setter, counter);
 
       // Save collection
@@ -557,7 +557,6 @@ export class Compiler {
       this.compile(node.condition);
       const jumpToElse = this.emit(Opcode.JMP_IF_NOT, 0xffff);
       this.compile(node.block);
-      this.removeInstructionIf(Opcode.POP);
       this.emit(
         Opcode.JMP,
         this.loopStarts[this.loopStarts.length - 1],
@@ -599,7 +598,7 @@ export class Compiler {
       if (node.duration) {
         this.compile(node.duration);
       } else {
-        this.emit(Opcode.CONST, this.addConstant(new Int(1)));
+        this.emit(Opcode.CONST, this.addConstant(Int.from(1)));
       }
       this.emit(Opcode.SKIP);
     } else if (node instanceof ast.CCExpression) {

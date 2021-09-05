@@ -309,6 +309,8 @@ class MeleeEditor {
         this.ide.setValue(code);
         this.execute(code);
         this.onExample(example);
+        this.savedValue = code;
+        this.onChangeUnstaged();
       });
       this.examples.appendChild(li);
     });

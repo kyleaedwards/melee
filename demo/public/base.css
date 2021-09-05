@@ -54,10 +54,6 @@ h1 {
   height: calc(100% - 254px);
 }
 
-.loaded #editorWrapper {
-  transition: height 0.5s;
-}
-
 .syntax-error {
   background-color: red;
 }
@@ -81,10 +77,6 @@ h1 {
 
 .show-console #console {
   bottom: 10px;
-}
-
-.loaded #console {
-  transition: bottom 0.5s;
 }
 
 #consoleBody {
@@ -151,10 +143,6 @@ h1 {
   color: #f0f0f0;
   cursor: pointer;
   user-select: none;
-}
-
-.loaded #helptextToggle {
-  transition: all 0.2s;
 }
 
 #helptext.hidden {

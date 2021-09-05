@@ -12,6 +12,7 @@ import {
   MidiNote,
   Arr,
   Hold,
+  provisionMidiNote,
 } from './object';
 import { Parser } from './parser';
 import { SymbolTable } from './symbols';
@@ -239,7 +240,7 @@ export class Runtime {
         playable = true;
       }
       this.queue.push(
-        new MidiNote(note.pitch, note.duration, note.velocity),
+        provisionMidiNote(note.pitch, note.duration, note.velocity),
       );
     }
     return playable;

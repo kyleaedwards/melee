@@ -408,7 +408,7 @@ export class VM {
           if (!(arr instanceof obj.Arr)) {
             throw new Error('Cannot iterate over non-array');
           }
-          this.push(new obj.Int(arr.items.length));
+          this.push(obj.Int.from(arr.items.length));
           break;
         }
         case Opcode.INDEX: {
@@ -839,7 +839,7 @@ export class VM {
     }
 
     if (right instanceof obj.Int) {
-      this.push(new obj.Int(-right.value));
+      this.push(obj.Int.from(-right.value));
       return;
     }
 
@@ -864,7 +864,7 @@ export class VM {
     }
 
     if (right instanceof obj.Int) {
-      this.push(new obj.Bool(right.value !== 0));
+      this.push(obj.Bool.from(right.value !== 0));
     } else if (right === NULL || right === FALSE) {
       this.push(TRUE);
     } else {
@@ -941,7 +941,7 @@ export class VM {
         throw new Error(`Unhandled binary integer operator: ${op}`);
     }
 
-    this.push(new obj.Int(result));
+    this.push(obj.Int.from(result));
   }
 
   /**
@@ -965,10 +965,10 @@ export class VM {
     if (left instanceof obj.Bool && right instanceof obj.Bool) {
       switch (op) {
         case Opcode.EQ:
-          this.push(new obj.Bool(left === right));
+          this.push(obj.Bool.from(left === right));
           break;
         case Opcode.NOT_EQ:
-          this.push(new obj.Bool(left !== right));
+          this.push(obj.Bool.from(left !== right));
           break;
         default:
           throw new Error(
@@ -1025,6 +1025,6 @@ export class VM {
         );
     }
 
-    this.push(new obj.Bool(result));
+    this.push(obj.Bool.from(result));
   }
 }
