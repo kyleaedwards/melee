@@ -490,7 +490,7 @@ for (let index = 0; index < 128; index++) {
 }
 
 export const MIDI_VALUES = midi;
-export const NOTES = notes.map(n => n.replace(/_/g, '-'));
+export const NOTES = notes.map((n) => n.replace(/_/g, '-'));
 
 const MIDI_POOL_SIZE = 1000;
 const MIDI_POOL: MidiNote[] = new Array<MidiNote>(MIDI_POOL_SIZE);
@@ -500,7 +500,11 @@ for (let i = 0; i < MIDI_POOL_SIZE; i++) {
 }
 
 let MIDI_POOL_INDEX = 0;
-export function provisionMidiNote(pitch: number, duration: number, velocity: number) {
+export function provisionMidiNote(
+  pitch: number,
+  duration: number,
+  velocity: number,
+) {
   const note = MIDI_POOL[MIDI_POOL_INDEX++];
   if (MIDI_POOL_INDEX >= MIDI_POOL_SIZE) {
     MIDI_POOL_INDEX = 0;

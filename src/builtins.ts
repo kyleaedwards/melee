@@ -70,7 +70,7 @@ export const NATIVE_FNS: NativeFn[] = [
             'Chord requires second argument to be an existing chord variable or an array of note intervals',
           );
         }
-        return item.value + 12 * (inversionOcts + i % len);
+        return item.value + 12 * (inversionOcts + (i % len));
       });
 
       // while (inversionValue-- > 0) {
