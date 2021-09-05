@@ -16,8 +16,8 @@ export const MAX_VARIABLES = 65536;
  * Literals
  */
 const NULL = new obj.Null();
-const TRUE = new obj.Bool(true);
-const FALSE = new obj.Bool(false);
+const TRUE = obj.Bool.from(true);
+const FALSE = obj.Bool.from(false);
 
 /**
  * Runtime callback function hooks into the VM.
@@ -537,13 +537,16 @@ export class VM {
         case Opcode.JMP:
           this.jump();
           break;
-        case Opcode.JMP_IF_NOT:
-          if (!obj.isTruthy(this.pop())) {
+        case Opcode.JMP_IF_NOT: {
+          const x = this.pop();
+          // console.log(x)
+          if (!obj.isTruthy(x)) {
             this.jump();
           } else {
             frame.ip += 2;
           }
           break;
+        }
         case Opcode.CALL: {
           const numArgs = this.readOperand(1);
           const o = this.stack[this.sp - 1 - numArgs];

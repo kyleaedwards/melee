@@ -7,7 +7,7 @@ const { Runtime } = require('../dist');
  * Constants
  */
 const melee = new Runtime();
-const ITERS = 1000000;
+const ITERS = 200000;
 
 melee.exec(`
   // Example: Random Walk
@@ -46,19 +46,22 @@ melee.exec(`
       position %= len(notes);
 
       // Yield out a note object with a pitch from the list.
-      yield note [notes[position], 2, 127];
+      yield note [notes[position], 3, 127];
     }
   };
 `);
 
 const before = Date.now();
+let iterations = 0;
 try {
   let x;
   for (let i = 0; i < ITERS; i++) {
     x = melee.clock();
+    // console.log(x);
+    iterations++;
   }
   console.log(x);
 } catch (e) {
   console.log(e);
 }
-console.log(`Done in ${Date.now() - before}ms`);
+console.log(`Done ${iterations} iters in ${Date.now() - before}ms`);
