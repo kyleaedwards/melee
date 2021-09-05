@@ -4,7 +4,7 @@
 const { obj } = require('../../dist');
 const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
-const { createSynth, disconnect } = require('./synth');
+const { createSynth } = require('./synth');
 const createTempoComponent = require('./tempo');
 const { $$, noop } = require('./utils');
 
@@ -76,15 +76,15 @@ const ui = new MeleeEditor({
   },
 });
 
+let runningNotes = {};
+
 function stop(skipReset, skipRestage) {
   webControls.classList.remove('playing');
   if (synth) {
-    disconnect(synth);
-    synth = null;
-    // Debounce
-    setTimeout(() => {
-      synth = createSynth();
-    }, 10);
+    Object.values(runningNotes).forEach((note) => {
+      synth.triggerRelease(note, Tone.now());
+    });
+    runningNotes = {};
   }
   Tone.Transport.stop();
   tempo.reset();
@@ -101,17 +101,25 @@ function stop(skipReset, skipRestage) {
 }
 
 Tone.Transport.scheduleRepeat((time) => {
-  tempo.tick();
+  if (stopped) return;
   const results = ui.clock();
   if (!results) return;
+  results.off.forEach((off) => {
+    delete runningNotes[off];
+  });
   results.on.forEach((result) => {
     if (result instanceof obj.MidiNote && synth) {
-      synth.triggerAttackRelease(
-        [result.scientificNotation().replace(/_/g, '-')],
-        `0:0:${result.duration}`,
-        time,
-        result.velocity / 127.0,
-      );
+      if (!runningNotes[result.pitch]) {
+        const sciNote = result.scientificNotation();
+        console.log(result.duration);
+        synth.triggerAttackRelease(
+          [sciNote],
+          `0:0:${result.duration}`,
+          time,
+          result.velocity / 127.0,
+        );
+        runningNotes[result.pitch] = sciNote;
+      }
     }
   });
   if (results.done) stop(false, true);
@@ -130,6 +138,11 @@ playBtn.addEventListener('click', () => {
 
 pauseBtn.addEventListener('click', () => {
   webControls.classList.remove('playing');
+  Object.values(runningNotes).forEach((note) => {
+    console.log(note);
+    synth.triggerRelease(note, Tone.now());
+  });
+  runningNotes = {};
   Tone.Transport.pause();
   stopped = false;
 });

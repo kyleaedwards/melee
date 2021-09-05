@@ -490,7 +490,7 @@ for (let index = 0; index < 128; index++) {
 }
 
 export const MIDI_VALUES = midi;
-export const NOTES = notes;
+export const NOTES = notes.map(n => n.replace(/_/g, '-'));
 
 const MIDI_POOL_SIZE = 1000;
 const MIDI_POOL: MidiNote[] = new Array<MidiNote>(MIDI_POOL_SIZE);
