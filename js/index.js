@@ -310,6 +310,8 @@ class MeleeEditor {
         this.ide.setValue(code);
         this.execute(code);
         this.onExample(example);
+        this.savedValue = code;
+        this.onChangeUnstaged();
       });
       this.examples.appendChild(li);
     });
@@ -651,7 +653,7 @@ main := gen () {
 const { obj } = require('../../dist');
 const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
-const { createSynth, disconnect } = require('./synth');
+const { createSynth } = require('./synth');
 const createTempoComponent = require('./tempo');
 const { $$, noop } = require('./utils');
 
@@ -723,15 +725,15 @@ const ui = new MeleeEditor({
   },
 });
 
+let runningNotes = {};
+
 function stop(skipReset, skipRestage) {
   webControls.classList.remove('playing');
   if (synth) {
-    disconnect(synth);
-    synth = null;
-    // Debounce
-    setTimeout(() => {
-      synth = createSynth();
-    }, 10);
+    Object.values(runningNotes).forEach((note) => {
+      synth.triggerRelease(note, Tone.now());
+    });
+    runningNotes = {};
   }
   Tone.Transport.stop();
   tempo.reset();
@@ -748,17 +750,25 @@ function stop(skipReset, skipRestage) {
 }
 
 Tone.Transport.scheduleRepeat((time) => {
-  tempo.tick();
+  if (stopped) return;
   const results = ui.clock();
   if (!results) return;
+  results.off.forEach((off) => {
+    delete runningNotes[off];
+  });
   results.on.forEach((result) => {
     if (result instanceof obj.MidiNote && synth) {
-      synth.triggerAttackRelease(
-        [result.scientificNotation().replace(/_/g, '-')],
-        `0:0:${result.duration}`,
-        time,
-        result.velocity / 127.0,
-      );
+      if (!runningNotes[result.pitch]) {
+        const sciNote = result.scientificNotation();
+        console.log(result.duration);
+        synth.triggerAttackRelease(
+          [sciNote],
+          `0:0:${result.duration}`,
+          time,
+          result.velocity / 127.0,
+        );
+        runningNotes[result.pitch] = sciNote;
+      }
     }
   });
   if (results.done) stop(false, true);
@@ -777,13 +787,22 @@ playBtn.addEventListener('click', () => {
 
 pauseBtn.addEventListener('click', () => {
   webControls.classList.remove('playing');
+  Object.values(runningNotes).forEach((note) => {
+    console.log(note);
+    synth.triggerRelease(note, Tone.now());
+  });
+  runningNotes = {};
   Tone.Transport.pause();
   stopped = false;
 });
 
 stopBtn.addEventListener('click', () => stop());
 
-setTimeout(() => ui.initialize(), 250);
+setTimeout(async () => {
+  Tone.setContext(new Tone.Context({ latencyHint: 'playback' }))
+  // await Tone.start();
+  ui.initialize()
+}, 250);
 
 },{"../../dist":13,"./editor":1,"./examples":2,"./synth":5,"./tempo":6,"./utils":7}],4:[function(require,module,exports){
 /**
@@ -930,7 +949,6 @@ module.exports = (CodeMirror) => {
 /**
  * Constants
  */
-const POOL_SIZE = 10;
 const REVERB_WET_DRY = 0.5;
 const FILTER_FREQ = 2000;
 const FILTER_TYPE = 'lowpass';
@@ -950,29 +968,18 @@ reverb.wet.value = REVERB_WET_DRY;
 filter.connect(reverb);
 reverb.toDestination();
 
-const pool = [];
-for (let i = 0; i < POOL_SIZE; i++) {
-  pool.push(new Tone.PolySynth(Tone.Synth, { oscillator: OSCILLATOR_OPTS }));
-}
-
 /**
  * Creates an opinionated synth voice.
  *
  * @returns {Tone.Synth} Synth voice
  */
 const createSynth = () => {
-  const synth = pool.shift();
+  const synth = new Tone.PolySynth(Tone.Synth, { oscillator: OSCILLATOR_OPTS });
   synth.connect(filter);
-  Tone.start();
   return synth;
 }
 
-const disconnect = (synth) => {
-  synth.disconnect(filter);
-  pool.push(synth);
-};
-
-module.exports = { createSynth, disconnect };
+module.exports = { createSynth };
 
 },{}],6:[function(require,module,exports){
 /**
@@ -1095,22 +1102,21 @@ module.exports = {
 /**
  * Abstract syntax tree mechanisms and node types.
  */
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.CCExpression = exports.SkipExpression = exports.NoteExpression = exports.CallExpression = exports.IndexExpression = exports.NextExpression = exports.GeneratorLiteral = exports.FunctionLiteral = exports.IfExpression = exports.InfixExpression = exports.PrefixExpression = exports.ArrayLiteral = exports.BooleanLiteral = exports.IntegerLiteral = exports.CompoundAssignExpression = exports.AssignExpression = exports.Identifier = exports.WhileStatement = exports.ForStatement = exports.BreakStatement = exports.ContinueStatement = exports.BlockStatement = exports.ExpressionStatement = exports.YieldStatement = exports.ReturnStatement = exports.DeclareStatement = exports.Program = void 0;
 /**
  * Root-level program node encapsulating the full abstract syntax tree.
  *
  * @public
  */
-var Program = /** @class */ (function () {
-    function Program() {
+class Program {
+    constructor() {
         this.statements = [];
     }
-    Program.prototype.toString = function () {
-        return this.statements.map(function (stmt) { return stmt.toString(); }).join('\n');
-    };
-    return Program;
-}());
+    toString() {
+        return this.statements.map((stmt) => stmt.toString()).join('\n');
+    }
+}
 exports.Program = Program;
 /**
  * Statements
@@ -1120,37 +1126,35 @@ exports.Program = Program;
  *
  * @public
  */
-var DeclareStatement = /** @class */ (function () {
-    function DeclareStatement(token, name, value) {
+class DeclareStatement {
+    constructor(token, name, value) {
         this.token = token;
         this.name = name;
         this.value = value;
         this.nodeType = 'statement';
     }
-    DeclareStatement.prototype.toString = function () {
-        return this.name.toString() + " := " + (this.value ? this.value.toString() : '') + ";";
-    };
-    return DeclareStatement;
-}());
+    toString() {
+        return `${this.name.toString()} := ${this.value ? this.value.toString() : ''};`;
+    }
+}
 exports.DeclareStatement = DeclareStatement;
 /**
  * AST node type representing a return statement like `return var;`.
  *
  * @public
  */
-var ReturnStatement = /** @class */ (function () {
-    function ReturnStatement(token, value) {
+class ReturnStatement {
+    constructor(token, value) {
         this.token = token;
         this.value = value;
         this.nodeType = 'statement';
     }
-    ReturnStatement.prototype.toString = function () {
+    toString() {
         return this.value
-            ? this.token.literal + " " + this.value.toString() + ";"
-            : this.token.literal + ";";
-    };
-    return ReturnStatement;
-}());
+            ? `${this.token.literal} ${this.value.toString()};`
+            : `${this.token.literal};`;
+    }
+}
 exports.ReturnStatement = ReturnStatement;
 /**
  * AST node type representing a yield statement like `yield var;`. Must
@@ -1158,39 +1162,37 @@ exports.ReturnStatement = ReturnStatement;
  *
  * @public
  */
-var YieldStatement = /** @class */ (function () {
-    function YieldStatement(token, value) {
+class YieldStatement {
+    constructor(token, value) {
         this.token = token;
         this.value = value;
         this.nodeType = 'statement';
     }
-    YieldStatement.prototype.toString = function () {
+    toString() {
         return this.value
-            ? this.token.literal + " " + this.value.toString() + ";"
-            : this.token.literal + ";";
-    };
-    return YieldStatement;
-}());
+            ? `${this.token.literal} ${this.value.toString()};`
+            : `${this.token.literal};`;
+    }
+}
 exports.YieldStatement = YieldStatement;
 /**
  * AST statement encapsulating an expression like `1 + 2;`.
  *
  * @public
  */
-var ExpressionStatement = /** @class */ (function () {
-    function ExpressionStatement(token, value) {
+class ExpressionStatement {
+    constructor(token, value) {
         this.token = token;
         this.value = value;
         this.nodeType = 'statement';
     }
-    ExpressionStatement.prototype.toString = function () {
+    toString() {
         if (this.value) {
-            return this.value.toString() + ";";
+            return `${this.value.toString()};`;
         }
         return '';
-    };
-    return ExpressionStatement;
-}());
+    }
+}
 exports.ExpressionStatement = ExpressionStatement;
 /**
  * AST statement encapsulating a group of statements for a function body,
@@ -1198,19 +1200,18 @@ exports.ExpressionStatement = ExpressionStatement;
  *
  * @public
  */
-var BlockStatement = /** @class */ (function () {
-    function BlockStatement(token, statements) {
+class BlockStatement {
+    constructor(token, statements) {
         this.token = token;
         this.statements = statements;
         this.nodeType = 'statement';
     }
-    BlockStatement.prototype.toString = function () {
-        return "{ " + this.statements
-            .map(function (s) { return s.toString(); })
-            .join('\n') + " }";
-    };
-    return BlockStatement;
-}());
+    toString() {
+        return `{ ${this.statements
+            .map((s) => s.toString())
+            .join('\n')} }`;
+    }
+}
 exports.BlockStatement = BlockStatement;
 /**
  * AST node type representing a `continue` statement for flow control within
@@ -1218,16 +1219,15 @@ exports.BlockStatement = BlockStatement;
  *
  * @public
  */
-var ContinueStatement = /** @class */ (function () {
-    function ContinueStatement(token) {
+class ContinueStatement {
+    constructor(token) {
         this.token = token;
         this.nodeType = 'statement';
     }
-    ContinueStatement.prototype.toString = function () {
-        return "continue;";
-    };
-    return ContinueStatement;
-}());
+    toString() {
+        return `continue;`;
+    }
+}
 exports.ContinueStatement = ContinueStatement;
 /**
  * AST node type representing a `break` statement for flow control within
@@ -1235,56 +1235,53 @@ exports.ContinueStatement = ContinueStatement;
  *
  * @public
  */
-var BreakStatement = /** @class */ (function () {
-    function BreakStatement(token) {
+class BreakStatement {
+    constructor(token) {
         this.token = token;
         this.nodeType = 'statement';
     }
-    BreakStatement.prototype.toString = function () {
-        return "break;";
-    };
-    return BreakStatement;
-}());
+    toString() {
+        return `break;`;
+    }
+}
 exports.BreakStatement = BreakStatement;
 /**
  * AST node type representing a `for x in arr {}` expression.
  *
  * @public
  */
-var ForStatement = /** @class */ (function () {
-    function ForStatement(token, identifier, collection, block) {
+class ForStatement {
+    constructor(token, identifier, collection, block) {
         this.token = token;
         this.identifier = identifier;
         this.collection = collection;
         this.block = block;
         this.nodeType = 'statement';
     }
-    ForStatement.prototype.toString = function () {
-        return "for " + this.identifier.toString() + " in " + this.collection.toString() + " " + this.block.toString();
-    };
-    return ForStatement;
-}());
+    toString() {
+        return `for ${this.identifier.toString()} in ${this.collection.toString()} ${this.block.toString()}`;
+    }
+}
 exports.ForStatement = ForStatement;
 /**
  * AST node type representing a `while` or `loop` expression.
  *
  * @public
  */
-var WhileStatement = /** @class */ (function () {
-    function WhileStatement(token, condition, block) {
+class WhileStatement {
+    constructor(token, condition, block) {
         this.token = token;
         this.condition = condition;
         this.block = block;
         this.nodeType = 'statement';
     }
-    WhileStatement.prototype.toString = function () {
+    toString() {
         if (this.token.tokenType === 'loop') {
-            return "loop " + this.block.toString();
+            return `loop ${this.block.toString()}`;
         }
-        return "while (" + this.condition.toString() + ") " + this.block.toString();
-    };
-    return WhileStatement;
-}());
+        return `while (${this.condition.toString()}) ${this.block.toString()}`;
+    }
+}
 exports.WhileStatement = WhileStatement;
 /**
  * Expressions
@@ -1294,17 +1291,16 @@ exports.WhileStatement = WhileStatement;
  *
  * @public
  */
-var Identifier = /** @class */ (function () {
-    function Identifier(token, value) {
+class Identifier {
+    constructor(token, value) {
         this.token = token;
         this.value = value;
         this.nodeType = 'expression';
     }
-    Identifier.prototype.toString = function () {
+    toString() {
         return this.value;
-    };
-    return Identifier;
-}());
+    }
+}
 exports.Identifier = Identifier;
 /**
  * AST node type representing a variable assignment expression like `var = 1;`
@@ -1312,18 +1308,17 @@ exports.Identifier = Identifier;
  *
  * @public
  */
-var AssignExpression = /** @class */ (function () {
-    function AssignExpression(token, name, value) {
+class AssignExpression {
+    constructor(token, name, value) {
         this.token = token;
         this.name = name;
         this.value = value;
         this.nodeType = 'expression';
     }
-    AssignExpression.prototype.toString = function () {
-        return this.name.toString() + " = " + (this.value ? this.value.toString() : '') + ";";
-    };
-    return AssignExpression;
-}());
+    toString() {
+        return `${this.name.toString()} = ${this.value ? this.value.toString() : ''};`;
+    }
+}
 exports.AssignExpression = AssignExpression;
 /**
  * AST node type representing a compound assignment expression like `var += 1;`
@@ -1331,214 +1326,203 @@ exports.AssignExpression = AssignExpression;
  *
  * @public
  */
-var CompoundAssignExpression = /** @class */ (function () {
-    function CompoundAssignExpression(token, name, operator, value) {
+class CompoundAssignExpression {
+    constructor(token, name, operator, value) {
         this.token = token;
         this.name = name;
         this.operator = operator;
         this.value = value;
         this.nodeType = 'expression';
     }
-    CompoundAssignExpression.prototype.toString = function () {
-        return this.name.toString() + " " + this.operator + " " + (this.value ? this.value.toString() : '') + ";";
-    };
-    return CompoundAssignExpression;
-}());
+    toString() {
+        return `${this.name.toString()} ${this.operator} ${this.value ? this.value.toString() : ''};`;
+    }
+}
 exports.CompoundAssignExpression = CompoundAssignExpression;
 /**
  * AST node type representing an integer literal.
  *
  * @public
  */
-var IntegerLiteral = /** @class */ (function () {
-    function IntegerLiteral(token, value) {
+class IntegerLiteral {
+    constructor(token, value) {
         this.token = token;
         this.value = value;
         this.nodeType = 'expression';
     }
-    IntegerLiteral.prototype.toString = function () {
+    toString() {
         return this.value.toString();
-    };
-    return IntegerLiteral;
-}());
+    }
+}
 exports.IntegerLiteral = IntegerLiteral;
 /**
  * AST node type representing a boolean literal.
  *
  * @public
  */
-var BooleanLiteral = /** @class */ (function () {
-    function BooleanLiteral(token, value) {
+class BooleanLiteral {
+    constructor(token, value) {
         this.token = token;
         this.value = value;
         this.nodeType = 'expression';
     }
-    BooleanLiteral.prototype.toString = function () {
+    toString() {
         return this.value.toString();
-    };
-    return BooleanLiteral;
-}());
+    }
+}
 exports.BooleanLiteral = BooleanLiteral;
 /**
  * AST node type representing an array literal.
  *
  * @public
  */
-var ArrayLiteral = /** @class */ (function () {
-    function ArrayLiteral(token, values) {
+class ArrayLiteral {
+    constructor(token, values) {
         this.token = token;
         this.values = values;
         this.nodeType = 'expression';
     }
-    ArrayLiteral.prototype.toString = function () {
-        return "[" + this.values
-            .map(function (value) { return value.toString(); })
-            .join(', ') + "]";
-    };
-    return ArrayLiteral;
-}());
+    toString() {
+        return `[${this.values
+            .map((value) => value.toString())
+            .join(', ')}]`;
+    }
+}
 exports.ArrayLiteral = ArrayLiteral;
 /**
  * AST node type representing a unary operator expression like `!true` or `-2`.
  *
  * @public
  */
-var PrefixExpression = /** @class */ (function () {
-    function PrefixExpression(token, operator, right) {
+class PrefixExpression {
+    constructor(token, operator, right) {
         this.token = token;
         this.operator = operator;
         this.right = right;
         this.nodeType = 'expression';
     }
-    PrefixExpression.prototype.toString = function () {
-        return "(" + this.operator + (this.right ? this.right.toString() : '') + ")";
-    };
-    return PrefixExpression;
-}());
+    toString() {
+        return `(${this.operator}${this.right ? this.right.toString() : ''})`;
+    }
+}
 exports.PrefixExpression = PrefixExpression;
 /**
  * AST node type representing a binary operator expression like `1 + 2`.
  *
  * @public
  */
-var InfixExpression = /** @class */ (function () {
-    function InfixExpression(token, left, operator, right) {
+class InfixExpression {
+    constructor(token, left, operator, right) {
         this.token = token;
         this.left = left;
         this.operator = operator;
         this.right = right;
         this.nodeType = 'expression';
     }
-    InfixExpression.prototype.toString = function () {
-        return "(" + (this.left ? this.left.toString() : '') + " " + this.operator + " " + (this.right ? this.right.toString() : '') + ")";
-    };
-    return InfixExpression;
-}());
+    toString() {
+        return `(${this.left ? this.left.toString() : ''} ${this.operator} ${this.right ? this.right.toString() : ''})`;
+    }
+}
 exports.InfixExpression = InfixExpression;
 /**
  * AST node type representing an `if` or (`if`/`else`) conditional expression.
  *
  * @public
  */
-var IfExpression = /** @class */ (function () {
-    function IfExpression(token, condition, consequence, alternative) {
+class IfExpression {
+    constructor(token, condition, consequence, alternative) {
         this.token = token;
         this.condition = condition;
         this.consequence = consequence;
         this.alternative = alternative;
         this.nodeType = 'expression';
     }
-    IfExpression.prototype.toString = function () {
-        var str = "if (" + this.condition.toString() + ") " + this.consequence.toString();
+    toString() {
+        let str = `if (${this.condition.toString()}) ${this.consequence.toString()}`;
         if (this.alternative) {
-            str += " else " + this.alternative.toString();
+            str += ` else ${this.alternative.toString()}`;
         }
         return str;
-    };
-    return IfExpression;
-}());
+    }
+}
 exports.IfExpression = IfExpression;
 /**
  * AST node type representing a function literal (`fn(...params) { ... }`).
  *
  * @public
  */
-var FunctionLiteral = /** @class */ (function () {
-    function FunctionLiteral(token, parameters, body, name) {
+class FunctionLiteral {
+    constructor(token, parameters, body, name) {
         this.token = token;
         this.parameters = parameters;
         this.body = body;
         this.name = name;
         this.nodeType = 'expression';
     }
-    FunctionLiteral.prototype.toString = function () {
-        var params = this.parameters
-            .map(function (p) { return p.toString(); })
+    toString() {
+        const params = this.parameters
+            .map((p) => p.toString())
             .join(', ');
-        return (this.name || '<anonymous fn>') + "(" + params + ") " + this.body.toString();
-    };
-    return FunctionLiteral;
-}());
+        return `${this.name || '<anonymous fn>'}(${params}) ${this.body.toString()}`;
+    }
+}
 exports.FunctionLiteral = FunctionLiteral;
 /**
  * AST node type representing a generator literal (`gen(...params) { ... }`).
  *
  * @public
  */
-var GeneratorLiteral = /** @class */ (function () {
-    function GeneratorLiteral(token, parameters, body, name) {
+class GeneratorLiteral {
+    constructor(token, parameters, body, name) {
         this.token = token;
         this.parameters = parameters;
         this.body = body;
         this.name = name;
         this.nodeType = 'expression';
     }
-    GeneratorLiteral.prototype.toString = function () {
-        var params = this.parameters
-            .map(function (p) { return p.toString(); })
+    toString() {
+        const params = this.parameters
+            .map((p) => p.toString())
             .join(', ');
-        return (this.name || '<anonymous gen>') + "(" + params + ") " + this.body.toString();
-    };
-    return GeneratorLiteral;
-}());
+        return `${this.name || '<anonymous gen>'}(${params}) ${this.body.toString()}`;
+    }
+}
 exports.GeneratorLiteral = GeneratorLiteral;
 /**
  * AST node type representing a `next` expression.
  *
  * @public
  */
-var NextExpression = /** @class */ (function () {
-    function NextExpression(token, right) {
+class NextExpression {
+    constructor(token, right) {
         this.token = token;
         this.right = right;
         this.nodeType = 'expression';
     }
-    NextExpression.prototype.toString = function () {
+    toString() {
         if (!this.right) {
             return 'next';
         }
-        return "next " + this.right.toString();
-    };
-    return NextExpression;
-}());
+        return `next ${this.right.toString()}`;
+    }
+}
 exports.NextExpression = NextExpression;
 /**
  * AST node type representing an array index expression like `arr[1]`.
  *
  * @public
  */
-var IndexExpression = /** @class */ (function () {
-    function IndexExpression(token, collection, index) {
+class IndexExpression {
+    constructor(token, collection, index) {
         this.token = token;
         this.collection = collection;
         this.index = index;
         this.nodeType = 'expression';
     }
-    IndexExpression.prototype.toString = function () {
-        return this.collection.toString() + "[" + this.index.toString() + "]";
-    };
-    return IndexExpression;
-}());
+    toString() {
+        return `${this.collection.toString()}[${this.index.toString()}]`;
+    }
+}
 exports.IndexExpression = IndexExpression;
 /**
  * AST node type representing a function or generator call expression
@@ -1546,94 +1530,74 @@ exports.IndexExpression = IndexExpression;
  *
  * @public
  */
-var CallExpression = /** @class */ (function () {
-    function CallExpression(token, fn, args) {
+class CallExpression {
+    constructor(token, fn, args) {
         this.token = token;
         this.fn = fn;
         this.args = args;
         this.nodeType = 'expression';
     }
-    CallExpression.prototype.toString = function () {
-        var args = this.args.map(function (p) { return p.toString(); }).join(', ');
-        return (this.fn ? this.fn.toString() : '') + "(" + args + ")";
-    };
-    return CallExpression;
-}());
+    toString() {
+        const args = this.args.map((p) => p.toString()).join(', ');
+        return `${this.fn ? this.fn.toString() : ''}(${args})`;
+    }
+}
 exports.CallExpression = CallExpression;
 /**
  * AST node type representing a MIDI note expression.
  *
  * @public
  */
-var NoteExpression = /** @class */ (function () {
-    function NoteExpression(token, note) {
+class NoteExpression {
+    constructor(token, note) {
         this.token = token;
         this.note = note;
         this.nodeType = 'expression';
     }
-    NoteExpression.prototype.toString = function () {
-        return this.token.literal + " " + (this.note ? this.note.toString() : '');
-    };
-    return NoteExpression;
-}());
+    toString() {
+        return `${this.token.literal} ${this.note ? this.note.toString() : ''}`;
+    }
+}
 exports.NoteExpression = NoteExpression;
 /**
  * AST node type representing a MIDI skip expression.
  *
  * @public
  */
-var SkipExpression = /** @class */ (function () {
-    function SkipExpression(token, duration) {
+class SkipExpression {
+    constructor(token, duration) {
         this.token = token;
         this.duration = duration;
         this.nodeType = 'expression';
     }
-    SkipExpression.prototype.toString = function () {
-        return this.token.literal + " " + (this.duration ? this.duration.toString() : '');
-    };
-    return SkipExpression;
-}());
+    toString() {
+        return `${this.token.literal} ${this.duration ? this.duration.toString() : ''}`;
+    }
+}
 exports.SkipExpression = SkipExpression;
 /**
  * AST node type representing a MIDI CC message expression.
  *
  * @public
  */
-var CCExpression = /** @class */ (function () {
-    function CCExpression(token, message) {
+class CCExpression {
+    constructor(token, message) {
         this.token = token;
         this.message = message;
         this.nodeType = 'expression';
     }
-    CCExpression.prototype.toString = function () {
-        return this.token.literal + " " + (this.message ? this.message.toString() : '');
-    };
-    return CCExpression;
-}());
+    toString() {
+        return `${this.token.literal} ${this.message ? this.message.toString() : ''}`;
+    }
+}
 exports.CCExpression = CCExpression;
 
 },{}],9:[function(require,module,exports){
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.KNOWN_LABELS = exports.NATIVE_FN_KEYS = exports.BUILTIN_KEYS = exports.BUILTINS = exports.NATIVE_FNS = void 0;
-var object_1 = require("./object");
-var NULL = new object_1.Null();
+const object_1 = require("./object");
+const NULL = new object_1.Null();
 /**
  * Collection of native function implementations that cannot be implemented
  * as easily with the compiled code itself.
@@ -1647,13 +1611,9 @@ exports.NATIVE_FNS = [
      * Creates a chord of notes or pitches either with an existing
      * root note or root pitch value.
      */
-    new object_1.NativeFn('chord', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var root = args[0], chord = args[1], inversion = args[2];
-        var rootPitch;
+    new object_1.NativeFn('chord', (_, ...args) => {
+        const [root, chord, inversion] = args;
+        let rootPitch;
         if (root instanceof object_1.MidiNote) {
             rootPitch = root.pitch;
         }
@@ -1666,30 +1626,32 @@ exports.NATIVE_FNS = [
         if (!(chord instanceof object_1.Arr)) {
             throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
         }
-        var intervals = chord.items.map(function (item) {
-            if (!(item instanceof object_1.Int)) {
-                throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
-            }
-            return item.value;
-        });
-        var inversionValue = 0;
+        let inversionValue = 0;
         if (inversion) {
             if (!(inversion instanceof object_1.Int)) {
                 throw new Error('Inversion must be a number');
             }
             inversionValue = inversion.value;
         }
-        while (inversionValue-- > 0) {
-            var interval = intervals.shift();
-            if (interval !== undefined) {
-                intervals.push(interval + 12);
+        const len = chord.items.length;
+        const inversionOcts = Math.floor(inversionValue / len);
+        const intervals = chord.items.map((item, i) => {
+            if (!(item instanceof object_1.Int)) {
+                throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
             }
-        }
-        var items = intervals.map(function (interval) {
+            return item.value + 12 * (inversionOcts + i % len);
+        });
+        // while (inversionValue-- > 0) {
+        //   const interval = intervals.shift();
+        //   if (interval !== undefined) {
+        //     intervals.push(interval + 12);
+        //   }
+        // }
+        const items = intervals.map((interval) => {
             if (root instanceof object_1.MidiNote) {
                 return new object_1.MidiNote(rootPitch + interval, root.duration, root.velocity);
             }
-            return new object_1.Int(rootPitch + interval);
+            return object_1.Int.from(rootPitch + interval);
         });
         return new object_1.Arr(items);
     }),
@@ -1698,13 +1660,9 @@ exports.NATIVE_FNS = [
      * Given an arbitrary number of array arguments, returns a new
      * array containing all of the arrays' children.
      */
-    new object_1.NativeFn('concat', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var items = [];
-        args.forEach(function (arg) {
+    new object_1.NativeFn('concat', (_, ...args) => {
+        let items = [];
+        args.forEach((arg) => {
             if (!(arg instanceof object_1.Arr)) {
                 throw new Error('Function `concat` only accepts array arguments');
             }
@@ -1716,23 +1674,19 @@ exports.NATIVE_FNS = [
      * conv(Arr): VirtualSeq
      * Converts an array into a one-shot sequence.
      */
-    new object_1.NativeFn('conv', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('conv', (_, ...args) => {
+        const arr = args[0];
         if (!(arr instanceof object_1.Arr)) {
             throw new Error('Function `conv` takes a single array argument');
         }
-        var items = arr.items;
-        var length = items.length;
-        var index = 0;
-        var seq = new object_1.VirtualSeq(function () {
+        const items = arr.items;
+        const length = items.length;
+        let index = 0;
+        const seq = new object_1.VirtualSeq(() => {
             if (seq.done) {
                 return NULL;
             }
-            var item = items[index++];
+            const item = items[index++];
             if (index >= length) {
                 seq.done = true;
             }
@@ -1744,20 +1698,16 @@ exports.NATIVE_FNS = [
      * cycle(Arr): VirtualSeq
      * Converts an array into a looping sequence.
      */
-    new object_1.NativeFn('cycle', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('cycle', (_, ...args) => {
+        const arr = args[0];
         if (!(arr instanceof object_1.Arr)) {
             throw new Error('Function `cycle` takes a single array argument');
         }
-        var items = arr.items;
-        var length = items.length;
-        var index = 0;
-        var seq = new object_1.VirtualSeq(function () {
-            var item = items[index++];
+        const items = arr.items;
+        const length = items.length;
+        let index = 0;
+        const seq = new object_1.VirtualSeq(() => {
+            const item = items[index++];
             if (index >= length) {
                 index = 0;
             }
@@ -1769,35 +1719,27 @@ exports.NATIVE_FNS = [
      * dur(Note): Int
      * Given a MIDI note object, returns its duration.
      */
-    new object_1.NativeFn('dur', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var note = args[0];
+    new object_1.NativeFn('dur', (_, ...args) => {
+        const note = args[0];
         if (args.length !== 1 || !(note instanceof object_1.MidiNote)) {
             throw new Error('Function `dur` takes a single MIDI note argument');
         }
-        return new object_1.Int(note.duration);
+        return object_1.Int.from(note.duration);
     }),
     /**
      * filter(Arr, Fn): Arr
      * Given an array and a function, returns a new array containing
      * only the elements that return truthy when provided to the function.
      */
-    new object_1.NativeFn('filter', function (vm) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0], fn = args[1];
+    new object_1.NativeFn('filter', (vm, ...args) => {
+        const [arr, fn] = args;
         if (args.length !== 2 ||
             !(arr instanceof object_1.Arr) ||
             !(fn instanceof object_1.Closure || fn instanceof object_1.NativeFn)) {
             throw new Error('Function `filter` requires an array and a function');
         }
-        var items = arr.items.filter(function (item, i) {
-            var res = vm.callAndReturn(fn, [item, new object_1.Int(i)]);
+        const items = arr.items.filter((item, i) => {
+            const res = vm.callAndReturn(fn, [item, object_1.Int.from(i)]);
             return object_1.isTruthy(res);
         });
         return new object_1.Arr(items);
@@ -1806,16 +1748,12 @@ exports.NATIVE_FNS = [
      * len(Arr): Int
      * Returns the length of a Melee array object.
      */
-    new object_1.NativeFn('len', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('len', (_, ...args) => {
+        const arr = args[0];
         if (!(arr instanceof object_1.Arr)) {
             throw new Error('Function `len` takes a single array argument');
         }
-        return new object_1.Int(arr.items.length);
+        return object_1.Int.from(arr.items.length);
     }),
     /**
      * map(Arr, Fn): Arr
@@ -1823,38 +1761,28 @@ exports.NATIVE_FNS = [
      * array element and returns an array containing the return values
      * of each.
      */
-    new object_1.NativeFn('map', function (vm) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0], fn = args[1];
+    new object_1.NativeFn('map', (vm, ...args) => {
+        const [arr, fn] = args;
         if (args.length !== 2 ||
             !(arr instanceof object_1.Arr) ||
             !(fn instanceof object_1.Closure || fn instanceof object_1.NativeFn)) {
             throw new Error('Function `map` takes an array and a function to transform each element');
         }
-        var items = arr.items.map(function (item, i) {
-            return vm.callAndReturn(fn, [item, new object_1.Int(i)]);
-        });
+        const items = arr.items.map((item, i) => vm.callAndReturn(fn, [item, object_1.Int.from(i)]));
         return new object_1.Arr(items);
     }),
     /**
      * max(Arr): Int | Null
      * Given an array of integers, returns the largest integer value.
      */
-    new object_1.NativeFn('max', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('max', (_, ...args) => {
+        const arr = args[0];
         if (args.length !== 1 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `max` takes a single array argument');
         }
-        var items = [];
-        for (var i = 0; i < arr.items.length; i++) {
-            var item = arr.items[i];
+        const items = [];
+        for (let i = 0; i < arr.items.length; i++) {
+            const item = arr.items[i];
             if (item instanceof object_1.Int) {
                 items.push(item.value);
             }
@@ -1862,28 +1790,24 @@ exports.NATIVE_FNS = [
         if (!items.length) {
             return NULL;
         }
-        return new object_1.Int(Math.max.apply(null, items));
+        return object_1.Int.from(Math.max.apply(null, items));
     }),
     /**
      * merge(...Seq): Seq
      * Given a variable length list of sequences, returns a new sequence
      * that returns an array of next values for each one.
      */
-    new object_1.NativeFn('merge', function (vm) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var seqs = [];
-        args.forEach(function (arg) {
+    new object_1.NativeFn('merge', (vm, ...args) => {
+        const seqs = [];
+        args.forEach((arg) => {
             if (!(arg instanceof object_1.Iterable)) {
                 throw new Error('Function `merge` takes a flexible number of sequence objects');
             }
             seqs.push(arg);
         });
-        var seq = new object_1.VirtualSeq(function () {
-            var output = new Array(seqs.length);
-            seqs.forEach(function (seq, i) {
+        const seq = new object_1.VirtualSeq(() => {
+            const output = new Array(seqs.length);
+            seqs.forEach((seq, i) => {
                 output[i] = vm.takeNext(seq);
             });
             return new object_1.Arr(output);
@@ -1894,18 +1818,14 @@ exports.NATIVE_FNS = [
      * min(Arr): Int | Null
      * Given an array of integers, returns the smallest integer value.
      */
-    new object_1.NativeFn('min', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('min', (_, ...args) => {
+        const arr = args[0];
         if (args.length !== 1 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `min` takes a single array argument');
         }
-        var items = [];
-        for (var i = 0; i < arr.items.length; i++) {
-            var item = arr.items[i];
+        const items = [];
+        for (let i = 0; i < arr.items.length; i++) {
+            const item = arr.items[i];
             if (item instanceof object_1.Int) {
                 items.push(item.value);
             }
@@ -1913,63 +1833,55 @@ exports.NATIVE_FNS = [
         if (!items.length) {
             return NULL;
         }
-        return new object_1.Int(Math.min.apply(null, items));
+        return object_1.Int.from(Math.min.apply(null, items));
     }),
     /**
      * pitch(Note): Int
      * Given a MIDI note object, returns its pitch.
      */
-    new object_1.NativeFn('pitch', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var note = args[0];
+    new object_1.NativeFn('pitch', (_, ...args) => {
+        const note = args[0];
         if (args.length !== 1 || !(note instanceof object_1.MidiNote)) {
             throw new Error('Function `pitch` takes a single MIDI note argument');
         }
-        return new object_1.Int(note.pitch);
+        return object_1.Int.from(note.pitch);
     }),
     /**
      * poly(...Seq): Seq
      * Polyphony helper to process multiple sequences of notes and
      * chords at the same time.
      */
-    new object_1.NativeFn('poly', function (vm) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var seqs = [];
-        args.forEach(function (arg) {
+    new object_1.NativeFn('poly', (vm, ...args) => {
+        const seqs = [];
+        args.forEach((arg) => {
             if (!(arg instanceof object_1.Iterable)) {
                 throw new Error('Function `poly` takes a flexible number of sequence objects');
             }
             seqs.push(arg);
         });
-        var durations = [];
-        for (var i = 0; i < seqs.length; i++)
+        const durations = [];
+        for (let i = 0; i < seqs.length; i++)
             durations[i] = -1;
-        var pitches = [];
-        for (var i = 0; i < seqs.length; i++)
+        const pitches = [];
+        for (let i = 0; i < seqs.length; i++)
             pitches[i] = -1;
-        var seq = new object_1.VirtualSeq(function () {
-            var output = new Array(seqs.length);
-            seqs.forEach(function (seq, i) {
+        const seq = new object_1.VirtualSeq(() => {
+            const output = new Array(seqs.length);
+            seqs.forEach((seq, i) => {
                 if (durations[i] > 0) {
-                    output[i] = new object_1.Hold(pitches[i], durations[i]);
+                    output[i] = object_1.provisionHold(pitches[i], durations[i]);
                 }
                 else {
-                    var note = vm.takeNext(seq);
+                    const note = vm.takeNext(seq);
                     if (note instanceof object_1.MidiNote) {
                         durations[i] = note.duration;
                         pitches[i] = note.pitch;
                     }
                     else if (note instanceof object_1.Arr) {
-                        var minDuration = -1;
-                        var pitch = -1;
-                        for (var j = 0; j < note.items.length; j++) {
-                            var item = note.items[j];
+                        let minDuration = -1;
+                        let pitch = -1;
+                        for (let j = 0; j < note.items.length; j++) {
+                            const item = note.items[j];
                             if (!(item instanceof object_1.MidiNote)) {
                                 throw new Error('`poly` sequences must yield MIDI notes or chords');
                             }
@@ -1990,19 +1902,19 @@ exports.NATIVE_FNS = [
                     output[i] = note;
                 }
             });
-            var min = Math.min.apply(Math, durations.filter(function (d) { return d > 0; }));
-            for (var i = 0; i < seqs.length; i++) {
+            const min = Math.min(...durations.filter((d) => d > 0));
+            for (let i = 0; i < seqs.length; i++) {
                 durations[i] = Math.max(0, durations[i] - min);
-                var hold = output[i];
+                const hold = output[i];
                 if (hold instanceof object_1.Hold) {
                     hold.duration = min;
                 }
             }
-            var flattenedNotes = output.reduce(function (acc, cur) {
+            const flattenedNotes = output.reduce((acc, cur) => {
                 if (cur instanceof object_1.Arr) {
-                    return __spreadArray(__spreadArray([], acc), cur.items);
+                    return [...acc, ...cur.items];
                 }
-                return __spreadArray(__spreadArray([], acc), [cur]);
+                return [...acc, cur];
             }, []);
             return new object_1.Arr(flattenedNotes);
         });
@@ -2012,12 +1924,8 @@ exports.NATIVE_FNS = [
      * pop(Arr): *
      * Pops an item off of the end of an array.
      */
-    new object_1.NativeFn('pop', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('pop', (_, ...args) => {
+        const arr = args[0];
         if (args.length !== 1 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `pop` takes a single array argument');
         }
@@ -2027,14 +1935,9 @@ exports.NATIVE_FNS = [
      * print(...*): Null
      * Prints the provided arguments to the console.
      */
-    new object_1.NativeFn('print', function (vm) {
-        var _a;
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
+    new object_1.NativeFn('print', (vm, ...args) => {
         if (vm.callbacks && vm.callbacks.print) {
-            (_a = vm.callbacks).print.apply(_a, args);
+            vm.callbacks.print(...args);
         }
         return NULL;
     }),
@@ -2042,13 +1945,9 @@ exports.NATIVE_FNS = [
      * push(Arr, *): Arr
      * Pushes an arbitrary item onto the end of an array.
      */
-    new object_1.NativeFn('push', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
-        var next = args[1] || NULL;
+    new object_1.NativeFn('push', (_, ...args) => {
+        const arr = args[0];
+        const next = args[1] || NULL;
         if (args.length !== 2 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `push` takes an array and an item to push');
         }
@@ -2060,17 +1959,13 @@ exports.NATIVE_FNS = [
      * Given a scale, a root note, and an input note, calculates and
      * returns the next closest note that fits the scale.
      */
-    new object_1.NativeFn('quant', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var scale = args[0], root = args[1], note = args[2];
+    new object_1.NativeFn('quant', (_, ...args) => {
+        const [scale, root, note] = args;
         if (!(scale instanceof object_1.Arr) ||
-            !scale.items.every(function (item) { return item instanceof object_1.Int; })) {
+            !scale.items.every((item) => item instanceof object_1.Int)) {
             throw new Error('Function `quant` requires the first argument to be an array of integers');
         }
-        var rootPitch;
+        let rootPitch;
         if (root instanceof object_1.Int) {
             rootPitch = root.value;
         }
@@ -2080,7 +1975,7 @@ exports.NATIVE_FNS = [
         else {
             throw new Error('Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize');
         }
-        var notePitch;
+        let notePitch;
         if (note instanceof object_1.Int) {
             notePitch = note.value;
         }
@@ -2090,15 +1985,15 @@ exports.NATIVE_FNS = [
         else {
             throw new Error('Function `quant` requires a scale array, a root note or pitch, and a note or pitch to quantize');
         }
-        var base = notePitch - rootPitch;
-        var octave = Math.floor(base / 12);
+        let base = notePitch - rootPitch;
+        const octave = Math.floor(base / 12);
         while (base < 0) {
             base += 12;
         }
         base %= 12;
-        var quantized = 12;
-        for (var i = 0; i < scale.items.length; i++) {
-            var item = scale.items[i];
+        let quantized = 12;
+        for (let i = 0; i < scale.items.length; i++) {
+            const item = scale.items[i];
             if (item.value >= base) {
                 quantized = item.value;
                 break;
@@ -2108,43 +2003,35 @@ exports.NATIVE_FNS = [
         if (note instanceof object_1.MidiNote) {
             return new object_1.MidiNote(quantized, note.duration, note.velocity);
         }
-        return new object_1.Int(quantized);
+        return object_1.Int.from(quantized);
     }),
     /**
      * rand(Int): Int
      * Given number `n`, returns a random number between `0` and `n - 1`.
      */
-    new object_1.NativeFn('rand', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var hi = args[0];
+    new object_1.NativeFn('rand', (_, ...args) => {
+        const hi = args[0];
         if (args.length !== 1 || !(hi instanceof object_1.Int)) {
             throw new Error('Function `rand(num)` takes a single integer argument, which returns a number from 0 up to, but not including, num');
         }
-        return new object_1.Int(Math.floor(Math.random() * hi.value));
+        return object_1.Int.from(Math.floor(Math.random() * hi.value));
     }),
     /**
      * range(Int): Arr
      * Given an integer `n`, returns a Melee array object containing
      * integers `0` through `n - 1`.
      */
-    new object_1.NativeFn('range', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var num = args[0];
+    new object_1.NativeFn('range', (_, ...args) => {
+        const num = args[0];
         if (args.length !== 1 || !(num instanceof object_1.Int)) {
             throw new Error('Function `range` takes a single integer argument');
         }
         if (num.value < 1) {
             throw new Error('Function `range(num)` requires num to be at least 1');
         }
-        var items = [];
-        for (var i = 0; i < num.value; i++) {
-            items.push(new object_1.Int(i));
+        const items = [];
+        for (let i = 0; i < num.value; i++) {
+            items.push(object_1.Int.from(i));
         }
         return new object_1.Arr(items);
     }),
@@ -2152,17 +2039,13 @@ exports.NATIVE_FNS = [
      * rev(Arr): Arr
      * Given an array, returns a new array with the items in reverse order.
      */
-    new object_1.NativeFn('rev', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('rev', (_, ...args) => {
+        const arr = args[0];
         if (args.length !== 1 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `rev` takes a single array argument');
         }
-        var items = [];
-        for (var i = 0; i < arr.items.length; i++) {
+        const items = [];
+        for (let i = 0; i < arr.items.length; i++) {
             items.push(arr.items[arr.items.length - 1 - i]);
         }
         return new object_1.Arr(items);
@@ -2172,38 +2055,30 @@ exports.NATIVE_FNS = [
      * Given numbers `lo` and `hi`, returns a random number between `lo`
      * and `hi - 1`.
      */
-    new object_1.NativeFn('rrand', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var lo = args[0];
-        var hi = args[1];
+    new object_1.NativeFn('rrand', (_, ...args) => {
+        const lo = args[0];
+        const hi = args[1];
         if (args.length !== 2 ||
             !(hi instanceof object_1.Int) ||
             !(lo instanceof object_1.Int)) {
             throw new Error('Function `rrand(lo, hi)` takes a two integer arguments, returning a random number from lo up to, but not including, hi');
         }
-        var x = Math.min(lo.value, hi.value);
-        var y = Math.max(lo.value, hi.value);
-        return new object_1.Int(x + Math.floor(Math.random() * (y - x)));
+        const x = Math.min(lo.value, hi.value);
+        const y = Math.max(lo.value, hi.value);
+        return object_1.Int.from(x + Math.floor(Math.random() * (y - x)));
     }),
     /**
      * scale(Arr, Int | Note, Int): Int | Note
      * Given a scale, a root note, and an interval, calculates and returns
      * the pitch value at that interval.
      */
-    new object_1.NativeFn('scale', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var scale = args[0], root = args[1], interval = args[2];
+    new object_1.NativeFn('scale', (_, ...args) => {
+        const [scale, root, interval] = args;
         if (!(scale instanceof object_1.Arr) ||
-            !scale.items.every(function (item) { return item instanceof object_1.Int; })) {
+            !scale.items.every((item) => item instanceof object_1.Int)) {
             throw new Error('Function `scale` requires the first argument to be an array of integers');
         }
-        var rootPitch;
+        let rootPitch;
         if (root instanceof object_1.Int) {
             rootPitch = root.value;
         }
@@ -2216,28 +2091,24 @@ exports.NATIVE_FNS = [
         if (!(interval instanceof object_1.Int)) {
             throw new Error('Function `scale` requires a scale array, a root note or pitch, and an integer interval');
         }
-        var base = interval.value;
+        let base = interval.value;
         while (base < 0) {
             base += scale.items.length;
         }
-        var offset = scale.items[base % scale.items.length];
-        var octave = Math.floor(interval.value / scale.items.length);
-        var pitch = rootPitch + octave * 12 + offset.value;
+        const offset = scale.items[base % scale.items.length];
+        const octave = Math.floor(interval.value / scale.items.length);
+        const pitch = rootPitch + octave * 12 + offset.value;
         if (root instanceof object_1.MidiNote) {
             return new object_1.MidiNote(pitch, root.duration, root.velocity);
         }
-        return new object_1.Int(pitch);
+        return object_1.Int.from(pitch);
     }),
     /**
      * shift(Arr): *
      * Shifts an item off of the beginning of an array.
      */
-    new object_1.NativeFn('shift', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('shift', (_, ...args) => {
+        const arr = args[0];
         if (args.length !== 1 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `shift` takes a single array argument');
         }
@@ -2247,18 +2118,14 @@ exports.NATIVE_FNS = [
      * sort(Arr): Arr
      * Given an array, returns a new array with the values sorted.
      */
-    new object_1.NativeFn('sort', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var arr = args[0];
+    new object_1.NativeFn('sort', (_, ...args) => {
+        const arr = args[0];
         if (args.length !== 1 || !(arr instanceof object_1.Arr)) {
             throw new Error('Function `sort` takes a single array argument');
         }
-        var items = arr.items.sort(function (a, b) {
-            var aVal = NaN;
-            var bVal = NaN;
+        const items = arr.items.sort((a, b) => {
+            let aVal = NaN;
+            let bVal = NaN;
             if (a instanceof object_1.Int) {
                 aVal = a.value;
             }
@@ -2286,19 +2153,15 @@ exports.NATIVE_FNS = [
      * Given a sequence and an integer `n`, returns an array containing
      * the next `n` items from the sequence.
      */
-    new object_1.NativeFn('take', function (vm) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var seq = args[0], num = args[1];
+    new object_1.NativeFn('take', (vm, ...args) => {
+        const [seq, num] = args;
         if (args.length !== 2 ||
             !(seq instanceof object_1.Iterable) ||
             !(num instanceof object_1.Int)) {
             throw new Error('Function `take` requires a sequence object and an integer');
         }
-        var items = [];
-        for (var i = 0; i < num.value; i++) {
+        const items = [];
+        for (let i = 0; i < num.value; i++) {
             items.push(vm.takeNext(seq) || NULL);
         }
         return new object_1.Arr(items);
@@ -2307,16 +2170,12 @@ exports.NATIVE_FNS = [
      * vel(Note): Int
      * Given a MIDI note object, returns its velocity.
      */
-    new object_1.NativeFn('vel', function (_) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        var note = args[0];
+    new object_1.NativeFn('vel', (_, ...args) => {
+        const note = args[0];
         if (args.length !== 1 || !(note instanceof object_1.MidiNote)) {
             throw new Error('Function `vel` takes a single MIDI note argument');
         }
-        return new object_1.Int(note.velocity);
+        return object_1.Int.from(note.velocity);
     }),
 ];
 /**
@@ -2327,7 +2186,7 @@ exports.NATIVE_FNS = [
  * @internal
  */
 function createChordMap() {
-    var CHORD_MAP = {
+    const CHORD_MAP = {
         ROOT_4: [0, 5],
         ROOT_5: [0, 7],
         ROOT_6: [0, 9],
@@ -2347,12 +2206,12 @@ function createChordMap() {
         MIN_ADD_9: [0, 3, 7, 14],
         DOM_9: [0, 4, 7, 10, 14],
         MAJ_11: [0, 4, 7, 11, 14, 17],
-        MIN_11: [0, 3, 7, 10, 14, 17]
+        MIN_11: [0, 3, 7, 10, 14, 17],
     };
-    return Object.keys(CHORD_MAP).reduce(function (acc, cur) {
-        var _a;
-        return (__assign(__assign({}, acc), (_a = {}, _a[cur] = new object_1.Arr(CHORD_MAP[cur].map(function (interval) { return new object_1.Int(interval); })), _a)));
-    }, {});
+    return Object.keys(CHORD_MAP).reduce((acc, cur) => ({
+        ...acc,
+        [cur]: new object_1.Arr(CHORD_MAP[cur].map((interval) => object_1.Int.from(interval))),
+    }), {});
 }
 /**
  * Create a mapping of scale names to arrays of intervals.
@@ -2362,7 +2221,7 @@ function createChordMap() {
  * @internal
  */
 function createScaleMap() {
-    var SCALE_MAP = {
+    const SCALE_MAP = {
         SCALE_MAJOR: [0, 2, 4, 5, 7, 9, 11],
         SCALE_IONIAN: [0, 2, 4, 5, 7, 9, 11],
         SCALE_MINOR: [0, 2, 3, 5, 7, 8, 10],
@@ -2374,26 +2233,30 @@ function createScaleMap() {
         SCALE_MIXOLYDIAN: [0, 2, 4, 5, 7, 9, 10],
         SCALE_PHRYGIAN: [0, 1, 3, 5, 7, 8, 10],
         SCALE_LYDIAN: [0, 2, 4, 6, 7, 9, 11],
-        SCALE_LOCRIAN: [0, 1, 3, 5, 6, 8, 10]
+        SCALE_LOCRIAN: [0, 1, 3, 5, 6, 8, 10],
     };
-    return Object.keys(SCALE_MAP).reduce(function (acc, cur) {
-        var _a;
-        return (__assign(__assign({}, acc), (_a = {}, _a[cur] = new object_1.Arr(SCALE_MAP[cur].map(function (interval) { return new object_1.Int(interval); })), _a)));
-    }, {});
+    return Object.keys(SCALE_MAP).reduce((acc, cur) => ({
+        ...acc,
+        [cur]: new object_1.Arr(SCALE_MAP[cur].map((interval) => object_1.Int.from(interval))),
+    }), {});
 }
 /**
  * Default global variables placed in scope on startup.
  *
  * @internal
  */
-exports.BUILTINS = __assign(__assign(__assign({}, createChordMap()), object_1.MIDI_VALUES), createScaleMap());
+exports.BUILTINS = {
+    ...createChordMap(),
+    ...object_1.MIDI_VALUES,
+    ...createScaleMap(),
+};
 exports.BUILTIN_KEYS = Object.keys(exports.BUILTINS);
-exports.NATIVE_FN_KEYS = exports.NATIVE_FNS.map(function (fn) { return fn.label; });
-exports.KNOWN_LABELS = __spreadArray(__spreadArray([], exports.BUILTIN_KEYS), exports.NATIVE_FN_KEYS);
+exports.NATIVE_FN_KEYS = exports.NATIVE_FNS.map((fn) => fn.label);
+exports.KNOWN_LABELS = [...exports.BUILTIN_KEYS, ...exports.NATIVE_FN_KEYS];
 
 },{"./object":15}],10:[function(require,module,exports){
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.disassemble = exports.createInstruction = exports.unpackBigEndian = exports.packBigEndian = exports.OPCODES = exports.Opcode = void 0;
 /**
  * Byte value enumeration of an instruction's opcode (its first byte).
@@ -2445,7 +2308,7 @@ var Opcode;
 })(Opcode = exports.Opcode || (exports.Opcode = {}));
 exports.OPCODES = {};
 // Precalculate all total opcode instruction sizes.
-var operations = [
+const operations = [
     [Opcode.CONST, 'CONST', [2]],
     [Opcode.ARRAY, 'ARRAY', [2]],
     [Opcode.LEN, 'LEN'],
@@ -2488,12 +2351,11 @@ var operations = [
     [Opcode.YIELD, 'YIELD'],
     [Opcode.NEXT, 'NEXT'],
 ];
-operations.forEach(function (_a) {
-    var op = _a[0], name = _a[1], operands = _a[2];
+operations.forEach(([op, name, operands]) => {
     exports.OPCODES[op] = {
-        name: name,
-        operands: operands,
-        size: operands ? operands.reduce(function (acc, cur) { return acc + cur; }, 1) : 1
+        name,
+        operands,
+        size: operands ? operands.reduce((acc, cur) => acc + cur, 1) : 1,
     };
 });
 /**
@@ -2505,7 +2367,7 @@ operations.forEach(function (_a) {
  * @param value - Value inserted into instruction at offset
  */
 function packBigEndian(arr, offset, size, value) {
-    var n = value;
+    let n = value;
     while (size--) {
         arr[offset + size] = n & 255;
         n >>= 8;
@@ -2522,8 +2384,8 @@ exports.packBigEndian = packBigEndian;
  * @returns Integer value at offset
  */
 function unpackBigEndian(arr, offset, size) {
-    var n = 0;
-    for (var i = 0; i < size; i++) {
+    let n = 0;
+    for (let i = 0; i < size; i++) {
         n += arr[offset + i] * Math.pow(256, size - i - 1);
     }
     return n;
@@ -2536,22 +2398,18 @@ exports.unpackBigEndian = unpackBigEndian;
  * @param args - Additional operands
  * @returns Packed instruction bytes
  */
-function createInstruction(op) {
-    var args = [];
-    for (var _i = 1; _i < arguments.length; _i++) {
-        args[_i - 1] = arguments[_i];
-    }
-    var operation = exports.OPCODES[op];
+function createInstruction(op, ...args) {
+    const operation = exports.OPCODES[op];
     if (!operation) {
         return new Uint8Array(0);
     }
-    var instruction = new Uint8Array(operation.size);
+    const instruction = new Uint8Array(operation.size);
     instruction[0] = op;
     if (!operation.operands) {
         return instruction;
     }
-    var offset = 1;
-    for (var i = 0; i < operation.operands.length; i++) {
+    let offset = 1;
+    for (let i = 0; i < operation.operands.length; i++) {
         packBigEndian(instruction, offset, operation.operands[i], args[i]);
         offset += operation.operands[i];
     }
@@ -2565,26 +2423,23 @@ exports.createInstruction = createInstruction;
  * @returns Stringified bytecode
  */
 function disassemble(bytecode) {
-    var pos = 0;
-    var output = '';
-    var _loop_1 = function () {
-        var operation = exports.OPCODES[bytecode[pos]];
-        var name_1 = operation.name, operands = operation.operands;
-        var address = ("0000" + pos).slice(-4);
+    let pos = 0;
+    let output = '';
+    while (pos < bytecode.length) {
+        const operation = exports.OPCODES[bytecode[pos]];
+        const { name, operands } = operation;
+        const address = `0000${pos}`.slice(-4);
         pos += 1;
         if (!operands) {
-            output += address + " " + name_1 + "\n";
-            return "continue";
+            output += `${address} ${name}\n`;
+            continue;
         }
-        var args = [];
-        operands.forEach(function (width) {
+        const args = [];
+        operands.forEach((width) => {
             args.push(unpackBigEndian(bytecode, pos, width).toString());
             pos += width;
         });
-        output += address + " " + name_1 + " (" + args.join(', ') + ")\n";
-    };
-    while (pos < bytecode.length) {
-        _loop_1();
+        output += `${address} ${name} (${args.join(', ')})\n`;
     }
     return output;
 }
@@ -2592,30 +2447,23 @@ exports.disassemble = disassemble;
 
 },{}],11:[function(require,module,exports){
 "use strict";
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Compiler = void 0;
-var ast = require("./ast");
-var bytecode_1 = require("./bytecode");
-var object_1 = require("./object");
-var symbols_1 = require("./symbols");
-var builtins_1 = require("./builtins");
-var errors_1 = require("./errors");
+const ast = require("./ast");
+const bytecode_1 = require("./bytecode");
+const object_1 = require("./object");
+const symbols_1 = require("./symbols");
+const builtins_1 = require("./builtins");
+const errors_1 = require("./errors");
 /**
  * Compiles AST into serial bytecode instructions.
  */
-var Compiler = /** @class */ (function () {
-    function Compiler(
+class Compiler {
+    constructor(
     /**
      * Constant values referenced by the VM.
      */
-    constants, symbolTable) {
-        var _this = this;
-        if (constants === void 0) { constants = []; }
+    constants = [], symbolTable) {
         this.constants = constants;
         this.loopStarts = [];
         this.breaks = [];
@@ -2623,8 +2471,8 @@ var Compiler = /** @class */ (function () {
         this.scopes = [];
         // Create native symbol table for built-in functions and values.
         this.symbolTable = new symbols_1.SymbolTable(symbols_1.ScopeType.NATIVE);
-        builtins_1.NATIVE_FNS.forEach(function (fn) {
-            _this.symbolTable.add(fn.label);
+        builtins_1.NATIVE_FNS.forEach((fn) => {
+            this.symbolTable.add(fn.label);
         });
         this.pushScope(symbolTable);
     }
@@ -2635,9 +2483,9 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.scope = function () {
+    scope() {
         return this.scopes[this.scopeIndex];
-    };
+    }
     /**
      * Gets the current scope's instructions. (Can't use getters in ES3.)
      *
@@ -2645,19 +2493,18 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.instructions = function () {
+    instructions() {
         return this.scopes[this.scopeIndex].instructions;
-    };
+    }
     /**
      * Compiles an AST node into bytecode.
      *
      * @param node - AST node, preferrably a program node
      */
-    Compiler.prototype.compile = function (node) {
-        var _this = this;
+    compile(node) {
         if (node instanceof ast.Program ||
             node instanceof ast.BlockStatement) {
-            for (var i = 0; i < node.statements.length; i++) {
+            for (let i = 0; i < node.statements.length; i++) {
                 this.compile(node.statements[i]);
             }
         }
@@ -2668,7 +2515,7 @@ var Compiler = /** @class */ (function () {
             this.emit(bytecode_1.Opcode.POP);
         }
         else if (node instanceof ast.DeclareStatement) {
-            var index = this.symbolTable.add(node.name.value);
+            const index = this.symbolTable.add(node.name.value);
             if (node.value) {
                 this.compile(node.value);
             }
@@ -2677,60 +2524,60 @@ var Compiler = /** @class */ (function () {
                 : bytecode_1.Opcode.SET, index);
         }
         else if (node instanceof ast.AssignExpression) {
-            var name_1 = node.name;
-            if (!(name_1 instanceof ast.Identifier)) {
+            const name = node.name;
+            if (!(name instanceof ast.Identifier)) {
                 // Assignment for array expressions
-                if (name_1 instanceof ast.IndexExpression) {
-                    this.compile(name_1.collection);
-                    this.compile(name_1.index);
+                if (name instanceof ast.IndexExpression) {
+                    this.compile(name.collection);
+                    this.compile(name.index);
                     if (node.value) {
                         this.compile(node.value);
                     }
                     this.emit(bytecode_1.Opcode.SET_INDEX);
-                    this.compile(name_1.collection);
-                    this.compile(name_1.index);
+                    this.compile(name.collection);
+                    this.compile(name.index);
                     this.emit(bytecode_1.Opcode.INDEX);
                     return;
                 }
-                throw new errors_1.CompilerError('Left-hand of assignment must be a variable or an array index expression', name_1.token);
+                throw new errors_1.CompilerError('Left-hand of assignment must be a variable or an array index expression', name.token);
             }
-            var sym = this.symbolTable.get(name_1.value);
+            const sym = this.symbolTable.get(name.value);
             if (!sym) {
-                throw new errors_1.CompilerError("Cannot assign undefined variable " + name_1.value, name_1.token);
+                throw new errors_1.CompilerError(`Cannot assign undefined variable ${name.value}`, name.token);
             }
             if (node.value) {
                 this.compile(node.value);
             }
-            var opcode = void 0;
-            var fetch_1;
+            let opcode;
+            let fetch;
             switch (sym.type) {
                 case symbols_1.ScopeType.FREE:
                     opcode = bytecode_1.Opcode.SETC;
-                    fetch_1 = bytecode_1.Opcode.GETC;
+                    fetch = bytecode_1.Opcode.GETC;
                     break;
                 case symbols_1.ScopeType.LOCAL:
                     opcode = bytecode_1.Opcode.SET;
-                    fetch_1 = bytecode_1.Opcode.GET;
+                    fetch = bytecode_1.Opcode.GET;
                     break;
                 case symbols_1.ScopeType.GLOBAL:
                     opcode = bytecode_1.Opcode.SETG;
-                    fetch_1 = bytecode_1.Opcode.GETG;
+                    fetch = bytecode_1.Opcode.GETG;
                     break;
                 default:
-                    throw new errors_1.CompilerError("Cannot assign unassigned variable " + name_1.value, name_1.token);
+                    throw new errors_1.CompilerError(`Cannot assign unassigned variable ${name.value}`, name.token);
             }
             this.emit(opcode, sym.index);
-            this.emit(fetch_1, sym.index);
+            this.emit(fetch, sym.index);
         }
         else if (node instanceof ast.CompoundAssignExpression) {
-            var name_2 = node.name;
-            if (!(name_2 instanceof ast.Identifier)) {
+            const name = node.name;
+            if (!(name instanceof ast.Identifier)) {
                 // Assignment for array expressions
-                if (name_2 instanceof ast.IndexExpression) {
-                    this.compile(name_2.collection);
-                    this.compile(name_2.index);
-                    this.compile(name_2.collection);
-                    this.compile(name_2.index);
+                if (name instanceof ast.IndexExpression) {
+                    this.compile(name.collection);
+                    this.compile(name.index);
+                    this.compile(name.collection);
+                    this.compile(name.index);
                     this.emit(bytecode_1.Opcode.INDEX);
                     if (node.value) {
                         this.compile(node.value);
@@ -2753,18 +2600,18 @@ var Compiler = /** @class */ (function () {
                             break;
                     }
                     this.emit(bytecode_1.Opcode.SET_INDEX);
-                    this.compile(name_2.collection);
-                    this.compile(name_2.index);
+                    this.compile(name.collection);
+                    this.compile(name.index);
                     this.emit(bytecode_1.Opcode.INDEX);
                     return;
                 }
-                throw new errors_1.CompilerError('Left-hand of assignment must be a variable or an array index expression', name_2.token);
+                throw new errors_1.CompilerError('Left-hand of assignment must be a variable or an array index expression', name.token);
             }
-            var sym = this.symbolTable.get(name_2.value);
+            const sym = this.symbolTable.get(name.value);
             if (!sym) {
-                throw new errors_1.CompilerError("Cannot assign undefined variable " + name_2.value, name_2.token);
+                throw new errors_1.CompilerError(`Cannot assign undefined variable ${name.value}`, name.token);
             }
-            this.compile(name_2);
+            this.compile(name);
             if (node.value) {
                 this.compile(node.value);
             }
@@ -2785,33 +2632,33 @@ var Compiler = /** @class */ (function () {
                     this.emit(bytecode_1.Opcode.MOD);
                     break;
             }
-            var opcode = void 0;
-            var fetch_2;
+            let opcode;
+            let fetch;
             switch (sym.type) {
                 case symbols_1.ScopeType.FREE:
                     opcode = bytecode_1.Opcode.SETC;
-                    fetch_2 = bytecode_1.Opcode.GETC;
+                    fetch = bytecode_1.Opcode.GETC;
                     break;
                 case symbols_1.ScopeType.LOCAL:
                     opcode = bytecode_1.Opcode.SET;
-                    fetch_2 = bytecode_1.Opcode.GET;
+                    fetch = bytecode_1.Opcode.GET;
                     break;
                 case symbols_1.ScopeType.GLOBAL:
                     opcode = bytecode_1.Opcode.SETG;
-                    fetch_2 = bytecode_1.Opcode.GETG;
+                    fetch = bytecode_1.Opcode.GETG;
                     break;
                 default:
-                    throw new errors_1.CompilerError("Cannot assign unassigned variable " + name_2.value, name_2.token);
+                    throw new errors_1.CompilerError(`Cannot assign unassigned variable ${name.value}`, name.token);
             }
             this.emit(opcode, sym.index);
-            this.emit(fetch_2, sym.index);
+            this.emit(fetch, sym.index);
         }
         else if (node instanceof ast.Identifier) {
-            var sym = this.symbolTable.get(node.value);
+            const sym = this.symbolTable.get(node.value);
             if (typeof sym === 'undefined') {
-                throw new errors_1.CompilerError("Attempting to use undefined variable " + node.value, node.token);
+                throw new errors_1.CompilerError(`Attempting to use undefined variable ${node.value}`, node.token);
             }
-            var opcode = void 0;
+            let opcode;
             switch (sym.type) {
                 case symbols_1.ScopeType.FREE:
                     opcode = bytecode_1.Opcode.GETC;
@@ -2899,10 +2746,10 @@ var Compiler = /** @class */ (function () {
         else if (node instanceof ast.IfExpression) {
             this.compile(node.condition);
             // Jump to else clause (or outside of conditional statement if else doesn't exist).
-            var jumpToElse = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
+            const jumpToElse = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
             this.compile(node.consequence);
             this.removeInstructionIf(bytecode_1.Opcode.POP);
-            var jumpOut = this.emit(bytecode_1.Opcode.JMP, 0xffff);
+            const jumpOut = this.emit(bytecode_1.Opcode.JMP, 0xffff);
             this.replaceInstruction(jumpToElse, this.instructions().length);
             if (node.alternative) {
                 this.compile(node.alternative);
@@ -2916,7 +2763,7 @@ var Compiler = /** @class */ (function () {
         else if (node instanceof ast.IntegerLiteral) {
             // TODO: Why use constants for MIDI Ints, could we just bake them
             // into the bytecode instead?
-            var o = new object_1.Int(node.value);
+            const o = object_1.Int.from(node.value);
             this.emit(bytecode_1.Opcode.CONST, this.addConstant(o));
         }
         else if (node instanceof ast.BooleanLiteral) {
@@ -2937,21 +2784,21 @@ var Compiler = /** @class */ (function () {
             if (node.name) {
                 this.symbolTable.setSelf(node.name);
             }
-            node.parameters.forEach(function (param) {
-                _this.symbolTable.add(param.value);
+            node.parameters.forEach((param) => {
+                this.symbolTable.add(param.value);
             });
             this.compile(node.body);
-            var _a = this.symbolTable, freeSymbols = _a.freeSymbols, numSymbols = _a.numSymbols;
+            const { freeSymbols, numSymbols } = this.symbolTable;
             if (this.scope().lastInstruction.opcode !== bytecode_1.Opcode.RET) {
                 this.emit(bytecode_1.Opcode.NULL);
                 this.emit(bytecode_1.Opcode.RET);
             }
-            var instructions = this.popScope();
+            const instructions = this.popScope();
             if (!instructions) {
                 throw new errors_1.CompilerError('Error compiling function', node.token);
             }
-            freeSymbols.forEach(function (sym) {
-                var opcode;
+            freeSymbols.forEach((sym) => {
+                let opcode;
                 switch (sym.type) {
                     case symbols_1.ScopeType.FREE:
                         opcode = bytecode_1.Opcode.GETC;
@@ -2968,11 +2815,11 @@ var Compiler = /** @class */ (function () {
                     default:
                         opcode = bytecode_1.Opcode.GET;
                 }
-                _this.emit(opcode, sym.index);
+                this.emit(opcode, sym.index);
             });
-            var repr = node.toString();
-            var CallableConstructor = node instanceof ast.FunctionLiteral ? object_1.Fn : object_1.Gen;
-            var fn = new CallableConstructor(instructions, repr, numSymbols, node.parameters.length);
+            const repr = node.toString();
+            const CallableConstructor = node instanceof ast.FunctionLiteral ? object_1.Fn : object_1.Gen;
+            const fn = new CallableConstructor(instructions, repr, numSymbols, node.parameters.length);
             this.emit(bytecode_1.Opcode.CLOSURE, this.addConstant(fn), freeSymbols.length);
         }
         else if (node instanceof ast.YieldStatement) {
@@ -3011,18 +2858,18 @@ var Compiler = /** @class */ (function () {
             this.emit(bytecode_1.Opcode.RET);
         }
         else if (node instanceof ast.ForStatement) {
-            var identifier = this.symbolTable.add(node.identifier.value);
-            var setter = this.symbolTable.type === symbols_1.ScopeType.GLOBAL
+            const identifier = this.symbolTable.add(node.identifier.value);
+            const setter = this.symbolTable.type === symbols_1.ScopeType.GLOBAL
                 ? bytecode_1.Opcode.SETG
                 : bytecode_1.Opcode.SET;
-            var getter = this.symbolTable.type === symbols_1.ScopeType.GLOBAL
+            const getter = this.symbolTable.type === symbols_1.ScopeType.GLOBAL
                 ? bytecode_1.Opcode.GETG
                 : bytecode_1.Opcode.GET;
-            var counter = this.symbolTable.addIota();
-            var collection = this.symbolTable.addIota();
-            var incr = this.addConstant(new object_1.Int(1));
+            const counter = this.symbolTable.addIota();
+            const collection = this.symbolTable.addIota();
+            const incr = this.addConstant(object_1.Int.from(1));
             // Set counter
-            this.emit(bytecode_1.Opcode.CONST, this.addConstant(new object_1.Int(0)));
+            this.emit(bytecode_1.Opcode.CONST, this.addConstant(object_1.Int.from(0)));
             this.emit(setter, counter);
             // Save collection
             this.compile(node.collection);
@@ -3034,7 +2881,7 @@ var Compiler = /** @class */ (function () {
             this.emit(bytecode_1.Opcode.LEN);
             this.emit(getter, counter);
             this.emit(bytecode_1.Opcode.GT);
-            var jumpOut = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
+            const jumpOut = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
             // Set the current array item in the local variable
             this.emit(getter, collection);
             this.emit(getter, counter);
@@ -3050,7 +2897,7 @@ var Compiler = /** @class */ (function () {
             this.emit(bytecode_1.Opcode.JMP, this.loopStarts[this.loopStarts.length - 1]);
             this.replaceInstruction(jumpOut, this.instructions().length);
             while (this.breaks[this.breaks.length - 1].length) {
-                var brk = this.breaks[this.breaks.length - 1].pop();
+                const brk = this.breaks[this.breaks.length - 1].pop();
                 if (brk) {
                     this.replaceInstruction(brk, this.instructions().length);
                 }
@@ -3062,13 +2909,12 @@ var Compiler = /** @class */ (function () {
             this.loopStarts.push(this.instructions().length);
             this.breaks.push([]);
             this.compile(node.condition);
-            var jumpToElse = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
+            const jumpToElse = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
             this.compile(node.block);
-            this.removeInstructionIf(bytecode_1.Opcode.POP);
             this.emit(bytecode_1.Opcode.JMP, this.loopStarts[this.loopStarts.length - 1]);
             this.replaceInstruction(jumpToElse, this.instructions().length);
             while (this.breaks[this.breaks.length - 1].length) {
-                var brk = this.breaks[this.breaks.length - 1].pop();
+                const brk = this.breaks[this.breaks.length - 1].pop();
                 if (brk) {
                     this.replaceInstruction(brk, this.instructions().length);
                 }
@@ -3097,7 +2943,7 @@ var Compiler = /** @class */ (function () {
                 this.compile(node.duration);
             }
             else {
-                this.emit(bytecode_1.Opcode.CONST, this.addConstant(new object_1.Int(1)));
+                this.emit(bytecode_1.Opcode.CONST, this.addConstant(object_1.Int.from(1)));
             }
             this.emit(bytecode_1.Opcode.SKIP);
         }
@@ -3108,7 +2954,7 @@ var Compiler = /** @class */ (function () {
             this.compile(node.message);
             this.emit(bytecode_1.Opcode.CC);
         }
-    };
+    }
     /**
      * Add a new scope item onto the stack.
      *
@@ -3116,32 +2962,32 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.pushScope = function (symbolTable) {
+    pushScope(symbolTable) {
         this.scopeIndex++;
         this.scopes.push({
             instructions: new Uint8Array(0),
             lastInstruction: {
                 opcode: bytecode_1.Opcode.NOT_IMPLEMENTED,
-                position: -1
+                position: -1,
             },
             previousInstruction: {
                 opcode: bytecode_1.Opcode.NOT_IMPLEMENTED,
-                position: -1
-            }
+                position: -1,
+            },
         });
         if (symbolTable) {
             symbolTable.parent = this.symbolTable;
             this.symbolTable = symbolTable;
         }
         else if (this.symbolTable.type === symbols_1.ScopeType.NATIVE) {
-            var globals = symbols_1.SymbolTable.createGlobalSymbolTable();
+            const globals = symbols_1.SymbolTable.createGlobalSymbolTable();
             globals.parent = this.symbolTable;
             this.symbolTable = globals;
         }
         else {
             this.symbolTable = new symbols_1.SymbolTable(symbols_1.ScopeType.LOCAL, this.symbolTable);
         }
-    };
+    }
     /**
      * Remove the topmost scope object and return its instructions.
      *
@@ -3149,7 +2995,7 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.popScope = function () {
+    popScope() {
         var _a;
         if (!this.scopeIndex || !this.symbolTable.parent) {
             return;
@@ -3157,7 +3003,7 @@ var Compiler = /** @class */ (function () {
         this.symbolTable = this.symbolTable.parent;
         this.scopeIndex--;
         return (_a = this.scopes.pop()) === null || _a === void 0 ? void 0 : _a.instructions;
-    };
+    }
     /**
      * Keeps track of a program constant and return a reference.
      *
@@ -3166,25 +3012,25 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.addConstant = function (obj) {
+    addConstant(obj) {
         this.constants.push(obj);
         return this.constants.length - 1;
-    };
+    }
     /**
      * Removes the last instruction from the bytecode.
      *
      * @internal
      */
-    Compiler.prototype.removeInstruction = function () {
-        var position = this.scope().lastInstruction.position;
+    removeInstruction() {
+        const position = this.scope().lastInstruction.position;
         this.scope().lastInstruction.opcode =
             this.scope().previousInstruction.opcode;
         this.scope().lastInstruction.position =
             this.scope().previousInstruction.position;
-        var temp = new Uint8Array(position);
+        const temp = new Uint8Array(position);
         temp.set(this.instructions().slice(0, position));
         this.scope().instructions = temp;
-    };
+    }
     /**
      * Removes the last instruction from the bytecode if it matches
      * the supplied opcode.
@@ -3193,11 +3039,11 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.removeInstructionIf = function (op) {
+    removeInstructionIf(op) {
         if (this.scope().lastInstruction.opcode === op) {
             this.removeInstruction();
         }
-    };
+    }
     /**
      * Replaces an instruction in the program's bytecode.
      *
@@ -3206,14 +3052,10 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.replaceInstruction = function (position) {
-        var operands = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            operands[_i - 1] = arguments[_i];
-        }
-        var op = this.instructions()[position];
-        this.instructions().set(bytecode_1.createInstruction.apply(void 0, __spreadArray([op], operands)), position);
-    };
+    replaceInstruction(position, ...operands) {
+        const op = this.instructions()[position];
+        this.instructions().set(bytecode_1.createInstruction(op, ...operands), position);
+    }
     /**
      * Add an instruction to the program's bytecode.
      *
@@ -3223,14 +3065,10 @@ var Compiler = /** @class */ (function () {
      *
      * @internal
      */
-    Compiler.prototype.emit = function (op) {
-        var operands = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            operands[_i - 1] = arguments[_i];
-        }
-        var instruction = bytecode_1.createInstruction.apply(void 0, __spreadArray([op], operands));
-        var position = this.instructions().length;
-        var temp = new Uint8Array(position + instruction.length);
+    emit(op, ...operands) {
+        const instruction = bytecode_1.createInstruction(op, ...operands);
+        const position = this.instructions().length;
+        const temp = new Uint8Array(position + instruction.length);
         temp.set(this.instructions());
         temp.set(instruction, position);
         this.scope().instructions = temp;
@@ -3241,91 +3079,61 @@ var Compiler = /** @class */ (function () {
         this.scope().lastInstruction.opcode = op;
         this.scope().lastInstruction.position = position;
         return position;
-    };
-    return Compiler;
-}());
+    }
+}
 exports.Compiler = Compiler;
 
 },{"./ast":8,"./builtins":9,"./bytecode":10,"./errors":12,"./object":15,"./symbols":19}],12:[function(require,module,exports){
 "use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.RuntimeError = exports.CompilerError = exports.SynError = exports.MeleeError = void 0;
 /**
  * Base language error class.
  */
-var MeleeError = /** @class */ (function (_super) {
-    __extends(MeleeError, _super);
-    function MeleeError(message, line, column, length) {
-        var _this = _super.call(this, message) || this;
-        _this.line = line;
-        _this.column = column;
-        _this.length = length;
-        _this.name = 'MeleeError';
-        return _this;
+class MeleeError extends Error {
+    constructor(message, line, column, length) {
+        super(message);
+        this.line = line;
+        this.column = column;
+        this.length = length;
+        this.name = 'MeleeError';
     }
-    return MeleeError;
-}(Error));
+}
 exports.MeleeError = MeleeError;
 /**
  * Error representing invalid syntax, tokens, and characters.
  */
-var SynError = /** @class */ (function (_super) {
-    __extends(SynError, _super);
-    function SynError(message, token) {
-        var _this = this;
-        var line = token.line, column = token.column, literal = token.literal;
-        _this = _super.call(this, message, line, column, literal.length) || this;
-        _this.name = 'SynError';
-        return _this;
+class SynError extends MeleeError {
+    constructor(message, token) {
+        const { line, column, literal } = token;
+        super(message, line, column, literal.length);
+        this.name = 'SynError';
     }
-    return SynError;
-}(MeleeError));
+}
 exports.SynError = SynError;
 /**
  * Error representing compilation issues.
  */
-var CompilerError = /** @class */ (function (_super) {
-    __extends(CompilerError, _super);
-    function CompilerError(message, token) {
-        var _this = this;
-        var line = token.line, column = token.column, literal = token.literal;
-        _this = _super.call(this, message, line, column, literal.length) || this;
-        _this.name = 'CompilerError';
-        return _this;
+class CompilerError extends MeleeError {
+    constructor(message, token) {
+        const { line, column, literal } = token;
+        super(message, line, column, literal.length);
+        this.name = 'CompilerError';
     }
-    return CompilerError;
-}(MeleeError));
+}
 exports.CompilerError = CompilerError;
 /**
  * Errors occurring during runtime VM execution.
  */
-var RuntimeError = /** @class */ (function (_super) {
-    __extends(RuntimeError, _super);
-    function RuntimeError(message, line, column, length) {
-        var _this = _super.call(this, message, line, column, length) || this;
-        _this.line = line;
-        _this.column = column;
-        _this.length = length;
-        _this.name = 'RuntimeError';
-        return _this;
+class RuntimeError extends MeleeError {
+    constructor(message, line, column, length) {
+        super(message, line, column, length);
+        this.line = line;
+        this.column = column;
+        this.length = length;
+        this.name = 'RuntimeError';
     }
-    return RuntimeError;
-}(MeleeError));
+}
 exports.RuntimeError = RuntimeError;
 
 },{}],13:[function(require,module,exports){
@@ -3338,54 +3146,47 @@ exports.RuntimeError = RuntimeError;
  * Copyright(c) 2021 Kyle Edwards <edwards.kyle.a@gmail.com>
  * Released under the MIT License.
  */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.obj = exports.errors = exports.ast = exports.KNOWN_LABELS = exports.disassemble = exports.Runtime = exports.Repl = exports.tokenIs = exports.VM = exports.Compiler = exports.Parser = exports.Lexer = void 0;
 /**
  * Abstract syntax tree mechanisms and node types.
  */
-var ast = require("./ast");
+const ast = require("./ast");
 exports.ast = ast;
 /**
  * Melee error types.
  */
-var errors = require("./errors");
+const errors = require("./errors");
 exports.errors = errors;
 /**
  * Melee object types.
  */
-var obj = require("./object");
+const obj = require("./object");
 exports.obj = obj;
 var lexer_1 = require("./lexer");
-__createBinding(exports, lexer_1, "Lexer");
+Object.defineProperty(exports, "Lexer", { enumerable: true, get: function () { return lexer_1.Lexer; } });
 var parser_1 = require("./parser");
-__createBinding(exports, parser_1, "Parser");
+Object.defineProperty(exports, "Parser", { enumerable: true, get: function () { return parser_1.Parser; } });
 var compiler_1 = require("./compiler");
-__createBinding(exports, compiler_1, "Compiler");
+Object.defineProperty(exports, "Compiler", { enumerable: true, get: function () { return compiler_1.Compiler; } });
 var vm_1 = require("./vm");
-__createBinding(exports, vm_1, "VM");
+Object.defineProperty(exports, "VM", { enumerable: true, get: function () { return vm_1.VM; } });
 var token_1 = require("./token");
-__createBinding(exports, token_1, "tokenIs");
+Object.defineProperty(exports, "tokenIs", { enumerable: true, get: function () { return token_1.tokenIs; } });
 var repl_1 = require("./repl");
-__createBinding(exports, repl_1, "Repl");
+Object.defineProperty(exports, "Repl", { enumerable: true, get: function () { return repl_1.Repl; } });
 var runtime_1 = require("./runtime");
-__createBinding(exports, runtime_1, "Runtime");
+Object.defineProperty(exports, "Runtime", { enumerable: true, get: function () { return runtime_1.Runtime; } });
 var bytecode_1 = require("./bytecode");
-__createBinding(exports, bytecode_1, "disassemble");
+Object.defineProperty(exports, "disassemble", { enumerable: true, get: function () { return bytecode_1.disassemble; } });
 var builtins_1 = require("./builtins");
-__createBinding(exports, builtins_1, "KNOWN_LABELS");
+Object.defineProperty(exports, "KNOWN_LABELS", { enumerable: true, get: function () { return builtins_1.KNOWN_LABELS; } });
 
 },{"./ast":8,"./builtins":9,"./bytecode":10,"./compiler":11,"./errors":12,"./lexer":14,"./object":15,"./parser":16,"./repl":17,"./runtime":18,"./token":20,"./vm":22}],14:[function(require,module,exports){
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Lexer = void 0;
-var token_1 = require("./token");
+const token_1 = require("./token");
 /**
  * Returns if the provided character is alphabetic.
  *
@@ -3421,13 +3222,13 @@ function isAlphaNumeric(char) {
 /**
  * Lexer class to create tokens from code string.
  */
-var Lexer = /** @class */ (function () {
+class Lexer {
     /**
      * Constructs a new lexer object.
      *
      * @param input - Code string
      */
-    function Lexer(
+    constructor(
     /**
      * Code snippet to be lexed.
      */
@@ -3446,7 +3247,7 @@ var Lexer = /** @class */ (function () {
      *
      * @internal
      */
-    Lexer.prototype.readChar = function () {
+    readChar() {
         if (this.readPosition >= this.input.length) {
             this.char = '';
         }
@@ -3463,38 +3264,38 @@ var Lexer = /** @class */ (function () {
         }
         this.position = this.readPosition;
         this.readPosition++;
-    };
+    }
     /**
      * Returns the next character if possible without advancing
      * the lexer's position.
      *
      * @internal
      */
-    Lexer.prototype.peekChar = function () {
+    peekChar() {
         if (this.readPosition >= this.input.length) {
             return '';
         }
         return this.input[this.readPosition];
-    };
+    }
     /**
      * Skips whitespace characters until a non-whitespace character
      * is reached.
      *
      * @internal
      */
-    Lexer.prototype.skipWhitespace = function () {
+    skipWhitespace() {
         while (this.char !== '' && ' \t\n\r'.indexOf(this.char) !== -1) {
             this.readChar();
         }
-    };
+    }
     /**
      * Attempts to read a numeral from the input text.
      *
      * @internal
      * @returns Numeral string
      */
-    Lexer.prototype.readIdentifier = function () {
-        var start = this.position;
+    readIdentifier() {
+        const start = this.position;
         if (isAlpha(this.char)) {
             this.readChar();
         }
@@ -3505,39 +3306,38 @@ var Lexer = /** @class */ (function () {
             this.readChar();
         }
         return this.input.slice(start, this.position);
-    };
+    }
     /**
      * Attempts to read a numeral from the input text.
      *
      * @returns Numeral string
      */
-    Lexer.prototype.readNumber = function () {
-        var start = this.position;
+    readNumber() {
+        const start = this.position;
         while (isNumeric(this.char)) {
             this.readChar();
         }
         return this.input.slice(start, this.position);
-    };
+    }
     /**
      * Creates a new token with the current cursor position.
      *
      * @returns New token
      */
-    Lexer.prototype.createToken = function (tokenType, literal, colOffset) {
-        if (colOffset === void 0) { colOffset = 0; }
-        var column = this.column - literal.length - colOffset;
-        var line = this.line;
+    createToken(tokenType, literal, colOffset = 0) {
+        let column = this.column - literal.length - colOffset;
+        let { line } = this;
         if (column < 0) {
             column = this.lastLineLength - literal.length;
             line--;
         }
         return {
-            tokenType: tokenType,
-            literal: literal,
-            line: line,
-            column: column
+            tokenType,
+            literal,
+            line,
+            column,
         };
-    };
+    }
     /**
      * Iterates over characters until it can determine the next
      * valid token.
@@ -3545,8 +3345,8 @@ var Lexer = /** @class */ (function () {
      * @public
      * @returns Next token
      */
-    Lexer.prototype.nextToken = function () {
-        var token = this.createToken('illegal', this.char);
+    nextToken() {
+        let token = this.createToken('illegal', this.char);
         this.skipWhitespace();
         switch (this.char) {
             case '=':
@@ -3625,7 +3425,7 @@ var Lexer = /** @class */ (function () {
                 }
                 else if (this.peekChar() == '/') {
                     this.readChar();
-                    var literal = '//';
+                    let literal = '//';
                     while (this.peekChar() != '\n' && this.peekChar() != '') {
                         this.readChar();
                         literal += this.char;
@@ -3689,7 +3489,7 @@ var Lexer = /** @class */ (function () {
                 break;
             default:
                 if (isAlpha(this.char)) {
-                    var literal = this.readIdentifier();
+                    const literal = this.readIdentifier();
                     return this.createToken(token_1.lookupIdentifier(literal), literal, 1);
                 }
                 if (isNumeric(this.char)) {
@@ -3698,9 +3498,8 @@ var Lexer = /** @class */ (function () {
         }
         this.readChar();
         return token;
-    };
-    return Lexer;
-}());
+    }
+}
 exports.Lexer = Lexer;
 
 },{"./token":20}],15:[function(require,module,exports){
@@ -3708,31 +3507,16 @@ exports.Lexer = Lexer;
 /**
  * Melee object types.
  */
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-exports.__esModule = true;
-exports.NOTES = exports.MIDI_VALUES = exports.isTruthy = exports.Hold = exports.MidiCC = exports.MidiNote = exports.VirtualSeq = exports.Seq = exports.Iterable = exports.Closure = exports.NativeFn = exports.Gen = exports.Fn = exports.Callable = exports.Arr = exports.Bool = exports.Int = exports.Yield = exports.Return = exports.Err = exports.Null = exports.Frame = void 0;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.provisionHold = exports.provisionMidiNote = exports.NOTES = exports.MIDI_VALUES = exports.isTruthy = exports.Hold = exports.MidiCC = exports.MidiNote = exports.VirtualSeq = exports.Seq = exports.Iterable = exports.Closure = exports.NativeFn = exports.Gen = exports.Fn = exports.Callable = exports.Arr = exports.Bool = exports.Int = exports.Yield = exports.Return = exports.Err = exports.Null = exports.Frame = void 0;
 /**
  * Call "stack" frame (might not be in the call stack) representing
  * a function's execution context.
  *
  * @public
  */
-var Frame = /** @class */ (function () {
-    function Frame(closure, base) {
+class Frame {
+    constructor(closure, base) {
         this.closure = closure;
         this.base = base;
         this.ip = -1;
@@ -3742,78 +3526,73 @@ var Frame = /** @class */ (function () {
      *
      * @returns Bytecode instructions
      */
-    Frame.prototype.instructions = function () {
+    instructions() {
         return this.closure.fn.instructions;
-    };
-    return Frame;
-}());
+    }
+}
 exports.Frame = Frame;
 /**
  * Null type, contains no additional data.
  *
  * @public
  */
-var Null = /** @class */ (function () {
-    function Null() {
+class Null {
+    constructor() {
         this.type = 'null';
         if (!Null.self) {
             Null.self = this;
         }
         return Null.self;
     }
-    Null.prototype.inspectObject = function () {
+    inspectObject() {
         return 'null';
-    };
-    return Null;
-}());
+    }
+}
 exports.Null = Null;
 /**
  * Error type. (To be implemented in the VM.)
  *
  * @public
  */
-var Err = /** @class */ (function () {
-    function Err(message) {
+class Err {
+    constructor(message) {
         this.message = message;
         this.type = 'error';
     }
-    Err.prototype.inspectObject = function () {
+    inspectObject() {
         return this.message;
-    };
-    return Err;
-}());
+    }
+}
 exports.Err = Err;
 /**
  * Internal return type, should not be exposed to runtimes.
  *
  * @internal
  */
-var Return = /** @class */ (function () {
-    function Return(value) {
+class Return {
+    constructor(value) {
         this.value = value;
         this.type = 'return';
     }
-    Return.prototype.inspectObject = function () {
+    inspectObject() {
         return this.value.inspectObject();
-    };
-    return Return;
-}());
+    }
+}
 exports.Return = Return;
 /**
  * Internal yield type, should not be exposed to runtimes.
  *
  * @internal
  */
-var Yield = /** @class */ (function () {
-    function Yield(value) {
+class Yield {
+    constructor(value) {
         this.value = value;
         this.type = 'yield';
     }
-    Yield.prototype.inspectObject = function () {
+    inspectObject() {
         return this.value.inspectObject();
-    };
-    return Yield;
-}());
+    }
+}
 exports.Yield = Yield;
 /**
  * Integer type, contains a `value` property containing the implementation
@@ -3821,181 +3600,171 @@ exports.Yield = Yield;
  *
  * @public
  */
-var Int = /** @class */ (function () {
-    function Int(value) {
+class Int {
+    constructor(value) {
         this.value = value;
         this.type = 'integer';
     }
-    Int.prototype.inspectObject = function () {
+    inspectObject() {
         return this.value.toString();
-    };
-    return Int;
-}());
+    }
+    static from(value) {
+        if (value < -256 || value > 255) {
+            return new Int(value);
+        }
+        return Int.SMALL_VALUES[value + 256];
+    }
+}
 exports.Int = Int;
+Int.SMALL_VALUES = new Array(512);
+for (let i = 0; i < 512; i++) {
+    Int.SMALL_VALUES[i] = new Int(i - 256);
+}
+/**
+ * Pre-generated integers
+ */
 /**
  * Boolean type, contains a `value` property containing the implementation
  * language's value.
  *
  * @public
  */
-var Bool = /** @class */ (function () {
-    function Bool(value) {
+class Bool {
+    constructor(value) {
         this.value = value;
         this.type = 'boolean';
-        if (value) {
-            if (!Bool.t)
-                Bool.t = this;
-            return Bool.t;
-        }
-        if (!Bool.f)
-            Bool.f = this;
-        return Bool.f;
     }
-    Bool.prototype.inspectObject = function () {
+    inspectObject() {
         return this.value ? 'true' : 'false';
-    };
-    return Bool;
-}());
+    }
+    static from(value) {
+        return value ? Bool.t : Bool.f;
+    }
+}
 exports.Bool = Bool;
+Bool.t = new Bool(true);
+Bool.f = new Bool(false);
 /**
  * Array type, contains an array (in the implementation language) containing
  * child BaseObjects.
  *
  * @public
  */
-var Arr = /** @class */ (function () {
-    function Arr(items) {
-        if (items === void 0) { items = []; }
+class Arr {
+    constructor(items = []) {
         this.items = items;
         this.type = 'array';
     }
-    Arr.prototype.inspectObject = function () {
-        return "[" + this.items
-            .map(function (item) { return item.inspectObject(); })
-            .join(', ') + "]";
-    };
-    return Arr;
-}());
+    inspectObject() {
+        return `[${this.items
+            .map((item) => item.inspectObject())
+            .join(', ')}]`;
+    }
+}
 exports.Arr = Arr;
 /**
  * Base callable class for functions and generators.
  *
  * @public
  */
-var Callable = /** @class */ (function () {
-    function Callable(instructions, repr, numLocals, numParams) {
-        if (numLocals === void 0) { numLocals = 0; }
-        if (numParams === void 0) { numParams = 0; }
+class Callable {
+    constructor(instructions, repr, numLocals = 0, numParams = 0) {
         this.instructions = instructions;
         this.repr = repr;
         this.numLocals = numLocals;
         this.numParams = numParams;
         this.type = 'callable';
     }
-    Callable.prototype.inspectObject = function () {
+    inspectObject() {
         return this.repr;
-    };
-    return Callable;
-}());
+    }
+}
 exports.Callable = Callable;
 /**
  * Callable function type.
  *
  * @public
  */
-var Fn = /** @class */ (function (_super) {
-    __extends(Fn, _super);
-    function Fn() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.type = 'function';
-        return _this;
+class Fn extends Callable {
+    constructor() {
+        super(...arguments);
+        this.type = 'function';
     }
-    return Fn;
-}(Callable));
+}
 exports.Fn = Fn;
 /**
  * Callable generator type. Always returns a `Seq` object.
  *
  * @public
  */
-var Gen = /** @class */ (function (_super) {
-    __extends(Gen, _super);
-    function Gen() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.type = 'generator';
-        return _this;
+class Gen extends Callable {
+    constructor() {
+        super(...arguments);
+        this.type = 'generator';
     }
-    return Gen;
-}(Callable));
+}
 exports.Gen = Gen;
 /**
  * Melee object wrapping a native function definition.
  *
  * @public
  */
-var NativeFn = /** @class */ (function () {
-    function NativeFn(label, handler) {
+class NativeFn {
+    constructor(label, handler) {
         this.label = label;
         this.handler = handler;
         this.type = 'native';
     }
-    NativeFn.prototype.inspectObject = function () {
-        return this.label + "() { <native code> }";
-    };
-    return NativeFn;
-}());
+    inspectObject() {
+        return `${this.label}() { <native code> }`;
+    }
+}
 exports.NativeFn = NativeFn;
 /**
  * Closure encapsulating scoped variables with a function or generator.
  *
  * @public
  */
-var Closure = /** @class */ (function () {
-    function Closure(fn, vars) {
-        if (vars === void 0) { vars = []; }
+class Closure {
+    constructor(fn, vars = []) {
         this.fn = fn;
         this.vars = vars;
         this.type = 'closure';
     }
-    Closure.prototype.inspectObject = function () {
+    inspectObject() {
         return this.fn.inspectObject();
-    };
-    return Closure;
-}());
+    }
+}
 exports.Closure = Closure;
 /**
  * Base class for iterable sequences.
  *
  * @public
  */
-var Iterable = /** @class */ (function () {
-    function Iterable() {
+class Iterable {
+    constructor() {
         this.type = 'sequence';
         this.done = false;
     }
-    Iterable.prototype.inspectObject = function () {
-        return "{seq status=" + (this.done ? 'done' : 'ongoing') + "}";
-    };
-    return Iterable;
-}());
+    inspectObject() {
+        return `{seq status=${this.done ? 'done' : 'ongoing'}}`;
+    }
+}
 exports.Iterable = Iterable;
 /**
  * Sequence type, instance of a generator execution.
  *
  * @public
  */
-var Seq = /** @class */ (function (_super) {
-    __extends(Seq, _super);
-    function Seq(generator, executionState) {
-        var _this = _super.call(this) || this;
-        _this.generator = generator;
-        _this.executionState = executionState;
-        _this.type = 'sequence';
-        _this.executionState.seq = _this; // Self-reference
-        return _this;
+class Seq extends Iterable {
+    constructor(generator, executionState) {
+        super();
+        this.generator = generator;
+        this.executionState = executionState;
+        this.type = 'sequence';
+        this.executionState.seq = this; // Self-reference
     }
-    return Seq;
-}(Iterable));
+}
 exports.Seq = Seq;
 /**
  * Virtual sequence type, instance of an array of objects with
@@ -4006,69 +3775,64 @@ exports.Seq = Seq;
  *
  * @public
  */
-var VirtualSeq = /** @class */ (function (_super) {
-    __extends(VirtualSeq, _super);
-    function VirtualSeq(next) {
-        var _this = _super.call(this) || this;
-        _this.next = next;
-        _this.type = 'sequence';
-        return _this;
+class VirtualSeq extends Iterable {
+    constructor(next) {
+        super();
+        this.next = next;
+        this.type = 'sequence';
     }
-    return VirtualSeq;
-}(Iterable));
+}
 exports.VirtualSeq = VirtualSeq;
 /**
  * MIDI note object to be used in musical runtimes.
  *
  * @public
  */
-var MidiNote = /** @class */ (function () {
-    function MidiNote(pitch, duration, velocity) {
+class MidiNote {
+    constructor(pitch, duration, velocity) {
         this.pitch = pitch;
         this.duration = duration;
         this.velocity = velocity;
         this.type = 'note';
     }
-    MidiNote.prototype.inspectObject = function () {
+    inspectObject() {
         if (this.pitch < 0) {
-            return "{skip " + this.duration + "}";
+            return `{skip ${this.duration}}`;
         }
-        return "{" + exports.NOTES[this.pitch] + " for " + this.duration + " vel=" + this.velocity + "}";
-    };
-    MidiNote.prototype.midiValue = function () {
+        return `{${exports.NOTES[this.pitch]} for ${this.duration} vel=${this.velocity}}`;
+    }
+    midiValue() {
         return {
             type: this.type,
-            data: [this.pitch, this.duration, this.velocity]
+            data: [this.pitch, this.duration, this.velocity],
         };
-    };
-    MidiNote.prototype.scientificNotation = function () {
+    }
+    scientificNotation() {
         return exports.NOTES[this.pitch];
-    };
-    return MidiNote;
-}());
+    }
+}
 exports.MidiNote = MidiNote;
 /**
  * MIDI CC message object to be used in musical runtimes.
  *
  * @public
  */
-var MidiCC = /** @class */ (function () {
-    function MidiCC(key, value) {
+class MidiCC {
+    constructor(key, value) {
         this.key = key;
         this.value = value;
         this.type = 'cc';
     }
-    MidiCC.prototype.inspectObject = function () {
-        return "{cc key=" + this.key + " val=" + this.value + "}";
-    };
-    MidiCC.prototype.midiValue = function () {
+    inspectObject() {
+        return `{cc key=${this.key} val=${this.value}}`;
+    }
+    midiValue() {
         return {
             type: this.type,
-            data: [this.key, this.value]
+            data: [this.key, this.value],
         };
-    };
-    return MidiCC;
-}());
+    }
+}
 exports.MidiCC = MidiCC;
 /**
  * Sentinel used to notify the runtime to skip over this
@@ -4077,21 +3841,20 @@ exports.MidiCC = MidiCC;
  *
  * @public
  */
-var Hold = /** @class */ (function () {
-    function Hold(pitch, duration) {
+class Hold {
+    constructor(pitch, duration) {
         this.pitch = pitch;
         this.duration = duration;
         this.type = 'hold';
     }
-    Hold.prototype.inspectObject = function () {
-        return "{hold " + this.duration + "}";
-    };
-    return Hold;
-}());
+    inspectObject() {
+        return `{hold ${this.duration}}`;
+    }
+}
 exports.Hold = Hold;
 /* Utilities */
-var NULL = new Null();
-var FALSE = new Bool(false);
+const NULL = new Null();
+const FALSE = Bool.from(false);
 /**
  * Returns false if 0, null, or false, otherwise true.
  *
@@ -4111,7 +3874,7 @@ exports.isTruthy = isTruthy;
  * Create a mapping of notes (in scientific pitch notation) to their
  * corresponding integer MIDI pitch value.
  */
-var NOTE_NAMES = [
+const NOTE_NAMES = [
     ['C'],
     ['C#', 'Db'],
     ['D'],
@@ -4125,62 +3888,75 @@ var NOTE_NAMES = [
     ['A#', 'Bb'],
     ['B'],
 ];
-var midi = {};
-var notes = [];
-var _loop_1 = function (index) {
-    var oct = Math.floor(index / 12) - 1;
-    var octStr = "" + (oct < 0 ? '_1' : oct);
-    var names = NOTE_NAMES[index % 12];
+const midi = {};
+const notes = [];
+for (let index = 0; index < 128; index++) {
+    const oct = Math.floor(index / 12) - 1;
+    const octStr = `${oct < 0 ? '_1' : oct}`;
+    const names = NOTE_NAMES[index % 12];
     if (!names) {
-        return "continue";
+        continue;
     }
-    names.forEach(function (n) {
-        midi["" + n + octStr] = new Int(index);
+    names.forEach((n) => {
+        midi[`${n}${octStr}`] = Int.from(index);
     });
-    notes.push("" + names[0] + octStr);
-};
-for (var index = 0; index < 128; index++) {
-    _loop_1(index);
+    notes.push(`${names[0]}${octStr}`);
 }
 exports.MIDI_VALUES = midi;
-exports.NOTES = notes;
+exports.NOTES = notes.map(n => n.replace(/_/g, '-'));
+const MIDI_POOL_SIZE = 1000;
+const MIDI_POOL = new Array(MIDI_POOL_SIZE);
+for (let i = 0; i < MIDI_POOL_SIZE; i++) {
+    MIDI_POOL[i] = new MidiNote(-1, 1, 0);
+}
+let MIDI_POOL_INDEX = 0;
+function provisionMidiNote(pitch, duration, velocity) {
+    const note = MIDI_POOL[MIDI_POOL_INDEX++];
+    if (MIDI_POOL_INDEX >= MIDI_POOL_SIZE) {
+        MIDI_POOL_INDEX = 0;
+    }
+    note.pitch = pitch;
+    note.duration = duration;
+    note.velocity = velocity;
+    return note;
+}
+exports.provisionMidiNote = provisionMidiNote;
+const HOLD_POOL_SIZE = 1000;
+const HOLD_POOL = new Array(HOLD_POOL_SIZE);
+for (let i = 0; i < HOLD_POOL_SIZE; i++) {
+    HOLD_POOL[i] = new Hold(-1, 0);
+}
+let HOLD_POOL_INDEX = 0;
+function provisionHold(pitch, duration) {
+    const note = HOLD_POOL[HOLD_POOL_INDEX++];
+    if (HOLD_POOL_INDEX >= HOLD_POOL_SIZE) {
+        HOLD_POOL_INDEX = 0;
+    }
+    note.pitch = pitch;
+    note.duration = duration;
+    return note;
+}
+exports.provisionHold = provisionHold;
 
 },{}],16:[function(require,module,exports){
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
-var token_1 = require("./token");
-var errors_1 = require("./errors");
-var ast = require("./ast");
+const token_1 = require("./token");
+const errors_1 = require("./errors");
+const ast = require("./ast");
 /**
  * AST child markers to detect unstable code.
  */
-var ChildMarker = /** @class */ (function () {
-    function ChildMarker(hasYield, hasBreak, hasContinue, hasReturn, isLoop) {
-        if (hasYield === void 0) { hasYield = false; }
-        if (hasBreak === void 0) { hasBreak = false; }
-        if (hasContinue === void 0) { hasContinue = false; }
-        if (hasReturn === void 0) { hasReturn = false; }
-        if (isLoop === void 0) { isLoop = false; }
+class ChildMarker {
+    constructor(hasYield = false, hasBreak = false, hasContinue = false, hasReturn = false, isLoop = false) {
         this.hasYield = hasYield;
         this.hasBreak = hasBreak;
         this.hasContinue = hasContinue;
         this.hasReturn = hasReturn;
         this.isLoop = isLoop;
     }
-    return ChildMarker;
-}());
+}
 /**
  * Defines a precedence order for operations
  * when evaluating an expression.
@@ -4203,7 +3979,7 @@ var precedence;
 /**
  * Assigns precedence values to tokens.
  */
-var PRECEDENCE_MAP = {
+const PRECEDENCE_MAP = {
     assign: precedence.ASN,
     pluseq: precedence.ASN,
     minuseq: precedence.ASN,
@@ -4227,13 +4003,13 @@ var PRECEDENCE_MAP = {
     lbracket: precedence.IDX,
     identifier: precedence.ERR,
     number: precedence.ERR,
-    note: precedence.ERR
+    note: precedence.ERR,
 };
 /**
  * Parses tokens to generate an AST (abstract syntax tree).
  */
-var Parser = /** @class */ (function () {
-    function Parser(
+class Parser {
+    constructor(
     /**
      * Lexer instantiated with code to be parsed.
      */
@@ -4248,8 +4024,8 @@ var Parser = /** @class */ (function () {
         this.errors = [];
         this.prefixParseFns = {
             identifier: this.parseIdentifier.bind(this),
-            "true": this.parseBooleanLiteral.bind(this),
-            "false": this.parseBooleanLiteral.bind(this),
+            true: this.parseBooleanLiteral.bind(this),
+            false: this.parseBooleanLiteral.bind(this),
             int: this.parseIntegerLiteral.bind(this),
             fn: this.parseFunctionLiteral.bind(this),
             gen: this.parseGeneratorLiteral.bind(this),
@@ -4257,11 +4033,11 @@ var Parser = /** @class */ (function () {
             minus: this.parsePrefixExpression.bind(this),
             lparen: this.parseParentheticalExpression.bind(this),
             lbracket: this.parseArrayLiteral.bind(this),
-            "if": this.parseConditional.bind(this),
+            if: this.parseConditional.bind(this),
             next: this.parseNext.bind(this),
             note: this.parseNoteExpression.bind(this),
             skip: this.parseSkipExpression.bind(this),
-            cc: this.parseCCExpression.bind(this)
+            cc: this.parseCCExpression.bind(this),
         };
         this.infixParseFns = {
             plus: this.parseInfixExpression.bind(this),
@@ -4284,7 +4060,7 @@ var Parser = /** @class */ (function () {
             minuseq: this.parseCompoundAssignmentExpression.bind(this),
             asteriskeq: this.parseCompoundAssignmentExpression.bind(this),
             rslasheq: this.parseCompoundAssignmentExpression.bind(this),
-            percenteq: this.parseCompoundAssignmentExpression.bind(this)
+            percenteq: this.parseCompoundAssignmentExpression.bind(this),
         };
         this.curr = this.lexer.nextToken();
         this.peek = this.lexer.nextToken();
@@ -4295,9 +4071,9 @@ var Parser = /** @class */ (function () {
      *
      * @internal
      */
-    Parser.prototype.nextToken = function () {
+    nextToken() {
         if (this.peek.tokenType === 'illegal') {
-            this.errors.push(new errors_1.SynError("Unexpected token " + this.peek.literal, this.curr));
+            this.errors.push(new errors_1.SynError(`Unexpected token ${this.peek.literal}`, this.curr));
         }
         while (this.peek.tokenType === 'comment') {
             this.curr = this.peek;
@@ -4305,25 +4081,25 @@ var Parser = /** @class */ (function () {
         }
         this.curr = this.peek;
         this.peek = this.lexer.nextToken();
-    };
+    }
     /**
      * Starts as the first lexer token and attempts to parse the full program.
      *
      * @returns {ast.Program} Top-level program AST node
      */
-    Parser.prototype.parse = function () {
-        var program = new ast.Program();
+    parse() {
+        const program = new ast.Program();
         while (!token_1.tokenIs(this.curr, 'eof')) {
-            var stmt = this.parseStatement();
+            const stmt = this.parseStatement();
             if (stmt) {
                 program.statements.push(stmt);
             }
             this.nextToken();
         }
         return program;
-    };
+    }
     /** Statements **/
-    Parser.prototype.parseStatement = function () {
+    parseStatement() {
         while (this.curr.tokenType === 'semicolon') {
             this.nextToken();
         }
@@ -4337,9 +4113,9 @@ var Parser = /** @class */ (function () {
             case 'while':
             case 'loop': {
                 this.childMarkers.push(new ChildMarker());
-                var token = this.curr;
-                var result = this.parseWhile();
-                var _a = this.childMarker(), hasBreak = _a.hasBreak, hasReturn = _a.hasReturn, hasYield = _a.hasYield;
+                const token = this.curr;
+                const result = this.parseWhile();
+                const { hasBreak, hasReturn, hasYield } = this.childMarker();
                 this.childMarkers.pop();
                 if (token.tokenType === 'while') {
                     return result;
@@ -4357,13 +4133,13 @@ var Parser = /** @class */ (function () {
             }
             case 'continue': {
                 this.childMarker().hasContinue = true;
-                var stmt = new ast.ContinueStatement(this.curr);
+                const stmt = new ast.ContinueStatement(this.curr);
                 this.nextToken();
                 return stmt;
             }
             case 'break': {
                 this.childMarker().hasBreak = true;
-                var stmt = new ast.BreakStatement(this.curr);
+                const stmt = new ast.BreakStatement(this.curr);
                 this.nextToken();
                 return stmt;
             }
@@ -4374,67 +4150,67 @@ var Parser = /** @class */ (function () {
             default:
                 return this.parseExpressionStatement();
         }
-    };
-    Parser.prototype.parseDeclareStatement = function () {
-        var name = new ast.Identifier(this.curr, this.curr.literal);
+    }
+    parseDeclareStatement() {
+        const name = new ast.Identifier(this.curr, this.curr.literal);
         this.nextToken();
-        var declare = this.curr;
+        const declare = this.curr;
         this.nextToken();
-        var value = this.parseExpression(precedence.NIL);
+        const value = this.parseExpression(precedence.NIL);
         if (value instanceof ast.FunctionLiteral ||
             value instanceof ast.GeneratorLiteral) {
             value.name = name.value;
         }
         this.skipSemicolon();
         return new ast.DeclareStatement(declare, name, value);
-    };
-    Parser.prototype.parseReturnStatement = function () {
-        var token = this.curr;
+    }
+    parseReturnStatement() {
+        const token = this.curr;
         this.nextToken();
-        var value = this.parseExpression(precedence.NIL);
+        const value = this.parseExpression(precedence.NIL);
         this.skipSemicolon();
         return new ast.ReturnStatement(token, value);
-    };
-    Parser.prototype.parseYieldStatement = function () {
-        var token = this.curr;
+    }
+    parseYieldStatement() {
+        const token = this.curr;
         this.nextToken();
-        var value = this.parseExpression(precedence.NIL);
+        const value = this.parseExpression(precedence.NIL);
         this.skipSemicolon();
         return new ast.YieldStatement(token, value);
-    };
-    Parser.prototype.parseExpressionStatement = function () {
-        var token = this.curr;
-        var expr = this.parseExpression(precedence.NIL);
+    }
+    parseExpressionStatement() {
+        const token = this.curr;
+        const expr = this.parseExpression(precedence.NIL);
         this.skipSemicolon();
         return new ast.ExpressionStatement(token, expr);
-    };
-    Parser.prototype.parseBlockStatement = function () {
-        var block = new ast.BlockStatement(this.curr, []);
+    }
+    parseBlockStatement() {
+        const block = new ast.BlockStatement(this.curr, []);
         this.nextToken();
         while (!token_1.tokenIs(this.curr, 'rbrace') &&
             !token_1.tokenIs(this.curr, 'eof')) {
-            var stmt = this.parseStatement();
+            const stmt = this.parseStatement();
             if (stmt) {
                 block.statements.push(stmt);
             }
             this.nextToken();
         }
         return block;
-    };
+    }
     /** Expressions **/
-    Parser.prototype.parseExpression = function (precedence) {
+    parseExpression(precedence) {
         // Attempt to parse a prefix expression
-        var prefixFn = this.prefixParseFns[this.curr.tokenType];
+        const prefixFn = this.prefixParseFns[this.curr.tokenType];
         if (!prefixFn) {
-            this.errors.push(new errors_1.SynError("Unexpected token `" + this.curr.literal + "`", this.curr));
+            this.errors.push(new errors_1.SynError(`Unexpected token \`${this.curr.literal}\``, this.curr));
             return;
         }
-        var left = prefixFn.call(this);
+        let left = prefixFn.call(this);
         while (!token_1.tokenIs(this.peek, 'semicolon') &&
             precedence < this.peekPrecedence()) {
-            var infixFn = this.infixParseFns[this.peek.tokenType];
+            const infixFn = this.infixParseFns[this.peek.tokenType];
             if (!infixFn) {
-                this.errors.push(new errors_1.SynError("Unexpected token in infix expression " + this.curr.literal, this.curr));
+                this.errors.push(new errors_1.SynError(`Unexpected token in infix expression ${this.curr.literal}`, this.curr));
                 return left;
             }
             this.nextToken();
@@ -4443,139 +4219,139 @@ var Parser = /** @class */ (function () {
             }
         }
         return left;
-    };
-    Parser.prototype.parsePrefixExpression = function () {
-        var token = this.curr;
-        var operator = this.curr.literal;
+    }
+    parsePrefixExpression() {
+        const token = this.curr;
+        const operator = this.curr.literal;
         this.nextToken();
-        var right = this.parseExpression(precedence.PRF);
+        const right = this.parseExpression(precedence.PRF);
         return new ast.PrefixExpression(token, operator, right);
-    };
-    Parser.prototype.parseInfixExpression = function (left) {
-        var token = this.curr;
-        var operator = this.curr.literal;
-        var leftPrecedence = this.currPrecedence();
+    }
+    parseInfixExpression(left) {
+        const token = this.curr;
+        const operator = this.curr.literal;
+        const leftPrecedence = this.currPrecedence();
         this.nextToken();
-        var right = this.parseExpression(leftPrecedence);
+        const right = this.parseExpression(leftPrecedence);
         return new ast.InfixExpression(token, left, operator, right);
-    };
-    Parser.prototype.parseCompoundAssignmentExpression = function (left) {
+    }
+    parseCompoundAssignmentExpression(left) {
         if (!left) {
             throw new Error('Error compiling compound assignment expression');
         }
-        var token = this.curr;
-        var operator = this.curr.literal;
+        const token = this.curr;
+        const operator = this.curr.literal;
         this.nextToken();
-        var right = this.parseExpression(precedence.NIL);
+        const right = this.parseExpression(precedence.NIL);
         return new ast.CompoundAssignExpression(token, left, operator, right);
-    };
-    Parser.prototype.parseAssignExpression = function (left) {
+    }
+    parseAssignExpression(left) {
         if (!left) {
             throw new Error('Error compiling assignment expression');
         }
-        var token = this.curr;
+        const token = this.curr;
         this.nextToken();
-        var value = this.parseExpression(precedence.NIL);
+        const value = this.parseExpression(precedence.NIL);
         return new ast.AssignExpression(token, left, value);
-    };
-    Parser.prototype.parseIndexExpression = function (collection) {
-        var token = this.curr;
+    }
+    parseIndexExpression(collection) {
+        const token = this.curr;
         if (!collection)
             return;
         this.nextToken();
-        var index = this.parseExpression(precedence.NIL);
+        const index = this.parseExpression(precedence.NIL);
         if (!index)
             return;
         if (!this.expectPeek('rbracket'))
             return;
         return new ast.IndexExpression(token, collection, index);
-    };
-    Parser.prototype.parseNoteExpression = function () {
-        var token = this.curr;
+    }
+    parseNoteExpression() {
+        const token = this.curr;
         this.nextToken();
-        var data = this.parseExpression(precedence.NIL);
+        const data = this.parseExpression(precedence.NIL);
         return new ast.NoteExpression(token, data);
-    };
-    Parser.prototype.parseSkipExpression = function () {
-        var token = this.curr;
+    }
+    parseSkipExpression() {
+        const token = this.curr;
         this.nextToken();
-        var duration;
+        let duration;
         if (this.curr.tokenType !== 'semicolon') {
             duration = this.parseExpression(precedence.NIL);
         }
         return new ast.SkipExpression(token, duration);
-    };
-    Parser.prototype.parseCCExpression = function () {
-        var token = this.curr;
+    }
+    parseCCExpression() {
+        const token = this.curr;
         this.nextToken();
-        var message = this.parseExpression(precedence.NIL);
+        const message = this.parseExpression(precedence.NIL);
         return new ast.CCExpression(token, message);
-    };
-    Parser.prototype.parseParentheticalExpression = function () {
+    }
+    parseParentheticalExpression() {
         this.nextToken();
-        var expr = this.parseExpression(precedence.NIL);
+        const expr = this.parseExpression(precedence.NIL);
         if (!this.expectPeek('rparen')) {
             return;
         }
         return expr;
-    };
-    Parser.prototype.parseIdentifier = function () {
+    }
+    parseIdentifier() {
         return new ast.Identifier(this.curr, this.curr.literal);
-    };
-    Parser.prototype.parseBooleanLiteral = function () {
+    }
+    parseBooleanLiteral() {
         return new ast.BooleanLiteral(this.curr, this.curr.literal === 'true');
-    };
-    Parser.prototype.parseIntegerLiteral = function () {
+    }
+    parseIntegerLiteral() {
         return new ast.IntegerLiteral(this.curr, parseInt(this.curr.literal, 10));
-    };
-    Parser.prototype.parseArrayLiteral = function () {
+    }
+    parseArrayLiteral() {
         return new ast.ArrayLiteral(this.curr, this.parseExpressionList('rbracket'));
-    };
-    Parser.prototype.parseFunctionLiteral = function () {
-        var token = this.curr;
+    }
+    parseFunctionLiteral() {
+        const token = this.curr;
         if (!this.expectPeek('lparen'))
             return;
-        var parameters = this.parseFunctionParameters();
+        const parameters = this.parseFunctionParameters();
         if (!this.expectPeek('lbrace'))
             return;
-        var body = this.parseBlockStatement();
+        const body = this.parseBlockStatement();
         return new ast.FunctionLiteral(token, parameters, body);
-    };
-    Parser.prototype.parseGeneratorLiteral = function () {
-        var token = this.curr;
+    }
+    parseGeneratorLiteral() {
+        const token = this.curr;
         if (!this.expectPeek('lparen'))
             return;
-        var parameters = this.parseFunctionParameters();
+        const parameters = this.parseFunctionParameters();
         if (!this.expectPeek('lbrace'))
             return;
-        var body = this.parseBlockStatement();
+        const body = this.parseBlockStatement();
         return new ast.GeneratorLiteral(token, parameters, body);
-    };
-    Parser.prototype.parseNext = function () {
-        var token = this.curr;
+    }
+    parseNext() {
+        const token = this.curr;
         this.nextToken();
-        var right = this.parseExpression(precedence.PRF);
+        const right = this.parseExpression(precedence.PRF);
         return new ast.NextExpression(token, right);
-    };
-    Parser.prototype.parseConditional = function () {
-        var token = this.curr;
+    }
+    parseConditional() {
+        const token = this.curr;
         if (!this.expectPeek('lparen'))
             return;
         this.nextToken();
-        var condition = this.parseExpression(precedence.NIL);
+        const condition = this.parseExpression(precedence.NIL);
         if (!this.expectPeek('rparen'))
             return;
         if (!this.expectPeek('lbrace'))
             return;
         if (!condition)
             return;
-        var consequence = this.parseBlockStatement();
-        var alternative;
+        const consequence = this.parseBlockStatement();
+        let alternative;
         if (token_1.tokenIs(this.peek, 'else')) {
             this.nextToken();
             if (token_1.tokenIs(this.peek, 'if')) {
                 this.nextToken();
-                var stmt = this.parseStatement();
+                const stmt = this.parseStatement();
                 if (!stmt) {
                     throw new errors_1.SynError('Invalid `else if` clause', this.peek);
                 }
@@ -4588,34 +4364,38 @@ var Parser = /** @class */ (function () {
             }
         }
         return new ast.IfExpression(token, condition, consequence, alternative);
-    };
-    Parser.prototype.parseFor = function () {
-        var token = this.curr;
+    }
+    parseFor() {
+        const token = this.curr;
         if (!this.expectPeek('identifier')) {
             return;
         }
-        var identifier = this.parseIdentifier();
+        const identifier = this.parseIdentifier();
         if (!this.expectPeek('in'))
             return;
         this.nextToken();
-        var collToken = this.curr;
-        var collection = this.parseExpression(precedence.NIL);
+        const collToken = this.curr;
+        const collection = this.parseExpression(precedence.NIL);
         if (!collection) {
             this.errors.push(new errors_1.SynError('`for` expression must follow the `for var in collection {}` syntax', collToken));
             return;
         }
         if (!this.expectPeek('lbrace'))
             return;
-        var block = this.parseBlockStatement();
+        const block = this.parseBlockStatement();
         return new ast.ForStatement(token, identifier, collection, block);
-    };
-    Parser.prototype.parseWhile = function () {
-        var token = this.curr;
+    }
+    parseWhile() {
+        const token = this.curr;
         // If using the syntactic sugar `loop` keyword, just
         // create a true boolean conditional.
-        var condition;
+        let condition;
         if (token.tokenType === 'loop') {
-            condition = new ast.BooleanLiteral(__assign(__assign({}, token), { tokenType: 'true', literal: 'true' }), true);
+            condition = new ast.BooleanLiteral({
+                ...token,
+                tokenType: 'true',
+                literal: 'true',
+            }, true);
         }
         else {
             if (!this.expectPeek('lparen'))
@@ -4629,27 +4409,27 @@ var Parser = /** @class */ (function () {
             return;
         if (!condition)
             return;
-        var block = this.parseBlockStatement();
+        const block = this.parseBlockStatement();
         return new ast.WhileStatement(token, condition, block);
-    };
-    Parser.prototype.parseCallExpression = function (left) {
-        var token = this.curr;
-        var args = this.parseExpressionList('rparen');
+    }
+    parseCallExpression(left) {
+        const token = this.curr;
+        const args = this.parseExpressionList('rparen');
         return new ast.CallExpression(token, left, args);
-    };
+    }
     /** Utilities **/
-    Parser.prototype.peekPrecedence = function () {
+    peekPrecedence() {
         return PRECEDENCE_MAP[this.peek.tokenType]
             ? PRECEDENCE_MAP[this.peek.tokenType]
             : precedence.NIL;
-    };
-    Parser.prototype.currPrecedence = function () {
+    }
+    currPrecedence() {
         return PRECEDENCE_MAP[this.curr.tokenType]
             ? PRECEDENCE_MAP[this.curr.tokenType]
             : precedence.NIL;
-    };
-    Parser.prototype.parseFunctionParameters = function () {
-        var parameters = [];
+    }
+    parseFunctionParameters() {
+        const parameters = [];
         if (token_1.tokenIs(this.peek, 'rparen')) {
             this.nextToken();
             return parameters;
@@ -4666,15 +4446,15 @@ var Parser = /** @class */ (function () {
         }
         this.nextToken();
         return parameters;
-    };
-    Parser.prototype.parseExpressionList = function (endChar) {
-        var args = [];
+    }
+    parseExpressionList(endChar) {
+        const args = [];
         if (token_1.tokenIs(this.peek, endChar)) {
             this.nextToken();
             return args;
         }
         this.nextToken();
-        var expr = this.parseExpression(precedence.NIL);
+        let expr = this.parseExpression(precedence.NIL);
         if (expr) {
             args.push(expr);
         }
@@ -4691,54 +4471,53 @@ var Parser = /** @class */ (function () {
         }
         this.nextToken();
         return args;
-    };
-    Parser.prototype.expectPeek = function (t) {
+    }
+    expectPeek(t) {
         if (token_1.tokenIs(this.peek, t)) {
             this.nextToken();
             return true;
         }
         else {
-            var tokenType = this.peek.tokenType;
-            var msg = "Expected next token to be " + t + ", got " + tokenType + " instead";
+            const { tokenType } = this.peek;
+            const msg = `Expected next token to be ${t}, got ${tokenType} instead`;
             this.errors.push(new errors_1.SynError(msg, this.peek));
             return false;
         }
-    };
-    Parser.prototype.skipSemicolon = function () {
+    }
+    skipSemicolon() {
         if (token_1.tokenIs(this.peek, 'semicolon')) {
             this.nextToken();
         }
-    };
-    Parser.prototype.childMarker = function () {
+    }
+    childMarker() {
         if (this.childMarkers.length) {
             return this.childMarkers[this.childMarkers.length - 1];
         }
-        var childMarker = new ChildMarker();
+        const childMarker = new ChildMarker();
         this.childMarkers.push(childMarker);
         return childMarker;
-    };
-    return Parser;
-}());
+    }
+}
 exports.Parser = Parser;
 
 },{"./ast":8,"./errors":12,"./token":20}],17:[function(require,module,exports){
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Repl = void 0;
-var compiler_1 = require("./compiler");
-var lexer_1 = require("./lexer");
-var parser_1 = require("./parser");
-var symbols_1 = require("./symbols");
-var vm_1 = require("./vm");
-var MAX_REPL_HISTORY = 100;
+const compiler_1 = require("./compiler");
+const lexer_1 = require("./lexer");
+const parser_1 = require("./parser");
+const symbols_1 = require("./symbols");
+const vm_1 = require("./vm");
+const MAX_REPL_HISTORY = 100;
 /**
  * Read-eval-print loop for executing code from the command line.
  */
-var Repl = /** @class */ (function () {
+class Repl {
     /**
      * Constructs a new REPL instance.
      */
-    function Repl() {
+    constructor() {
         this.constants = [];
         this.history = [];
         this.globals = vm_1.createGlobalVariables();
@@ -4750,15 +4529,15 @@ var Repl = /** @class */ (function () {
      * @param input - Code snippet
      * @returns Stringified output
      */
-    Repl.prototype.exec = function (input) {
-        var lexer = new lexer_1.Lexer(input);
-        var parser = new parser_1.Parser(lexer);
-        var program = parser.parse();
-        var compiler = new compiler_1.Compiler(this.constants, this.symbolTable);
+    exec(input) {
+        const lexer = new lexer_1.Lexer(input);
+        const parser = new parser_1.Parser(lexer);
+        const program = parser.parse();
+        const compiler = new compiler_1.Compiler(this.constants, this.symbolTable);
         compiler.compile(program);
-        var vm = new vm_1.VM(compiler, this.globals);
+        const vm = new vm_1.VM(compiler, this.globals);
         vm.run();
-        var obj = vm.lastElement();
+        const obj = vm.lastElement();
         if (obj) {
             return obj.inspectObject();
         }
@@ -4767,53 +4546,45 @@ var Repl = /** @class */ (function () {
             this.history.shift();
         }
         return 'undefined';
-    };
+    }
     /**
      * Get a previously run code snippet.
      *
      * @param offset - Position from end of history record
      * @returns Previously run snippet
      */
-    Repl.prototype.getPreviousEntry = function (offset) {
-        if (offset === void 0) { offset = 0; }
+    getPreviousEntry(offset = 0) {
         if (offset >= MAX_REPL_HISTORY)
             return;
         return this.history[MAX_REPL_HISTORY - offset - 1];
-    };
-    return Repl;
-}());
+    }
+}
 exports.Repl = Repl;
 
 },{"./compiler":11,"./lexer":14,"./parser":16,"./symbols":19,"./vm":22}],18:[function(require,module,exports){
 "use strict";
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Runtime = void 0;
-var bytecode_1 = require("./bytecode");
-var compiler_1 = require("./compiler");
-var errors_1 = require("./errors");
-var lexer_1 = require("./lexer");
-var object_1 = require("./object");
-var parser_1 = require("./parser");
-var symbols_1 = require("./symbols");
-var vm_1 = require("./vm");
-var NULL = new object_1.Null();
+const bytecode_1 = require("./bytecode");
+const compiler_1 = require("./compiler");
+const errors_1 = require("./errors");
+const lexer_1 = require("./lexer");
+const object_1 = require("./object");
+const parser_1 = require("./parser");
+const symbols_1 = require("./symbols");
+const vm_1 = require("./vm");
+const NULL = new object_1.Null();
 function createRuntimeError(msg) {
     return new errors_1.RuntimeError(msg, 0, 0, 0);
 }
 /**
  * Opinionated runtime environment for generating MIDI sequences.
  */
-var Runtime = /** @class */ (function () {
+class Runtime {
     /**
      * Constructs a new runtime instance.
      */
-    function Runtime(active, callbacks) {
-        if (active === void 0) { active = true; }
+    constructor(active = true, callbacks) {
         this.active = active;
         this.callbacks = callbacks;
         this.queue = [];
@@ -4827,37 +4598,36 @@ var Runtime = /** @class */ (function () {
     /**
      * Full reset of constants, globals, and the symbol table.
      */
-    Runtime.prototype.reset = function () {
+    reset() {
         this.globals = vm_1.createGlobalVariables();
         this.symbolTable = symbols_1.SymbolTable.createGlobalSymbolTable();
         this.constants = [];
         this.errors = [];
         this.queue = [];
-    };
+    }
     /**
      * Executes a new runtime by resetting, and then applying a
      * new snippet of code to the runtime.
      *
      * @param input - Code snippet
      */
-    Runtime.prototype.exec = function (input, args) {
-        if (args === void 0) { args = []; }
+    exec(input, args = []) {
         this.reset();
         this.apply(input, args);
-    };
+    }
     /**
      * Stage changes to check for errors.
      *
      * @param input - Code snippet
      * @returns Lexer, parser, compiler, and runtime errors
      */
-    Runtime.prototype.stageChanges = function (input) {
-        var lexer = new lexer_1.Lexer(input);
-        var parser = new parser_1.Parser(lexer);
-        var program = parser.parse();
-        var errors = __spreadArray([], parser.errors);
-        var symbolTable = symbols_1.SymbolTable.createGlobalSymbolTable();
-        var compiler = new compiler_1.Compiler([], symbolTable);
+    stageChanges(input) {
+        const lexer = new lexer_1.Lexer(input);
+        const parser = new parser_1.Parser(lexer);
+        const program = parser.parse();
+        const errors = [...parser.errors];
+        const symbolTable = symbols_1.SymbolTable.createGlobalSymbolTable();
+        const compiler = new compiler_1.Compiler([], symbolTable);
         try {
             compiler.compile(program);
         }
@@ -4866,33 +4636,33 @@ var Runtime = /** @class */ (function () {
         }
         if (errors.length)
             return errors;
-        var globals = vm_1.createGlobalVariables();
-        var vm = new vm_1.VM(compiler, globals, this.callbacks);
+        const globals = vm_1.createGlobalVariables();
+        const vm = new vm_1.VM(compiler, globals, this.callbacks);
         vm.run();
-        var main = symbolTable.get('main');
+        const main = symbolTable.get('main');
         if (!main) {
             errors.push(createRuntimeError('Runtime environment requires a top-level `main` object'));
         }
         else {
-            var seq = globals[main.index];
+            const seq = globals[main.index];
             if (!(seq instanceof object_1.Closure)) {
                 errors.push(createRuntimeError('Top level `main` object must be a sequence generator'));
             }
         }
         return errors;
-    };
+    }
     /**
      * Applies a new snippet of code passed through the runtime.
      *
      * @param input - Code snippet
      * @param args - Arguments to main generator
      */
-    Runtime.prototype.apply = function (input, args) {
-        var lexer = new lexer_1.Lexer(input);
-        var parser = new parser_1.Parser(lexer);
-        var program = parser.parse();
-        this.errors = __spreadArray([], parser.errors);
-        var compiler = new compiler_1.Compiler(this.constants, this.symbolTable);
+    apply(input, args) {
+        const lexer = new lexer_1.Lexer(input);
+        const parser = new parser_1.Parser(lexer);
+        const program = parser.parse();
+        this.errors = [...parser.errors];
+        const compiler = new compiler_1.Compiler(this.constants, this.symbolTable);
         try {
             compiler.compile(program);
         }
@@ -4901,14 +4671,14 @@ var Runtime = /** @class */ (function () {
             return;
         }
         this.instructions = compiler.instructions();
-        var vm = new vm_1.VM(compiler, this.globals, this.callbacks);
+        const vm = new vm_1.VM(compiler, this.globals, this.callbacks);
         vm.run();
-        var main = this.symbolTable.get('main');
+        const main = this.symbolTable.get('main');
         if (!main) {
             this.errors.push(createRuntimeError('Runtime environment requires a top-level `main` object'));
             return;
         }
-        var seq = this.globals[main.index];
+        let seq = this.globals[main.index];
         if (seq instanceof object_1.Closure) {
             seq = vm.callAndReturn(seq, args);
         }
@@ -4922,31 +4692,31 @@ var Runtime = /** @class */ (function () {
         }
         this.seq = seq;
         this.vm = vm;
-    };
+    }
     /**
      * Return a new object off of the main sequence.
      *
      * @returns Next object in the sequence
      */
-    Runtime.prototype.getNextValue = function () {
+    getNextValue() {
         if (!this.vm || !this.seq) {
             return NULL;
         }
         return this.vm.takeNext(this.seq);
-    };
+    }
     /**
      * Clear the note queue of any notes whose
      * durations have lapsed.
      *
      * @returns Note pitches to be turned off
      */
-    Runtime.prototype.clearNotes = function () {
-        var newQueue = [];
-        var notesOff = [];
+    clearNotes() {
+        const newQueue = [];
+        const notesOff = [];
         // Iterate over playing notes...
         while (this.queue.length) {
             // Grab the next available note.
-            var item = this.queue.shift();
+            const item = this.queue.shift();
             if (!(item instanceof object_1.MidiNote) && !(item instanceof object_1.Hold))
                 break;
             // Decrement remaining note duration.
@@ -4962,38 +4732,37 @@ var Runtime = /** @class */ (function () {
         // Update the queue.
         this.queue = newQueue;
         return notesOff;
-    };
+    }
     /**
      * Adds a note object to the queue.
      *
      * @returns True if note should be played
      */
-    Runtime.prototype.noteOn = function (note) {
-        var playable = false;
+    noteOn(note) {
+        let playable = false;
         if (note instanceof object_1.MidiNote) {
             if (note.pitch >= 0) {
                 playable = true;
             }
-            this.queue.push(new object_1.MidiNote(note.pitch, note.duration, note.velocity));
+            this.queue.push(object_1.provisionMidiNote(note.pitch, note.duration, note.velocity));
         }
         return playable;
-    };
+    }
     /**
      * Handles a new clock pulse while honoring note duration.
      *
      * @returns Note updates usable by runtime implementations
      */
-    Runtime.prototype.clock = function () {
-        var _this = this;
-        var notesOff = this.clearNotes();
-        var notesOn = [];
+    clock() {
+        const notesOff = this.clearNotes();
+        let notesOn = [];
         if (this.active) {
-            var nextValue = void 0;
+            let nextValue;
             if (!this.queue.length || notesOff.length) {
                 nextValue = this.getNextValue();
             }
             if (nextValue instanceof object_1.Arr) {
-                notesOn = nextValue.items.filter(function (item) { return _this.noteOn(item); });
+                notesOn = nextValue.items.filter((item) => this.noteOn(item));
             }
             else if (nextValue instanceof object_1.MidiNote) {
                 if (this.noteOn(nextValue)) {
@@ -5003,54 +4772,42 @@ var Runtime = /** @class */ (function () {
         }
         return {
             on: notesOn,
-            off: notesOff.filter(function (n) { return n >= 0; }),
-            done: this.seq ? this.seq.done : true
+            off: notesOff.filter((n) => n >= 0),
+            done: this.seq ? this.seq.done : true,
         };
-    };
+    }
     /**
      * Debugs the bytecode for the current instructions
      * in the runtime.
      *
      * @returns Human-readable bytecode
      */
-    Runtime.prototype.getBytecode = function () {
-        var bytecode = 'Constants:\n\n';
-        this.constants.forEach(function (obj, i) {
-            bytecode += i + ": " + obj.inspectObject() + "\n";
+    getBytecode() {
+        let bytecode = 'Constants:\n\n';
+        this.constants.forEach((obj, i) => {
+            bytecode += `${i}: ${obj.inspectObject()}\n`;
         });
         if (this.instructions) {
             bytecode += '\n\n';
             bytecode += bytecode_1.disassemble(this.instructions);
-            this.constants.forEach(function (obj, i) {
+            this.constants.forEach((obj, i) => {
                 if (obj instanceof object_1.Fn || obj instanceof object_1.Gen) {
-                    bytecode += "\n\nFn[" + i + "]\n";
+                    bytecode += `\n\nFn[${i}]\n`;
                     bytecode += bytecode_1.disassemble(obj.instructions);
                 }
             });
             return bytecode;
         }
         return 'No bytecode found.';
-    };
-    return Runtime;
-}());
+    }
+}
 exports.Runtime = Runtime;
 
 },{"./bytecode":10,"./compiler":11,"./errors":12,"./lexer":14,"./object":15,"./parser":16,"./symbols":19,"./vm":22}],19:[function(require,module,exports){
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.SymbolTable = exports.ScopeType = void 0;
-var builtins_1 = require("./builtins");
+const builtins_1 = require("./builtins");
 /**
  * Label defining level of variable scope.
  */
@@ -5066,8 +4823,8 @@ var ScopeType;
  * Symbol table for tracking named variables through the
  * compilation process.
  */
-var SymbolTable = /** @class */ (function () {
-    function SymbolTable(type, parent) {
+class SymbolTable {
+    constructor(type, parent) {
         this.type = type;
         this.parent = parent;
         this.symbols = {};
@@ -5081,56 +4838,60 @@ var SymbolTable = /** @class */ (function () {
      * @param label - Variable name
      * @returns Index of new symbol
      */
-    SymbolTable.prototype.addIota = function () {
-        var iota = SymbolTable.iota++;
-        var label = "$iota__" + iota;
+    addIota() {
+        const iota = SymbolTable.iota++;
+        const label = `$iota__${iota}`;
         return this.add(label);
-    };
+    }
     /**
      * Adds a new symbol to the table and returns its unique index.
      *
      * @param label - Variable name
      * @returns Index of new symbol
      */
-    SymbolTable.prototype.add = function (label) {
-        var sym = {
-            label: label,
+    add(label) {
+        const sym = {
+            label,
             index: this.numSymbols,
             depth: this.depth,
-            type: this.type
+            type: this.type,
         };
         this.numSymbols++;
         this.symbols[label] = sym;
         return sym.index;
-    };
+    }
     /**
      * Save the name of the current closure as a symbol in scope.
      *
      * @param label - Variable name of the current function
      * @returns New symbol
      */
-    SymbolTable.prototype.setSelf = function (label) {
-        var sym = {
-            label: label,
+    setSelf(label) {
+        const sym = {
+            label,
             index: 0,
             depth: -1,
-            type: ScopeType.SELF
+            type: ScopeType.SELF,
         };
         this.symbols[label] = sym;
         return sym;
-    };
+    }
     /**
      * Free a variable for use in an inner function or closure.
      *
      * @param sym - Existing symbol in scope
      * @returns Symbol representing a free closure variable
      */
-    SymbolTable.prototype.free = function (sym) {
+    free(sym) {
         this.freeSymbols.push(sym);
-        var freeSymbol = __assign(__assign({}, sym), { index: this.freeSymbols.length - 1, type: ScopeType.FREE });
+        const freeSymbol = {
+            ...sym,
+            index: this.freeSymbols.length - 1,
+            type: ScopeType.FREE,
+        };
         this.symbols[sym.label] = freeSymbol;
         return freeSymbol;
-    };
+    }
     /**
      * Look up a symbol in the table. If not found, it recurses
      * up its parent scope.
@@ -5138,9 +4899,9 @@ var SymbolTable = /** @class */ (function () {
      * @param label - Variable name
      * @returns Symbol
      */
-    SymbolTable.prototype.get = function (label) {
+    get(label) {
         if (!this.symbols[label] && this.parent) {
-            var variable = this.parent.get(label);
+            const variable = this.parent.get(label);
             if (!variable ||
                 variable.type === ScopeType.GLOBAL ||
                 variable.type === ScopeType.NATIVE) {
@@ -5149,17 +4910,17 @@ var SymbolTable = /** @class */ (function () {
             return this.free(variable);
         }
         return this.symbols[label];
-    };
+    }
     /**
      * Look up a symbol in the table and return its unique index.
      *
      * @param label - Variable name
      * @returns Index of symbol
      */
-    SymbolTable.prototype.getIndex = function (label) {
+    getIndex(label) {
         var _a;
         return (_a = this.get(label)) === null || _a === void 0 ? void 0 : _a.index;
-    };
+    }
     /**
      * Create a default global symbol table with native values
      * already populated.
@@ -5169,22 +4930,23 @@ var SymbolTable = /** @class */ (function () {
      *
      * @internal
      */
-    SymbolTable.createGlobalSymbolTable = function (builtins) {
-        if (builtins === void 0) { builtins = {}; }
-        var globals = new SymbolTable(ScopeType.GLOBAL);
+    static createGlobalSymbolTable(builtins = {}) {
+        const globals = new SymbolTable(ScopeType.GLOBAL);
         if (builtins) {
-            Object.keys(__assign(__assign({}, builtins_1.BUILTINS), builtins)).forEach(function (label) { return globals.add(label); });
+            Object.keys({
+                ...builtins_1.BUILTINS,
+                ...builtins,
+            }).forEach((label) => globals.add(label));
         }
         return globals;
-    };
-    SymbolTable.iota = 0;
-    return SymbolTable;
-}());
+    }
+}
 exports.SymbolTable = SymbolTable;
+SymbolTable.iota = 0;
 
 },{"./builtins":9}],20:[function(require,module,exports){
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.tokenIs = exports.lookupIdentifier = void 0;
 /**
  * User-defined type guard for keyword token types.
@@ -5245,7 +5007,7 @@ exports.tokenIs = tokenIs;
 
 },{}],21:[function(require,module,exports){
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.clamp = void 0;
 /**
  * Clamps a value between low and high constraints.
@@ -5262,29 +5024,13 @@ exports.clamp = clamp;
 
 },{}],22:[function(require,module,exports){
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.VM = exports.createGlobalVariables = exports.MAX_VARIABLES = exports.MAX_STACK_SIZE = exports.MAX_FRAME_SIZE = void 0;
-var assert_1 = require("assert");
-var builtins_1 = require("./builtins");
-var bytecode_1 = require("./bytecode");
-var obj = require("./object");
-var utils_1 = require("./utils");
+const assert_1 = require("assert");
+const builtins_1 = require("./builtins");
+const bytecode_1 = require("./bytecode");
+const obj = require("./object");
+const utils_1 = require("./utils");
 /**
  * Constants
  */
@@ -5294,9 +5040,9 @@ exports.MAX_VARIABLES = 65536;
 /**
  * Literals
  */
-var NULL = new obj.Null();
-var TRUE = new obj.Bool(true);
-var FALSE = new obj.Bool(false);
+const NULL = new obj.Null();
+const TRUE = new obj.Bool(true);
+const FALSE = new obj.Bool(false);
 /**
  * Asserts stack object is defined.
  *
@@ -5308,7 +5054,7 @@ function assertStackObject(obj) {
     if (typeof obj === undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         throw new assert_1.AssertionError({
-            message: 'Attempting to access undeclared stack space. This is an error in the compiler.'
+            message: 'Attempting to access undeclared stack space. This is an error in the compiler.',
         });
     }
 }
@@ -5323,7 +5069,7 @@ function assertVariableObject(obj) {
     if (typeof obj === undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         throw new assert_1.AssertionError({
-            message: 'Attempting to access undeclared variable space. This is an error in the compiler.'
+            message: 'Attempting to access undeclared variable space. This is an error in the compiler.',
         });
     }
 }
@@ -5336,11 +5082,10 @@ function assertVariableObject(obj) {
  *
  * @internal
  */
-function createGlobalVariables(builtins) {
-    if (builtins === void 0) { builtins = {}; }
-    var globals = new Array(exports.MAX_VARIABLES);
-    var allBuiltins = __assign(__assign({}, builtins_1.BUILTINS), builtins);
-    Object.keys(allBuiltins).forEach(function (key, i) {
+function createGlobalVariables(builtins = {}) {
+    const globals = new Array(exports.MAX_VARIABLES);
+    const allBuiltins = { ...builtins_1.BUILTINS, ...builtins };
+    Object.keys(allBuiltins).forEach((key, i) => {
         if (allBuiltins[key]) {
             globals[i] = allBuiltins[key];
         }
@@ -5351,13 +5096,13 @@ exports.createGlobalVariables = createGlobalVariables;
 /**
  * Virtual stack machine for executing instructions.
  */
-var VM = /** @class */ (function () {
+class VM {
     /**
      * Constructs a new VM instance.
      *
      * @param compiler - Compiler instance
      */
-    function VM(compiler, variables, callbacks) {
+    constructor(compiler, variables, callbacks) {
         this.constants = compiler.constants;
         this.frames = new Array(exports.MAX_FRAME_SIZE);
         this.stack = new Array(exports.MAX_STACK_SIZE);
@@ -5374,31 +5119,31 @@ var VM = /** @class */ (function () {
      * @param args - Function arguments to place in the coroutine stack
      * @returns New execution state
      */
-    VM.prototype.createCoroutine = function (closure, args, numLocals) {
-        var parentExecutionState = {
+    createCoroutine(closure, args, numLocals) {
+        const parentExecutionState = {
             stack: this.stack,
             sp: this.sp,
             frames: this.frames,
             fp: this.fp,
             parent: this.coroutine && this.coroutine.parent
                 ? this.coroutine.parent
-                : undefined
+                : undefined,
         };
-        var frames = new Array(exports.MAX_FRAME_SIZE);
+        const frames = new Array(exports.MAX_FRAME_SIZE);
         frames[0] = new obj.Frame(closure, 0);
-        var stack = new Array(exports.MAX_STACK_SIZE);
-        var sp = numLocals;
-        for (var i = 0; i < args.length; i++) {
+        const stack = new Array(exports.MAX_STACK_SIZE);
+        const sp = numLocals;
+        for (let i = 0; i < args.length; i++) {
             stack[i] = args[i];
         }
         return {
-            stack: stack,
-            sp: sp,
-            frames: frames,
+            stack,
+            sp,
+            frames,
             fp: 1,
-            parent: parentExecutionState
+            parent: parentExecutionState,
         };
-    };
+    }
     /**
      * Enters a new coroutine by replacing the VM execution state with one saved
      * by a generator sequence.
@@ -5407,8 +5152,8 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.enterCoroutine = function (executionState) {
-        var _a = this, stack = _a.stack, sp = _a.sp, frames = _a.frames, fp = _a.fp, coroutine = _a.coroutine;
+    enterCoroutine(executionState) {
+        const { stack, sp, frames, fp, coroutine } = this;
         if (coroutine) {
             executionState.parent = coroutine;
             executionState.parent.stack = stack;
@@ -5421,19 +5166,19 @@ var VM = /** @class */ (function () {
         this.frames = executionState.frames;
         this.fp = executionState.fp;
         this.coroutine = executionState;
-    };
+    }
     /**
      * Leaves the current coroutine context and restore the old
      * VM execution state.
      *
      * @internal
      */
-    VM.prototype.leaveCoroutine = function () {
-        var executionState = this.coroutine;
+    leaveCoroutine() {
+        const executionState = this.coroutine;
         if (!executionState || !executionState.parent) {
             throw new Error('Cannot leave root execution state');
         }
-        var _a = this, stack = _a.stack, sp = _a.sp, frames = _a.frames, fp = _a.fp;
+        const { stack, sp, frames, fp } = this;
         executionState.stack = stack;
         executionState.sp = sp;
         executionState.frames = frames;
@@ -5443,7 +5188,7 @@ var VM = /** @class */ (function () {
         this.sp = executionState.parent.sp;
         this.frames = executionState.parent.frames;
         this.fp = executionState.parent.fp;
-    };
+    }
     /**
      * Pretty-prints information about the VM state.
      *
@@ -5451,23 +5196,23 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.printState = function () {
-        var curr = this.sp;
-        var output = "SP " + curr + "\n";
-        output += "FRAME " + this.frame().closure.inspectObject() + "\n";
-        output += "CVARS\n" + this.frame()
-            .closure.vars.map(function (n, i) { return "  " + i + ": " + n.inspectObject(); })
-            .join('\n') + "\n";
-        output += "CONSTS\n" + this.constants
-            .map(function (n, i) { return "  " + i + ": " + n.inspectObject(); })
-            .join('\n') + "\n\n";
+    printState() {
+        let curr = this.sp;
+        let output = `SP ${curr}\n`;
+        output += `FRAME ${this.frame().closure.inspectObject()}\n`;
+        output += `CVARS\n${this.frame()
+            .closure.vars.map((n, i) => `  ${i}: ${n.inspectObject()}`)
+            .join('\n')}\n`;
+        output += `CONSTS\n${this.constants
+            .map((n, i) => `  ${i}: ${n.inspectObject()}`)
+            .join('\n')}\n\n`;
         while (curr > 0 && curr--) {
-            var item = this.stack[curr];
-            var stackAddress = ("0000" + curr).slice(-5);
-            output += stackAddress + " " + (item ? item.inspectObject() : '<undef>') + "\n";
+            const item = this.stack[curr];
+            const stackAddress = `0000${curr}`.slice(-5);
+            output += `${stackAddress} ${item ? item.inspectObject() : '<undef>'}\n`;
         }
         return output;
-    };
+    }
     /**
      * Returns the current frame object.
      *
@@ -5475,18 +5220,18 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.frame = function () {
+    frame() {
         return this.frames[this.fp - 1];
-    };
+    }
     /**
      * Returns the last object popped off the top of the stack, or
      * undefined if the stack is empty.
      *
      * @returns Next stack object
      */
-    VM.prototype.lastElement = function () {
+    lastElement() {
         return this.stack[this.sp];
-    };
+    }
     /**
      * Pushes a new object onto the VM stack and increments
      * the stack pointer.
@@ -5495,13 +5240,13 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.push = function (o) {
+    push(o) {
         if (this.sp >= exports.MAX_STACK_SIZE) {
             throw new Error('Maximum stack size exceeded');
         }
         this.stack[this.sp] = o;
         this.sp++;
-    };
+    }
     /**
      * Pops a new object off the VM stack and decrements
      * the stack pointer.
@@ -5510,22 +5255,22 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.pop = function () {
-        var o = this.stack[this.sp - 1];
+    pop() {
+        const o = this.stack[this.sp - 1];
         this.sp--;
         return o;
-    };
+    }
     /**
      * Jumps to next instruction specified by the next two instruction
      * bytes.
      *
      * @internal
      */
-    VM.prototype.jump = function () {
-        var frame = this.frame();
-        var destination = bytecode_1.unpackBigEndian(frame.instructions(), frame.ip + 1, 2);
+    jump() {
+        const frame = this.frame();
+        const destination = bytecode_1.unpackBigEndian(frame.instructions(), frame.ip + 1, 2);
         frame.ip = destination - 1;
-    };
+    }
     /**
      * Reads operand at offset.
      *
@@ -5533,22 +5278,22 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.readOperand = function (width) {
-        var frame = this.frame();
-        var operand = bytecode_1.unpackBigEndian(frame.instructions(), frame.ip + 1, width);
+    readOperand(width) {
+        const frame = this.frame();
+        const operand = bytecode_1.unpackBigEndian(frame.instructions(), frame.ip + 1, width);
         frame.ip += width;
         return operand;
-    };
+    }
     /**
      * Iterates over the compiler instructions item-by-item, using the
      * stack to hold values and perform operations.
      *
      * @param exitFrame - Frame on which to halt execution
      */
-    VM.prototype.run = function (exitFrame) {
+    run(exitFrame) {
         var _a;
-        var frame = this.frame();
-        var inst = frame.instructions();
+        let frame = this.frame();
+        let inst = frame.instructions();
         while (frame.ip <= inst.length) {
             // The VM can be run recursively, but in doing so, you must
             // specify an exit frame in which to bounce out. This is
@@ -5557,26 +5302,26 @@ var VM = /** @class */ (function () {
             if (exitFrame && frame === exitFrame) {
                 return;
             }
-            var ip = ++frame.ip;
-            var op = inst[ip];
+            const ip = ++frame.ip;
+            const op = inst[ip];
             switch (op) {
                 case bytecode_1.Opcode.CONST: {
-                    var idx = this.readOperand(2);
+                    const idx = this.readOperand(2);
                     this.push(this.constants[idx]);
                     break;
                 }
                 case bytecode_1.Opcode.CLOSURE: {
-                    var idx = this.readOperand(2);
-                    var numFree = this.readOperand(1);
-                    var fn = this.constants[idx];
+                    const idx = this.readOperand(2);
+                    const numFree = this.readOperand(1);
+                    const fn = this.constants[idx];
                     if (!(fn instanceof obj.Callable)) {
                         throw new Error('Cannot enclose non-callable inside a closure');
                     }
-                    var closureVars = numFree
+                    const closureVars = numFree
                         ? new Array(numFree)
                         : [];
-                    for (var i = 0; i < numFree; i++) {
-                        var item = this.stack[this.sp - numFree + i];
+                    for (let i = 0; i < numFree; i++) {
+                        const item = this.stack[this.sp - numFree + i];
                         if (!item) {
                             throw new Error('Stack out of usable objects for closure variables');
                         }
@@ -5590,11 +5335,11 @@ var VM = /** @class */ (function () {
                     this.push(this.frame().closure);
                     break;
                 case bytecode_1.Opcode.ARRAY: {
-                    var size = this.readOperand(2);
-                    var arr = new obj.Arr(new Array(size));
-                    var start = this.sp - size;
-                    for (var i = start; i < this.sp; i++) {
-                        var element = this.stack[i];
+                    const size = this.readOperand(2);
+                    const arr = new obj.Arr(new Array(size));
+                    const start = this.sp - size;
+                    for (let i = start; i < this.sp; i++) {
+                        const element = this.stack[i];
                         assertStackObject(element);
                         arr.items[i - start] = element;
                     }
@@ -5603,19 +5348,19 @@ var VM = /** @class */ (function () {
                     break;
                 }
                 case bytecode_1.Opcode.LEN: {
-                    var arr = this.pop();
+                    const arr = this.pop();
                     if (!(arr instanceof obj.Arr)) {
                         throw new Error('Cannot iterate over non-array');
                     }
-                    this.push(new obj.Int(arr.items.length));
+                    this.push(obj.Int.from(arr.items.length));
                     break;
                 }
                 case bytecode_1.Opcode.INDEX: {
-                    var index = this.pop();
+                    const index = this.pop();
                     if (!(index instanceof obj.Int)) {
                         throw new Error('Array index must be an integer');
                     }
-                    var collection = this.pop();
+                    const collection = this.pop();
                     if (!(collection instanceof obj.Arr)) {
                         throw new Error('Cannot retrieve an element from a non-array');
                     }
@@ -5636,47 +5381,47 @@ var VM = /** @class */ (function () {
                     this.push(NULL);
                     break;
                 case bytecode_1.Opcode.SETG: {
-                    var index = this.readOperand(2);
-                    var val = this.pop();
+                    const index = this.readOperand(2);
+                    const val = this.pop();
                     this.variables[index] = val;
                     break;
                 }
                 case bytecode_1.Opcode.GETG: {
-                    var index = this.readOperand(2);
-                    var value = this.variables[index];
+                    const index = this.readOperand(2);
+                    const value = this.variables[index];
                     assertVariableObject(value);
                     this.push(value);
                     break;
                 }
                 case bytecode_1.Opcode.SET: {
-                    var index = this.readOperand(1);
+                    const index = this.readOperand(1);
                     this.stack[this.frame().base + index] = this.pop();
                     break;
                 }
                 case bytecode_1.Opcode.GET: {
-                    var index = this.readOperand(1);
-                    var value = this.stack[this.frame().base + index];
+                    const index = this.readOperand(1);
+                    const value = this.stack[this.frame().base + index];
                     assertVariableObject(value);
                     this.push(value);
                     break;
                 }
                 case bytecode_1.Opcode.SETC: {
-                    var index = this.readOperand(1);
-                    var value = this.pop();
+                    const index = this.readOperand(1);
+                    const value = this.pop();
                     assertVariableObject(value);
                     this.frame().closure.vars[index] = value;
                     break;
                 }
                 case bytecode_1.Opcode.GETC: {
-                    var index = this.readOperand(1);
-                    var value = this.frame().closure.vars[index];
+                    const index = this.readOperand(1);
+                    const value = this.frame().closure.vars[index];
                     assertVariableObject(value);
                     this.push(value);
                     break;
                 }
                 case bytecode_1.Opcode.GETN: {
-                    var index = this.readOperand(1);
-                    var fn = builtins_1.NATIVE_FNS[index];
+                    const index = this.readOperand(1);
+                    const fn = builtins_1.NATIVE_FNS[index];
                     if (fn) {
                         this.push(fn);
                     }
@@ -5702,24 +5447,24 @@ var VM = /** @class */ (function () {
                     this.execComparison(op);
                     break;
                 case bytecode_1.Opcode.AND: {
-                    var left = this.stack[this.sp - 2];
-                    var right = this.stack[this.sp - 1];
+                    const left = this.stack[this.sp - 2];
+                    const right = this.stack[this.sp - 1];
                     this.sp -= 2;
                     if (!left || !right) {
                         throw new Error('Cannot perform binary operation without two operands');
                     }
-                    var res = obj.isTruthy(left) && obj.isTruthy(right);
+                    const res = obj.isTruthy(left) && obj.isTruthy(right);
                     this.push(res ? TRUE : FALSE);
                     break;
                 }
                 case bytecode_1.Opcode.OR: {
-                    var left = this.stack[this.sp - 2];
-                    var right = this.stack[this.sp - 1];
+                    const left = this.stack[this.sp - 2];
+                    const right = this.stack[this.sp - 1];
                     this.sp -= 2;
                     if (!left || !right) {
                         throw new Error('Cannot perform binary operation without two operands');
                     }
-                    var res = obj.isTruthy(left) || obj.isTruthy(right);
+                    const res = obj.isTruthy(left) || obj.isTruthy(right);
                     this.push(res ? TRUE : FALSE);
                     break;
                 }
@@ -5735,15 +5480,15 @@ var VM = /** @class */ (function () {
                     }
                     break;
                 case bytecode_1.Opcode.CALL: {
-                    var numArgs = this.readOperand(1);
-                    var o = this.stack[this.sp - 1 - numArgs];
+                    const numArgs = this.readOperand(1);
+                    const o = this.stack[this.sp - 1 - numArgs];
                     assertStackObject(o);
                     this.call(o, numArgs);
                     break;
                 }
                 case bytecode_1.Opcode.RET: {
-                    var closureVars = this.frame().closure.vars;
-                    var value = this.pop();
+                    const closureVars = this.frame().closure.vars;
+                    const value = this.pop();
                     if (!value) {
                         throw new Error('Functions must return an explicit value or an implicit null');
                     }
@@ -5759,7 +5504,7 @@ var VM = /** @class */ (function () {
                         this.fp--;
                         this.sp = frame.base - 1;
                         frame = this.frames[this.fp - 1];
-                        for (var i = 0; i < closureVars.length; i++) {
+                        for (let i = 0; i < closureVars.length; i++) {
                             this.stack[frame.base + i] = closureVars[i];
                         }
                     }
@@ -5767,7 +5512,7 @@ var VM = /** @class */ (function () {
                     break;
                 }
                 case bytecode_1.Opcode.NEXT: {
-                    var seq = this.pop();
+                    const seq = this.pop();
                     if (seq instanceof obj.VirtualSeq) {
                         this.push(seq.next());
                     }
@@ -5777,14 +5522,14 @@ var VM = /** @class */ (function () {
                     break;
                 }
                 case bytecode_1.Opcode.YIELD: {
-                    var value = this.pop();
+                    const value = this.pop();
                     assertStackObject(value);
                     this.leaveCoroutine();
                     this.push(value);
                     break;
                 }
                 case bytecode_1.Opcode.SKIP: {
-                    var duration = this.pop();
+                    const duration = this.pop();
                     if (!(duration instanceof obj.Int) || duration.value <= 0) {
                         throw new Error('Cannot use `skip` keyword with a non-integer duration or a duration less than 1');
                     }
@@ -5792,27 +5537,27 @@ var VM = /** @class */ (function () {
                     break;
                 }
                 case bytecode_1.Opcode.NOTE: {
-                    var value = this.pop();
+                    const value = this.pop();
                     if (!value ||
                         !(value instanceof obj.Arr) ||
                         !value.items.length ||
                         value.items.length > 3) {
                         throw new Error('Notes must be created with an array containing one to three integer arguments');
                     }
-                    var pitch = value.items[0];
+                    const pitch = value.items[0];
                     if (!(pitch instanceof obj.Int)) {
                         throw new Error('MIDI note pitch must be an integer or a pitch literal like Eb4');
                     }
-                    var duration = value.items[1];
-                    var durationValue = 1;
+                    const duration = value.items[1];
+                    let durationValue = 1;
                     if (duration) {
                         if (!(duration instanceof obj.Int)) {
                             throw new Error('MIDI note duration must be an integer');
                         }
                         durationValue = Math.max(1, duration.value);
                     }
-                    var velocity = value.items[2];
-                    var velocityValue = 64;
+                    const velocity = value.items[2];
+                    let velocityValue = 64;
                     if (velocity) {
                         if (!(velocity instanceof obj.Int)) {
                             throw new Error('MIDI note velocity must be an integer');
@@ -5823,17 +5568,17 @@ var VM = /** @class */ (function () {
                     break;
                 }
                 case bytecode_1.Opcode.CC: {
-                    var args = this.pop();
+                    const args = this.pop();
                     if (!args ||
                         !(args instanceof obj.Arr) ||
                         args.items.length !== 2) {
                         throw new Error('CC messages must be created with an array containing a key integer and a value integer');
                     }
-                    var key = args.items[0];
+                    const key = args.items[0];
                     if (!(key instanceof obj.Int)) {
                         throw new Error('MIDI CC key must be an integer');
                     }
-                    var value = args.items[1];
+                    const value = args.items[1];
                     if (!(value instanceof obj.Int)) {
                         throw new Error('MIDI CC value must be an integer');
                     }
@@ -5843,32 +5588,32 @@ var VM = /** @class */ (function () {
             frame = this.frame();
             inst = frame.instructions();
         }
-    };
+    }
     /**
      * Calculate a sequence's next value and retrieve the value from the stack.
      *
      * @param seq - Sequence instance
      * @returns Return value
      */
-    VM.prototype.takeNext = function (seq) {
+    takeNext(seq) {
         if (seq instanceof obj.VirtualSeq) {
             return seq.next();
         }
-        var exitFrame = this.next(seq);
+        const exitFrame = this.next(seq);
         if (exitFrame) {
             this.run(exitFrame);
         }
-        var result = this.pop();
+        const result = this.pop();
         assertStackObject(result);
         return result;
-    };
+    }
     /**
      * Calculate a sequence's next value.
      *
      * @param seq - Sequence instance
      * @returns Current stack frame before the call
      */
-    VM.prototype.next = function (seq) {
+    next(seq) {
         if (!seq || !(seq instanceof obj.Seq)) {
             throw new Error('`next` can only be used on generated sequence instances');
         }
@@ -5876,10 +5621,10 @@ var VM = /** @class */ (function () {
             this.push(NULL);
             return;
         }
-        var frame = this.frame();
+        const frame = this.frame();
         this.enterCoroutine(seq.executionState);
         return frame;
-    };
+    }
     /**
      * Call a function and obtain its return value.
      *
@@ -5887,20 +5632,19 @@ var VM = /** @class */ (function () {
      * @param args - Arguments to apply
      * @returns Return value
      */
-    VM.prototype.callAndReturn = function (callee, args) {
-        var _this = this;
+    callAndReturn(callee, args) {
         this.push(callee);
-        args.forEach(function (arg) {
-            _this.push(arg);
+        args.forEach((arg) => {
+            this.push(arg);
         });
-        var exitFrame = this.call(callee, args.length);
+        const exitFrame = this.call(callee, args.length);
         if (exitFrame) {
             this.run(exitFrame);
         }
-        var result = this.pop();
+        const result = this.pop();
         assertStackObject(result);
         return result;
-    };
+    }
     /**
      * Begin a function, generator, or built-in call.
      *
@@ -5908,13 +5652,13 @@ var VM = /** @class */ (function () {
      * @param numArgs - Number of arguments applied to the call
      * @returns Current stack frame before the call
      */
-    VM.prototype.call = function (callee, numArgs) {
+    call(callee, numArgs) {
         if (!(callee instanceof obj.Closure) &&
             !(callee instanceof obj.NativeFn)) {
             throw new Error('Cannot perform opcode CALL on a non-callable stack element');
         }
         if (callee instanceof obj.Closure) {
-            var fn = callee.fn;
+            const { fn } = callee;
             while (numArgs > fn.numParams) {
                 this.pop();
                 numArgs--;
@@ -5924,7 +5668,7 @@ var VM = /** @class */ (function () {
                 numArgs++;
             }
             if (fn instanceof obj.Fn) {
-                var frame = new obj.Frame(callee, this.sp - numArgs);
+                const frame = new obj.Frame(callee, this.sp - numArgs);
                 this.frames[this.fp] = frame;
                 this.fp++;
                 this.sp = frame.base + fn.numLocals;
@@ -5932,16 +5676,16 @@ var VM = /** @class */ (function () {
                 return this.frames[this.fp - 2];
             }
             else if (fn instanceof obj.Gen) {
-                var args = this.gatherArgs(numArgs);
+                const args = this.gatherArgs(numArgs);
                 this.push(new obj.Seq(callee, this.createCoroutine(callee, args, fn.numLocals)));
             }
         }
         else if (callee instanceof obj.NativeFn) {
-            var args = this.gatherArgs(numArgs);
-            this.push(callee.handler.apply(callee, __spreadArray([this], args)));
+            const args = this.gatherArgs(numArgs);
+            this.push(callee.handler(this, ...args));
         }
         return undefined;
-    };
+    }
     /**
      * Gather the expected arguments into an array of objects.
      *
@@ -5950,46 +5694,46 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.gatherArgs = function (numArgs) {
-        var args = [];
+    gatherArgs(numArgs) {
+        const args = [];
         while (numArgs--) {
-            var arg = this.pop();
+            const arg = this.pop();
             assertStackObject(arg);
             args.unshift(arg);
         }
         this.pop(); // Get the closure or native function out of the way.
         return args;
-    };
+    }
     /**
      * Pops the last item off of the stack, performs a unary
      * arithmetic negation, and pushes its result onto the stack.
      *
      * @internal
      */
-    VM.prototype.execUnaryArithmeticNegation = function () {
-        var right = this.pop();
+    execUnaryArithmeticNegation() {
+        const right = this.pop();
         if (!right) {
             throw new Error('Cannot perform unary operation without a valid operand');
         }
         if (right instanceof obj.Int) {
-            this.push(new obj.Int(-right.value));
+            this.push(obj.Int.from(-right.value));
             return;
         }
-        throw new Error("Cannot perform unary arithmetic negation (-) operation on a non-integer");
-    };
+        throw new Error(`Cannot perform unary arithmetic negation (-) operation on a non-integer`);
+    }
     /**
      * Pops the last item off of the stack, performs a unary
      * logical negation, and pushes its result onto the stack.
      *
      * @internal
      */
-    VM.prototype.execUnaryLogicalNegation = function () {
-        var right = this.pop();
+    execUnaryLogicalNegation() {
+        const right = this.pop();
         if (!right) {
             throw new Error('Cannot perform unary operation without a valid operand');
         }
         if (right instanceof obj.Int) {
-            this.push(new obj.Bool(right.value !== 0));
+            this.push(obj.Bool.from(right.value !== 0));
         }
         else if (right === NULL || right === FALSE) {
             this.push(TRUE);
@@ -5997,7 +5741,7 @@ var VM = /** @class */ (function () {
         else {
             this.push(FALSE);
         }
-    };
+    }
     /**
      * Pops the last two items off of the stack, performs a binary
      * operation, and pushes its result onto the stack.
@@ -6006,9 +5750,9 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.execBinaryArithmetic = function (op) {
-        var left = this.stack[this.sp - 2];
-        var right = this.stack[this.sp - 1];
+    execBinaryArithmetic(op) {
+        const left = this.stack[this.sp - 2];
+        const right = this.stack[this.sp - 1];
         this.sp -= 2;
         if (!left || !right) {
             throw new Error('Cannot perform binary operation without two operands');
@@ -6017,8 +5761,8 @@ var VM = /** @class */ (function () {
             this.execBinaryIntegerArithmetic(op, left, right);
             return;
         }
-        throw new Error("Cannot perform binary operation (" + bytecode_1.OPCODES[op].name + ") between types " + left.type + " and " + right.type);
-    };
+        throw new Error(`Cannot perform binary operation (${bytecode_1.OPCODES[op].name}) between types ${left.type} and ${right.type}`);
+    }
     /**
      * Executes a binary (infix) integer operation and pushes the result
      * onto the stack.
@@ -6029,8 +5773,8 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.execBinaryIntegerArithmetic = function (op, left, right) {
-        var result;
+    execBinaryIntegerArithmetic(op, left, right) {
+        let result;
         switch (op) {
             case bytecode_1.Opcode.ADD:
                 result = left.value + right.value;
@@ -6051,10 +5795,10 @@ var VM = /** @class */ (function () {
                 break;
             }
             default:
-                throw new Error("Unhandled binary integer operator: " + op);
+                throw new Error(`Unhandled binary integer operator: ${op}`);
         }
-        this.push(new obj.Int(result));
-    };
+        this.push(obj.Int.from(result));
+    }
     /**
      * Pops the last two items off of the stack, performs a comparison
      * operation, and pushes its result onto the stack.
@@ -6063,9 +5807,9 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.execComparison = function (op) {
-        var left = this.stack[this.sp - 2];
-        var right = this.stack[this.sp - 1];
+    execComparison(op) {
+        const left = this.stack[this.sp - 2];
+        const right = this.stack[this.sp - 1];
         this.sp -= 2;
         if (left instanceof obj.Int && right instanceof obj.Int) {
             this.execIntegerComparison(op, left, right);
@@ -6074,21 +5818,21 @@ var VM = /** @class */ (function () {
         if (left instanceof obj.Bool && right instanceof obj.Bool) {
             switch (op) {
                 case bytecode_1.Opcode.EQ:
-                    this.push(new obj.Bool(left === right));
+                    this.push(obj.Bool.from(left === right));
                     break;
                 case bytecode_1.Opcode.NOT_EQ:
-                    this.push(new obj.Bool(left !== right));
+                    this.push(obj.Bool.from(left !== right));
                     break;
                 default:
-                    throw new Error("Unhandled boolean comparison operator: " + op);
+                    throw new Error(`Unhandled boolean comparison operator: ${op}`);
             }
             return;
         }
         if (!left || !right) {
             throw new Error('Cannot perform comparison operation without two operands');
         }
-        throw new Error("Cannot perform comparison operation between types " + left.type + " and " + right.type);
-    };
+        throw new Error(`Cannot perform comparison operation between types ${left.type} and ${right.type}`);
+    }
     /**
      * Executes an integer comparison operation and pushes the result
      * onto the stack.
@@ -6099,8 +5843,8 @@ var VM = /** @class */ (function () {
      *
      * @internal
      */
-    VM.prototype.execIntegerComparison = function (op, left, right) {
-        var result;
+    execIntegerComparison(op, left, right) {
+        let result;
         switch (op) {
             case bytecode_1.Opcode.EQ:
                 result = left.value === right.value;
@@ -6115,12 +5859,11 @@ var VM = /** @class */ (function () {
                 result = left.value >= right.value;
                 break;
             default:
-                throw new Error("Unhandled integer comparison operator: " + op);
+                throw new Error(`Unhandled integer comparison operator: ${op}`);
         }
-        this.push(new obj.Bool(result));
-    };
-    return VM;
-}());
+        this.push(obj.Bool.from(result));
+    }
+}
 exports.VM = VM;
 
 },{"./builtins":9,"./bytecode":10,"./object":15,"./utils":21,"assert":23}],23:[function(require,module,exports){
