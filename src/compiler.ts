@@ -4,6 +4,7 @@ import { BaseObject, Int, Fn, Gen } from './object';
 import { ScopeType, SymbolTable } from './symbols';
 import { NATIVE_FNS } from './builtins';
 import { CompilerError } from './errors';
+import { DEFAULT_NOTE_DURATION } from './constants';
 
 /**
  * Instruction occurence at a given position in the bytecode.
@@ -598,7 +599,7 @@ export class Compiler {
       if (node.duration) {
         this.compile(node.duration);
       } else {
-        this.emit(Opcode.CONST, this.addConstant(Int.from(1)));
+        this.emit(Opcode.CONST, this.addConstant(Int.from(DEFAULT_NOTE_DURATION)));
       }
       this.emit(Opcode.SKIP);
     } else if (node instanceof ast.CCExpression) {

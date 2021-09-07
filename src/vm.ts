@@ -2,6 +2,7 @@ import { AssertionError } from 'assert';
 import { BUILTINS, NATIVE_FNS } from './builtins';
 import { Opcode, OPCODES, unpackBigEndian } from './bytecode';
 import { Compiler } from './compiler';
+import { DEFAULT_NOTE_DURATION } from './constants';
 import * as obj from './object';
 import { clamp } from './utils';
 
@@ -624,7 +625,7 @@ export class VM {
             );
           }
           const duration = value.items[1];
-          let durationValue = 1;
+          let durationValue = DEFAULT_NOTE_DURATION;
           if (duration) {
             if (!(duration instanceof obj.Int)) {
               throw new Error(

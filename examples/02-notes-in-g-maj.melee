@@ -7,7 +7,7 @@
 
 main := gen () {
   loop {
-    noteDuration := rrand(1, 5);
+    noteDuration := n16 * rrand(1, 5);
     notePitch := scale(SCALE_MAJOR, G2, rand(24));
     yield note [notePitch, noteDuration];
   }

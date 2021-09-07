@@ -54,7 +54,7 @@ main := gen () {
 
 main := gen () {
   loop {
-    noteDuration := rrand(1, 5);
+    noteDuration := n16 * rrand(1, 5);
     notePitch := scale(SCALE_MAJOR, G2, rand(24));
     yield note [notePitch, noteDuration];
   }
@@ -99,11 +99,11 @@ main := gen () {
 // that are adjacent to one another. In this example, it might
 // happen to output a sequence like so:
 //
-// C3 -> C3 -> C4 -> C3 -> Eb3 -> E3 -> Eb3
+// C3 -> C3 -> C4 -> C3 -> F3 -> E3 -> F3
 
 main := gen () {
   position := 0;
-  notes := [C3, C4, D4, G3, E3, Eb3];
+  notes := [C3, C4, D4, G3, E3, F3];
   loop {
     // rand(3) returns a random number from 0 to 2. If we subtract
     // 1 from this, we either get -1, 0, or 1. Meaning that if we
@@ -126,7 +126,7 @@ main := gen () {
     position %= len(notes);
 
     // Yield out a note object with a pitch from the list.
-    yield note [notes[position], 2, 127];
+    yield note [notes[position], n8, 127];
   }
 };`,
   },
@@ -164,13 +164,13 @@ main := gen () {
     // Every time through the loop, we take the next item out
     // of each sequence, but since their loops have different
     // numbers of elements, they quickly get out of sync.
-    yield note [next notePitch, next noteDuration];
+    yield note [next notePitch, n16 * next noteDuration];
   }
 };\n`,
   },
   {
     name: 'Composing Sequences',
-    tempo: 80,
+    tempo: 112,
     code: `// Example: Composing Sequences
 //
 // We can compose sequences out of random notes by introducing
@@ -189,7 +189,7 @@ createNotes := gen (root) { // We've given this generator an
   loop {
     vl := next velocity; // Pull off next item from velocity seq.
     pt := scale(SCALE_PENT_MINOR, root, rand(18));
-    yield note [pt, 1, vl];
+    yield note [pt, n16, vl];
   }
 };
 
@@ -229,11 +229,13 @@ main := gen () {
 // play independently of one another.
 
 // Here we have a bassline generator that plays notes
-// for a full quarter note.
+// for a full half note.
 bass := gen () {
   loop {
-    notePitch := scale(SCALE_PENT_MAJOR, G2, rand(8));
-    yield note [notePitch, 8];
+    notePitch := scale(SCALE_PENT_MAJOR, G1, rand(6));
+
+    // Double up the octaves
+    yield [note [notePitch, HALF], note [notePitch + 12, HALF]];
   }
 };
 
@@ -241,8 +243,8 @@ bass := gen () {
 // than the bass.
 melody := gen () {
   loop {
-    noteDuration := rrand(1, 4);
-    notePitch := scale(SCALE_MAJOR, G3, rand(16));
+    noteDuration := n16 * rrand(1, 4);
+    notePitch := scale(SCALE_MAJOR, G3, 4 + rand(10));
     yield note [notePitch, noteDuration];
   }
 };
@@ -266,8 +268,8 @@ main := gen () {
 
 main := gen () {
   loop {
-    yield note [G#2, 2];
-    yield skip 1;
+    yield note [G#2, n8];
+    yield skip;
     yield note [A#2];
     yield note [B3];
     yield note [B3];
@@ -277,14 +279,14 @@ main := gen () {
     yield note [A#3];
     yield note [F#3];
     yield note [G#2];
-    yield note [B1, 2];
+    yield note [B1, n8];
     yield note [A#2];
     yield note [G#2];
-    yield note [C#3, 4];
-    yield note [C#2, 6];
-    yield note [F#3, 4];
-    yield note [G#3, 2];
-    yield note [G#1, 3];
+    yield note [C#3, n4];
+    yield note [C#2, d4];
+    yield note [F#3, n4];
+    yield note [G#3, n8];
+    yield note [G#1, d8];
     yield note [A#2];
     yield note [D#3];
     yield note [A#2];
@@ -296,18 +298,18 @@ main := gen () {
     yield note [A#2];
     yield note [F#3];
     yield note [G#3];
-    yield note [G#3, 2];
-    yield note [C#2, 2];
+    yield note [G#3, n8];
+    yield note [C#2, n8];
     yield note [D#2];
     yield note [F3];
-    yield note [D#2, 2];
-    yield note [F3, 2];
-    yield note [B3, 2];
+    yield note [D#2, n8];
+    yield note [F3, n8];
+    yield note [B3, n8];
     yield note [F3];
     yield note [B3];
     yield note [F3];
     yield note [A#3];
-    yield note [F#3, 2];
+    yield note [F#3, n8];
   }
 };\n`,
   },

@@ -84,9 +84,9 @@ You don't have to yield `note`s or `cc` messages from generators, they can be an
 ```js
 subseq := gen() {
   loop {
-    yield 1
-    yield 2
-    yield 3
+    yield n16;
+    yield n8;
+    yield d8;
   }
 }
 duration := subseq();
@@ -111,6 +111,14 @@ What we start getting here is a loop of MIDI notes, but the durations drift with
 Hopefully you're starting to see how with a little bit of code you can build complex sequences that you may have not have been able to dream up otherwise.
 
 This barely cracks the surface of what's capable with Melee, so check out the [examples](/examples) for more in-depth demonstrations.
+
+## Note Lengths
+
+By default, any note or skip without an explicit duration lasts for a sixteenth note. When supplying a duration, you may provide an integer value or use a built-in variable. Variables like `n1`, `n2`, `n4`, `n8`, and so on represent whole notes, half notes, quarter notes and eighth notes respectively. There are also the aliases `WHOLE`, `HALF`, `QUARTER`, `EIGHTH` and `SIXTEENTH` for common note lengths. Triplets can be specified by swapping the `n` for a `t` like `t4` for a triple quarter note, and dotted notes can be specified with a `d`, like `d4`.
+
+Under the hood, all these values are integers that are multiples of the number of clock ticks per measure. By default this is set to 48, meaning that the smallest note you make is a 32nd note triplet at one tick. Two ticks is a 16th note triplet, and three ticks is a 16th note. If you were to use a Melee runtime that doubled the amount of ticks per measure, it would support 32nd notes.
+
+Because these are all just numbers, you can do math operations on them, such as `n4 + n8 + 16` or `n4 * 3 - n8t`.
 
 ## Scales
 

@@ -6,6 +6,7 @@ const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
 const { createSynth } = require('./synth');
 const createTempoComponent = require('./tempo');
+const { TONE_FREQ } = require('./time');
 const { $$, noop } = require('./utils');
 
 /**
@@ -111,10 +112,11 @@ Tone.Transport.scheduleRepeat((time) => {
     if (result instanceof obj.MidiNote && synth) {
       if (!runningNotes[result.pitch]) {
         const sciNote = result.scientificNotation();
-        console.log(result.duration);
+        const dur = {};
+        dur[TONE_FREQ] = result.duration;
         synth.triggerAttackRelease(
           [sciNote],
-          `0:0:${result.duration}`,
+          dur,
           time,
           result.velocity / 127.0,
         );
@@ -123,7 +125,7 @@ Tone.Transport.scheduleRepeat((time) => {
     }
   });
   if (results.done) stop(false, true);
-}, '16n');
+}, TONE_FREQ);
 
 playBtn.addEventListener('click', () => {
   ui.lock();

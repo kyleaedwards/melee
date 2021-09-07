@@ -1,3 +1,4 @@
+import { CLOCKS_PER_MEASURE, CPM } from './constants';
 import {
   Arr,
   BaseObject,
@@ -813,6 +814,54 @@ function createScaleMap(): Record<string, BaseObject> {
 }
 
 /**
+ * Create note lengths. To support triplets, clocksPerMeasure should ideally be set
+ * to a multiple of 24 (24, 48, 96, 192, or 384).
+ *
+ * @internal
+ */
+function createNoteLengthMap(clocksPerMeasure: CPM): Record<string, BaseObject> {
+  const LENGTH_MAP: Record<string, number> = {
+    t128: 2,
+    n128: 3,
+    t64: 4,
+    n64: 6,
+    d64: 9,
+    t32: 8,
+    n32: 12,
+    d32: 18,
+    t16: 16,
+    n16: 24,
+    SIXTEENTH: 24,
+    d16: 36,
+    t8: 32,
+    n8: 48,
+    EIGHTH: 48,
+    d8: 72,
+    t4: 64,
+    n4: 96,
+    QUARTER: 96,
+    d4: 144,
+    t2: 128,
+    n2: 192,
+    HALF: 192,
+    d2: 288,
+    n1: 384,
+    WHOLE: 384,
+  };
+
+  const divisor = 384 / clocksPerMeasure;
+
+  return Object.keys(LENGTH_MAP).reduce((acc, cur) => {
+    const value = Math.floor(LENGTH_MAP[cur] / divisor);
+    if (value < 2) return acc;
+    return {
+      ...acc,
+      [cur]: Int.from(value),
+    }
+  }, {});
+}
+
+/**
  * Default global variables placed in scope on startup.
  *
  * @internal
@@ -820,6 +869,7 @@ function createScaleMap(): Record<string, BaseObject> {
 export const BUILTINS = {
   ...createChordMap(),
   ...MIDI_VALUES,
+  ...createNoteLengthMap(CLOCKS_PER_MEASURE),
   ...createScaleMap(),
 };
 
