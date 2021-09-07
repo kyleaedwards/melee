@@ -599,7 +599,10 @@ export class Compiler {
       if (node.duration) {
         this.compile(node.duration);
       } else {
-        this.emit(Opcode.CONST, this.addConstant(Int.from(DEFAULT_NOTE_DURATION)));
+        this.emit(
+          Opcode.CONST,
+          this.addConstant(Int.from(DEFAULT_NOTE_DURATION)),
+        );
       }
       this.emit(Opcode.SKIP);
     } else if (node instanceof ast.CCExpression) {

@@ -819,7 +819,9 @@ function createScaleMap(): Record<string, BaseObject> {
  *
  * @internal
  */
-function createNoteLengthMap(clocksPerMeasure: CPM): Record<string, BaseObject> {
+function createNoteLengthMap(
+  clocksPerMeasure: CPM,
+): Record<string, BaseObject> {
   const LENGTH_MAP: Record<string, number> = {
     t128: 2,
     n128: 3,
@@ -857,7 +859,7 @@ function createNoteLengthMap(clocksPerMeasure: CPM): Record<string, BaseObject> 
     return {
       ...acc,
       [cur]: Int.from(value),
-    }
+    };
   }, {});
 }
 
