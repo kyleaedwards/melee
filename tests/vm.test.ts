@@ -5,6 +5,7 @@ import { Compiler } from '../src/compiler';
 import { disassemble } from '../src/bytecode';
 import { VM } from '../src/vm';
 import * as obj from '../src/object';
+import { DEFAULT_NOTE_DURATION } from '../src/constants';
 
 type TestScalar = number | boolean | null | obj.MidiNote | obj.Hold;
 
@@ -629,7 +630,7 @@ describe('VM', () => {
   test('should support MIDI `note` messages', () => {
     testInputs([
       [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],
-      [`note [C3]`, new obj.MidiNote(48, 1, 64)],
+      [`note [C3]`, new obj.MidiNote(48, DEFAULT_NOTE_DURATION, 64)],
     ]);
 
     testError('note []');
@@ -755,19 +756,19 @@ describe('VM', () => {
         next p;
         next p;`,
         [
-          new obj.MidiNote(50, 1, 64),
-          new obj.MidiNote(50, 1, 64),
+          new obj.MidiNote(50, DEFAULT_NOTE_DURATION, 64),
+          new obj.MidiNote(50, DEFAULT_NOTE_DURATION, 64),
         ],
       ],
       [
-        `g1 := cycle([note [C3], note[D3], note[G3]]);
+        `g1 := cycle([note [C3, 1], note[D3, 1], note[G3, 1]]);
         g2 := cycle([note [C3, 2], note[D3, 2], note[G3, 2]]);
         p := poly(g1, g2);
         next p;
         next p;`,
         [
           new obj.MidiNote(50, 1, 64),
-          new obj.Hold(),
+          new obj.Hold(48, 1),
         ],
       ],
     ]);
@@ -834,7 +835,7 @@ describe('VM', () => {
 
   test('should support `skip` keyword', () => {
     testInputs([
-      [`skip`, new obj.MidiNote(-1, 1, 0)],
+      [`skip`, new obj.MidiNote(-1, DEFAULT_NOTE_DURATION, 0)],
       [`skip 10`, new obj.MidiNote(-1, 10, 0)],
     ]);
 
