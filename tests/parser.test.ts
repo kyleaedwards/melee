@@ -734,9 +734,9 @@ describe('Parser', () => {
   describe('parseCCExpression', () => {
     test('should parse valid CC expression', () => {
       const inputs: [string, (string | boolean | number)[]][] = [
-        ['cc []', []],
-        ['cc [x, y]', ['x', 'y']],
-        ['cc [a, 1, false]', ['a', 1, false]],
+        ['cc()', []],
+        ['cc(x, y)', ['x', 'y']],
+        ['cc(a, 1, false)', ['a', 1, false]],
       ];
 
       inputs.forEach(([input, values]) => {
@@ -749,12 +749,9 @@ describe('Parser', () => {
         const expr = stmt.value;
         assertNodeType(expr, ast.CCExpression);
 
-        const arr = expr.message;
-        assertNodeType(arr, ast.ArrayLiteral);
-
-        expect(arr.values).toHaveLength(values.length);
+        expect(expr.args).toHaveLength(values.length);
         values.forEach((expected, i) => {
-          testLiteral(arr.values[i], expected);
+          testLiteral(expr.args[i], expected);
         });
       });
     });

@@ -12,6 +12,7 @@ import {
   Int,
   isTruthy,
   Iterable,
+  MidiCC,
   MidiNote,
   MIDI_VALUES,
   NativeFn,
@@ -30,6 +31,23 @@ const NULL = new Null();
  * @internal
  */
 export const NATIVE_FNS: NativeFn[] = [
+  /**
+   * chan(Note): Int
+   * Given a MIDI note or CC object, returns its channel.
+   */
+  new NativeFn('chan', (_: VM, ...args: BaseObject[]): BaseObject => {
+    const note = args[0];
+    if (
+      args.length !== 1 ||
+      (!(note instanceof MidiNote) && !(note instanceof MidiCC))
+    ) {
+      throw new Error(
+        'Function `chan` takes a single MIDI note or CC argument',
+      );
+    }
+    return Int.from(note.channel);
+  }),
+
   /**
    * chord(Int, Note, Arr, Int): Arr
    * (alternatively: chord(Int, Int, Arr, Int): Arr)

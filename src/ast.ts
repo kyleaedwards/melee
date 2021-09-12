@@ -614,14 +614,16 @@ export class CCExpression implements Expression {
 
   constructor(
     public token: Token,
-    public message: Expression | undefined,
+    public args: Expression[] | undefined,
   ) {
     this.nodeType = 'expression';
   }
 
   toString(): string {
-    return `${this.token.literal} ${
-      this.message ? this.message.toString() : ''
-    }`;
+    return `${this.token.literal}(${
+      this.args
+        ? this.args.map((arg) => arg.toString()).join(', ')
+        : ''
+    })`;
   }
 }

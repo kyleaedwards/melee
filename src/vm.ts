@@ -677,26 +677,31 @@ export class VM {
           break;
         }
         case Opcode.CC: {
-          const args = this.pop();
-          if (
-            !args ||
-            !(args instanceof obj.Arr) ||
-            args.items.length !== 2
-          ) {
+          let argLength = this.readOperand(1);
+          if (argLength < 3) {
             throw new Error(
-              'CC messages must be created with an array containing a key integer and a value integer',
+              '`cc()` requires exactly three arguments, a MIDI channel, and key and value integer values',
             );
           }
-          const key = args.items[0];
-          if (!(key instanceof obj.Int)) {
-            throw new Error('MIDI CC key must be an integer');
+          while (argLength > 3) {
+            this.pop();
+            argLength--;
           }
-          const value = args.items[1];
+          const value = this.pop();
           if (!(value instanceof obj.Int)) {
             throw new Error('MIDI CC value must be an integer');
           }
+          const key = this.pop();
+          if (!(key instanceof obj.Int)) {
+            throw new Error('MIDI CC key must be an integer');
+          }
+          const channel = this.pop();
+          if (!(channel instanceof obj.Int)) {
+            throw new Error('MIDI CC channel must be an integer');
+          }
           this.push(
             new obj.MidiCC(
+              channel.value,
               clamp(key.value, 0, 127),
               clamp(value.value, 0, 127),
             ),

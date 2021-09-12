@@ -764,20 +764,18 @@ describe('Compiler.compile', () => {
   test('should compile midi cc keywords', () => {
     const inputs: CompilerTestCase[] = [
       [
-        `cc [4, 5]`,
+        `cc(4, 5)`,
         [4, 5],
         [
           createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.CONST, 1),
-          createInstruction(Opcode.ARRAY, 2),
-          createInstruction(Opcode.CC),
+          createInstruction(Opcode.CC, 2),
           createInstruction(Opcode.POP),
         ],
       ],
     ];
 
     testCompilerResult(inputs);
-    testCompilerError(`cc`);
   });
 
   test('should compile yield statements', () => {

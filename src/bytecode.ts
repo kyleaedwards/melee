@@ -122,7 +122,7 @@ const operations: [op: Opcode, name: string, operands?: number[]][] =
     [Opcode.GETC, 'GETC', [1]],
     [Opcode.SETC, 'SETC', [1]],
     [Opcode.NOTE, 'NOTE', [1]],
-    [Opcode.CC, 'CC'],
+    [Opcode.CC, 'CC', [1]],
     [Opcode.REST, 'REST', [1]],
     [Opcode.YIELD, 'YIELD'],
     [Opcode.NEXT, 'NEXT'],

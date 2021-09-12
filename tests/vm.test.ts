@@ -641,14 +641,13 @@ describe('VM', () => {
   });
 
   test('should support MIDI `cc` messages', () => {
-    testInputs([[`cc [1, 2]`, new obj.MidiCC(1, 2)]]);
+    testInputs([[`cc(0, 1, 2)`, new obj.MidiCC(0, 1, 2)]]);
 
-    testError('cc []');
-    testError('cc [false]');
-    testError('cc true');
-    testError('cc 3');
-    testError('cc [3, 4, 5, 6, 7]');
-    testError('cc [note(0, 60), cc [1, 2]]');
+    testError('cc()');
+    testError('cc(false)');
+    testError('cc(true)');
+    testError('cc(3)');
+    testError('cc(note(0, 60), cc(1, 2))');
   });
 
   test('should support sequence generators', () => {

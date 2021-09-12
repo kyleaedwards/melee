@@ -245,7 +245,7 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | --- | --- | --- |
 | **array** | `[1, 2, 3]` | A list of any of the above data types
 | **bool** | `true` | True or false; mostly used for branching your code |
-| **cc** | `cc [3, 64]` | MIDI CC message |
+| **cc** | `cc(0, 3, 64)` | MIDI CC message |
 | **fn** | `fn(...args) { ... }` | A function
 | **gen** | `gen(...args) { ... }` | A generator function capable of creating a generator instance
 | **int** | `5` | An integer value; used for math or converting into `note` or `cc` data |
@@ -258,6 +258,7 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 
 | Type | Example | Description |
 | --- | --- | --- |
+| **cc** | `cc(int, int, int)` | Creates a new MIDI CC message with the given channel, key, and value |
 | **chord** | `chord(...)` | See [Chords and Polyphony](#chords-and-polyphony) for a full explanation |
 | **concat** | `concat(arr1, arr2, ..., arrN)` | Merge multiple arrays into one |
 | **conv** | `conv(arr)` | Converts an array into a sequence |

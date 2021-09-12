@@ -465,13 +465,11 @@ export class Parser {
     return new ast.RestExpression(token, args);
   }
 
-  private parseCCExpression(): ast.CCExpression {
+  private parseCCExpression(): ast.CCExpression | undefined {
     const token = this.curr;
-
-    this.nextToken();
-    const message = this.parseExpression(precedence.NIL);
-
-    return new ast.CCExpression(token, message);
+    if (!this.expectPeek('lparen')) return;
+    const args = this.parseExpressionList('rparen');
+    return new ast.CCExpression(token, args);
   }
 
   private parseParentheticalExpression(): ast.Expression | undefined {

@@ -604,14 +604,14 @@ export class Compiler {
       node.args.forEach(this.compile.bind(this));
       this.emit(Opcode.REST, node.args.length);
     } else if (node instanceof ast.CCExpression) {
-      if (!node.message) {
+      if (!node.args) {
         throw new CompilerError(
-          'Cannot use the `cc` keyword without an operand',
+          'Cannot use the `cc` keyword without arguments',
           node.token,
         );
       }
-      this.compile(node.message);
-      this.emit(Opcode.CC);
+      node.args.forEach(this.compile.bind(this));
+      this.emit(Opcode.CC, node.args.length);
     }
   }
 

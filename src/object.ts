@@ -86,6 +86,7 @@ export interface BaseObject {
  * @public
  */
 export interface MidiValue {
+  channel: number;
   type: string;
   data: number[];
 }
@@ -396,6 +397,7 @@ export class MidiNote implements BaseObject, MidiObject {
 
   midiValue(): MidiValue {
     return {
+      channel: this.channel,
       type: this.type,
       data: [this.pitch, this.duration, this.velocity],
     };
@@ -414,14 +416,19 @@ export class MidiNote implements BaseObject, MidiObject {
 export class MidiCC implements BaseObject, MidiObject {
   type: Type = 'cc';
 
-  constructor(public key: number, public value: number) {}
+  constructor(
+    public channel: number,
+    public key: number,
+    public value: number,
+  ) {}
 
   inspectObject(): string {
-    return `{cc key=${this.key} val=${this.value}}`;
+    return `{CH${this.channel}: cc key=${this.key} val=${this.value}}`;
   }
 
   midiValue(): MidiValue {
     return {
+      channel: this.channel,
       type: this.type,
       data: [this.key, this.value],
     };
