@@ -1352,13 +1352,15 @@ exports.RestExpression = RestExpression;
  * @public
  */
 class CCExpression {
-    constructor(token, message) {
+    constructor(token, args) {
         this.token = token;
-        this.message = message;
+        this.args = args;
         this.nodeType = 'expression';
     }
     toString() {
-        return `${this.token.literal} ${this.message ? this.message.toString() : ''}`;
+        return `${this.token.literal}(${this.args
+            ? this.args.map((arg) => arg.toString()).join(', ')
+            : ''})`;
     }
 }
 exports.CCExpression = CCExpression;
@@ -1377,6 +1379,18 @@ const NULL = new object_1.Null();
  * @internal
  */
 exports.NATIVE_FNS = [
+    /**
+     * chan(Note): Int
+     * Given a MIDI note or CC object, returns its channel.
+     */
+    new object_1.NativeFn('chan', (_, ...args) => {
+        const note = args[0];
+        if (args.length !== 1 ||
+            (!(note instanceof object_1.MidiNote) && !(note instanceof object_1.MidiCC))) {
+            throw new Error('Function `chan` takes a single MIDI note or CC argument');
+        }
+        return object_1.Int.from(note.channel);
+    }),
     /**
      * chord(Int, Note, Arr, Int): Arr
      * (alternatively: chord(Int, Int, Arr, Int): Arr)
@@ -2191,7 +2205,7 @@ const operations = [
     [Opcode.GETC, 'GETC', [1]],
     [Opcode.SETC, 'SETC', [1]],
     [Opcode.NOTE, 'NOTE', [1]],
-    [Opcode.CC, 'CC'],
+    [Opcode.CC, 'CC', [1]],
     [Opcode.REST, 'REST', [1]],
     [Opcode.YIELD, 'YIELD'],
     [Opcode.NEXT, 'NEXT'],
@@ -2791,11 +2805,11 @@ class Compiler {
             this.emit(bytecode_1.Opcode.REST, node.args.length);
         }
         else if (node instanceof ast.CCExpression) {
-            if (!node.message) {
-                throw new errors_1.CompilerError('Cannot use the `cc` keyword without an operand', node.token);
+            if (!node.args) {
+                throw new errors_1.CompilerError('Cannot use the `cc` keyword without arguments', node.token);
             }
-            this.compile(node.message);
-            this.emit(bytecode_1.Opcode.CC);
+            node.args.forEach(this.compile.bind(this));
+            this.emit(bytecode_1.Opcode.CC, node.args.length);
         }
     }
     /**
@@ -3672,6 +3686,7 @@ class MidiNote {
     }
     midiValue() {
         return {
+            channel: this.channel,
             type: this.type,
             data: [this.pitch, this.duration, this.velocity],
         };
@@ -3687,16 +3702,18 @@ exports.MidiNote = MidiNote;
  * @public
  */
 class MidiCC {
-    constructor(key, value) {
+    constructor(channel, key, value) {
+        this.channel = channel;
         this.key = key;
         this.value = value;
         this.type = 'cc';
     }
     inspectObject() {
-        return `{cc key=${this.key} val=${this.value}}`;
+        return `{CH${this.channel}: cc key=${this.key} val=${this.value}}`;
     }
     midiValue() {
         return {
+            channel: this.channel,
             type: this.type,
             data: [this.key, this.value],
         };
@@ -4169,9 +4186,10 @@ class Parser {
     }
     parseCCExpression() {
         const token = this.curr;
-        this.nextToken();
-        const message = this.parseExpression(precedence.NIL);
-        return new ast.CCExpression(token, message);
+        if (!this.expectPeek('lparen'))
+            return;
+        const args = this.parseExpressionList('rparen');
+        return new ast.CCExpression(token, args);
     }
     parseParentheticalExpression() {
         this.nextToken();
@@ -5491,21 +5509,27 @@ class VM {
                     break;
                 }
                 case bytecode_1.Opcode.CC: {
-                    const args = this.pop();
-                    if (!args ||
-                        !(args instanceof obj.Arr) ||
-                        args.items.length !== 2) {
-                        throw new Error('CC messages must be created with an array containing a key integer and a value integer');
+                    let argLength = this.readOperand(1);
+                    if (argLength < 3) {
+                        throw new Error('`cc()` requires exactly three arguments, a MIDI channel, and key and value integer values');
                     }
-                    const key = args.items[0];
-                    if (!(key instanceof obj.Int)) {
-                        throw new Error('MIDI CC key must be an integer');
+                    while (argLength > 3) {
+                        this.pop();
+                        argLength--;
                     }
-                    const value = args.items[1];
+                    const value = this.pop();
                     if (!(value instanceof obj.Int)) {
                         throw new Error('MIDI CC value must be an integer');
                     }
-                    this.push(new obj.MidiCC(utils_1.clamp(key.value, 0, 127), utils_1.clamp(value.value, 0, 127)));
+                    const key = this.pop();
+                    if (!(key instanceof obj.Int)) {
+                        throw new Error('MIDI CC key must be an integer');
+                    }
+                    const channel = this.pop();
+                    if (!(channel instanceof obj.Int)) {
+                        throw new Error('MIDI CC channel must be an integer');
+                    }
+                    this.push(new obj.MidiCC(channel.value, utils_1.clamp(key.value, 0, 127), utils_1.clamp(value.value, 0, 127)));
                 }
             }
             frame = this.frame();
