@@ -330,323 +330,68 @@ class MeleeEditor {
 
 module.exports = MeleeEditor;
 
-},{"../../dist":13,"./syntax":4,"./utils":7}],2:[function(require,module,exports){
+},{"../../dist":15,"./syntax":4,"./utils":8}],2:[function(require,module,exports){
+/**
+ * Imports
+ */
+
+const path = require('path');
+
 /**
  * Examples used when defining the helptext for the demo page. Each demo is an
  * object consisting of a descriptive `name`, the default `tempo` for the
- * demonstration, and the `code` itself.
+ * demonstration, and the `code` itself. In this case, the code property is loaded
+ * from the example files in the repo.
  */
 module.exports = [
   {
     name: 'Simple Loop',
     tempo: 120,
-    code: `// Example: Simple Loop
-//
-// We're barely scratching the surface of what Melee can
-// do. While it can sometimes be useful to have quick loops
-// like this, the real magic happens when we use more of the
-// features (like probability, randomization, scales, etc...)
-// together.
-
-main := gen () {
-  loop {
-    yield note [C3];
-    yield note [D3];
-    yield note [F3];
-    yield note [G3];
-  }
-};\n`,
+    code: "// Example: Simple Loop\n//\n// We're barely scratching the surface of what Melee can\n// do. While it can sometimes be useful to have quick loops\n// like this, the real magic happens when we use more of the\n// features (like probability, randomization, scales, etc...)\n// together.\n\nmain := gen () {\n  loop {\n    yield note(0, C3);\n    yield note(0, D3);\n    yield note(0, F3);\n    yield note(0, G3);\n  }\n};\n",
   },
   {
     name: 'One-shot Sequence',
     tempo: 120,
-    code: `// Example: One-shot Sequence
-//
-// Not all sequences need to be loops. This is especially
-// useful in the Max for Live version, as each sequence can
-// be triggered (and repeated) with incoming MIDI notes.
-// This makes sequences more playable and active than
-// simply looping indefinitely.
-
-main := gen () {
-  yield note [C3];
-  yield note [D3];
-  yield note [F3];
-  yield note [G3];
-};\n`,
+    code: "// Example: One-shot Sequence\n//\n// Not all sequences need to be loops. This is especially\n// useful in the Max for Live version, as each sequence can\n// be triggered (and repeated) with incoming MIDI notes.\n// This makes sequences more playable and active than\n// simply looping indefinitely.\n\nmain := gen () {\n  yield note(0, C3);\n  yield note(0, D3);\n  yield note(0, F3);\n  yield note(0, G3);\n};\n",
   },
   {
     name: 'Notes in G maj',
     tempo: 120,
-    code: `// Example: Notes in G maj
-//
-// Here we're just using random number generators rand()
-// and rrand(), as well as the scale() function to create
-// a generative sequence of notes with different lengths
-// that still conform to a G major scale.
-
-main := gen () {
-  loop {
-    noteDuration := rrand(1, 5);
-    notePitch := scale(SCALE_MAJOR, G2, rand(24));
-    yield note [notePitch, noteDuration];
-  }
-};\n`,
+    code: "// Example: Notes in G maj\n//\n// Here we're just using random number generators rand()\n// and rrand(), as well as the scale() function to create\n// a generative sequence of notes with different lengths\n// that still conform to a G major scale.\n\nmain := gen () {\n  loop {\n    noteDuration := n16 * rrand(1, 5);\n    notePitch := scale(SCALE_MAJOR, G2, rand(24));\n    yield note(0, notePitch, noteDuration);\n  }\n};\n",
   },
   {
     name: 'Probabilities',
     tempo: 88,
-    code: `// Example: Probabilities
-//
-// On each cycle through the main loop, we step through
-// each note in order, giving E4 a 1 in 2 chance to play,
-// F#4 a 1 in 3 chance, G4 a 1 in 4 chance, and B4 a 1
-// in 5.
-
-main := gen () {
-  loop {
-    if (rand(2) == 0) {
-      yield note [E4];
-    }
-    if (rand(3) == 0) {
-      yield note [F#4];
-    }
-    if (rand(4) == 0) {
-      yield note [G4];
-    }
-    if (rand(5) == 0) {
-      yield note [B4];
-    }
-  }
-};\n`,
+    code: "// Example: Probabilities\n//\n// On each cycle through the main loop, we step through\n// each note in order, giving E4 a 1 in 2 chance to play,\n// F#4 a 1 in 3 chance, G4 a 1 in 4 chance, and B4 a 1\n// in 5.\n\n// Instruments\nsynth := instr(0);\n\nmain := gen () {\n  loop {\n    if (rand(2) == 0) {\n      yield synth(E4);\n    }\n    if (rand(3) == 0) {\n      yield synth(F#4);\n    }\n    if (rand(4) == 0) {\n      yield synth(G4);\n    }\n    if (rand(5) == 0) {\n      yield synth(B4);\n    }\n  }\n};\n",
   },
   {
     name: 'Random Walk',
     tempo: 120,
-    code: `// Example: Random Walk
-//
-// This example generates notes by making single steps left or
-// right (or not at all) through the array below, rolling around
-// to the other side of the array if it passes the beginning or
-// the end. Because of this, the sequence will only play notes
-// that are adjacent to one another. In this example, it might
-// happen to output a sequence like so:
-//
-// C3 -> C3 -> C4 -> C3 -> Eb3 -> E3 -> Eb3
-
-main := gen () {
-  position := 0;
-  notes := [C3, C4, D4, G3, E3, Eb3];
-  loop {
-    // rand(3) returns a random number from 0 to 2. If we subtract
-    // 1 from this, we either get -1, 0, or 1. Meaning that if we
-    // add this to the position value, it will randomly take steps
-    // forward or backwards by 1, or stay at the same value.
-    position += rand(3) - 1;
-
-    // If the number is negative, we can get the index back in the
-    // positive ranges by adding the length of the array to it,
-    // until it's greater than or equal to zero.
-    while (position < 0) {
-      position += len(notes);
-    }
-    
-    // The mod operator (%) returns the remainder of position
-    // divided by the length of the notes array. These two
-    // operations together ensure that the position will always
-    // be somewhere within the array's bounds, and we can use
-    // the value to retrieve one of its elements.
-    position %= len(notes);
-
-    // Yield out a note object with a pitch from the list.
-    yield note [notes[position], 2, 127];
-  }
-};`,
+    code: "// Example: Random Walk\n//\n// This example generates notes by making single steps left or\n// right (or not at all) through the array below, rolling around\n// to the other side of the array if it passes the beginning or\n// the end. Because of this, the sequence will only play notes\n// that are adjacent to one another. In this example, it might\n// happen to output a sequence like so:\n//\n// C3 -> C3 -> C4 -> C3 -> Eb3 -> E3 -> Eb3\n\nmain := gen () {\n  position := 0;\n  notes := [C3, C4, D4, G3, E3, Eb3];\n  loop {\n    // rand(3) returns a random number from 0 to 2. If we subtract\n    // 1 from this, we either get -1, 0, or 1. Meaning that if we\n    // add this to the position value, it will randomly take steps\n    // forward or backwards by 1, or stay at the same value.\n    position += rand(3) - 1;\n\n    // If the number is negative, we can get the index back in the\n    // positive ranges by adding the length of the array to it,\n    // until it's greater than or equal to zero.\n    while (position < 0) {\n      position += len(notes);\n    }\n    \n    // The mod operator (%) returns the remainder of position\n    // divided by the length of the notes array. These two\n    // operations together ensure that the position will always\n    // be somewhere within the array's bounds, and we can use\n    // the value to retrieve one of its elements.\n    position %= len(notes);\n\n    // Yield out a note object with a pitch from the list.\n    yield note(0, notes[position], n8, 127);\n  }\n};\n",
   },
   {
-    name: 'It\'s All Generators...',
+    name: 'Generators',
     tempo: 120,
-    code: `// Example: It's All Generators...
-//
-// We can use multiple generators to create subsequences
-// looping with different frequencies.
-
-// We start out with a generator that loops forever, picking a random note
-// out of an array.
-notePitch := gen () {
-  loop {
-    yield [D2, A2, G2, C3, F3, E4][rand(6)];
-  }
-}(); // If we don't need arguments, we can call the generator immediately.
-
-// Lets check out some built-in functions! First we'll use the
-// range(n) function to create an array of numbers from 0 to n.
-nums := range(5);
-
-// Now we'll map() over them, returning a new array using the
-// transform function we provide.
-biggerNums := map(nums, fn(x) { return x + 1; });
-
-// Rather than define generators with the gen keyword, we can
-// also convert arrays to sequences using conv() to create a
-// one-shot sequence, or cycle() to have it loop forever.
-noteDuration := cycle(biggerNums);
-
-main := gen () {
-  loop {
-    // Every time through the loop, we take the next item out
-    // of each sequence, but since their loops have different
-    // numbers of elements, they quickly get out of sync.
-    yield note [next notePitch, next noteDuration];
-  }
-};\n`,
+    code: "// Example: It's All Generators...\n//\n// We can use multiple generators to create subsequences\n// looping with different frequencies.\n\n// We start out with a generator that loops forever, picking a random note\n// out of an array.\nnotePitch := gen () {\n  loop {\n    yield [D2, A2, G2, C3, F3, E4][rand(6)];\n  }\n}(); // If we don't need arguments, we can call the generator immediately.\n\n// Lets check out some built-in functions! First we'll use the\n// range(n) function to create an array of numbers from 0 to n.\nnums := range(5);\n\n// Now we'll map() over them, returning a new array using the\n// transform function we provide.\nbiggerNums := map(nums, fn(x) { return x + 1; });\n\n// Rather than define generators with the gen keyword, we can\n// also convert arrays to sequences using conv() to create a\n// one-shot sequence, or cycle() to have it loop forever.\nnoteDuration := cycle(biggerNums);\n\nmain := gen () {\n  loop {\n    // Every time through the loop, we take the next item out\n    // of each sequence, but since their loops have different\n    // numbers of elements, they quickly get out of sync.\n    yield note(0, next notePitch, n16 * next noteDuration);\n  }\n};\n",
   },
   {
     name: 'Composing Sequences',
-    tempo: 80,
-    code: `// Example: Composing Sequences
-//
-// We can compose sequences out of random notes by introducing
-// repetition into the mix. Here we're taking a generator that
-// creates random notes of a scale, and pulling out four 8-note
-// sequences. Each time through the loop, we repeat each
-// sequence 4 times to give more structure to the melody.
-
-// With \`cycle\` we're making a sequence of velocities that give
-// some rhythmic consistency to our sequence.
-velocity := cycle([127, 0, 101, 33, 47, 75, 120, 55]);
-
-createNotes := gen (root) { // We've given this generator an
-                            // argument, so it's easy to change
-                            // the root note from main().
-  loop {
-    vl := next velocity; // Pull off next item from velocity seq.
-    pt := scale(SCALE_PENT_MINOR, root, rand(18));
-    yield note [pt, 1, vl];
-  }
-};
-
-main := gen () {
-  // Create a generator to pull random notes from.
-  notes := createNotes(C3);
-  
-  // Create 4 sets of 8 notes up front to use in the main loop.
-  sets := [];
-  for i in range(4) {
-    // take(seq, n) pulls the next n notes from the sequence.
-    push(sets, take(notes, 8));
-  }
-
-  loop {
-    // Repeat for each of the 4 sets.
-    for i in range(4) {
-      set := sets[i];
-  
-      // Loop four times over each 8-note sequence.
-      for j in range(4) {
-        for n in set {
-          yield n;
-        }
-      }
-    }
-  }
-};\n`,
+    tempo: 112,
+    code: "// Example: Composing Sequences\n//\n// We can compose sequences out of random notes by introducing\n// repetition into the mix. Here we're taking a generator that\n// creates random notes of a scale, and pulling out four 8-note\n// sequences. Each time through the loop, we repeat each\n// sequence 4 times to give more structure to the melody.\n\n// With `cycle` we're making a sequence of velocities that give\n// some rhythmic consistency to our sequence.\nvelocity := cycle([127, 0, 101, 33, 47, 75, 120, 55]);\n\ncreateNotes := gen (root) { // We've given this generator an\n                            // argument, so it's easy to change\n                            // the root note from main().\n  loop {\n    vl := next velocity; // Pull off next item from velocity seq.\n    pt := scale(SCALE_PENT_MINOR, root, rand(18));\n    yield note(0, pt, n16, vl);\n  }\n};\n\nmain := gen () {\n  // Create a generator to pull random notes from.\n  notes := createNotes(C3);\n  \n  // Create 4 sets of 8 notes up front to use in the main loop.\n  sets := [];\n  for i in range(4) {\n    // take(seq, n) pulls the next n notes from the sequence.\n    push(sets, take(notes, 8));\n  }\n\n  loop {\n    // Repeat for each of the 4 sets.\n    for i in range(4) {\n      set := sets[i];\n  \n      // Loop four times over each 8-note sequence.\n      for j in range(4) {\n        for n in set {\n          yield n;\n        }\n      }\n    }\n  }\n};\n",
   },
   {
     name: 'Polyphony',
     tempo: 101,
-    code: `// Example: Polyphony
-//
-// Using the merge() and poly() functions, we can combine
-// sequences together to create polyphonic sequences that
-// play independently of one another.
-
-// Here we have a bassline generator that plays notes
-// for a full quarter note.
-bass := gen () {
-  loop {
-    notePitch := scale(SCALE_PENT_MAJOR, G2, rand(8));
-    yield note [notePitch, 8];
-  }
-};
-
-// The melody plays much quicker around an octave higher
-// than the bass.
-melody := gen () {
-  loop {
-    noteDuration := rrand(1, 4);
-    notePitch := scale(SCALE_MAJOR, G3, rand(16));
-    yield note [notePitch, noteDuration];
-  }
-};
-
-main := gen () {
-  // poly(...seq) creates a new sequence from whatever
-  // sequences you provide the function.
-  m := poly(bass(), melody());
-  loop {
-    n := next m;
-    yield n;
-  }
-};\n`,   
+    code: "// Example: Polyphony\n//\n// Using the merge() and poly() functions, we can combine\n// sequences together to create polyphonic sequences that\n// play independently of one another.\n\n// Instruments\nsynth := instr(0);\n\n// Here we have a bassline generator that plays notes\n// for a full half note.\nbass := gen () {\n  loop {\n    notePitch := scale(SCALE_PENT_MAJOR, G1, rand(6));\n\n    // Double up the octaves\n    yield [synth(notePitch, HALF), synth(notePitch + 12, HALF)];\n  }\n};\n\n// The melody plays much quicker around an octave higher\n// than the bass.\nmelody := gen () {\n  loop {\n    noteDuration := n16 * rrand(1, 4);\n    notePitch := scale(SCALE_MAJOR, G3, 4 + rand(10));\n    yield synth(notePitch, noteDuration);\n  }\n};\n\nmain := gen () {\n  // poly(...seq) creates a new sequence from whatever\n  // sequences you provide the function.\n  m := poly(bass(), melody());\n  loop {\n    n := next m;\n    yield n;\n  }\n};\n",
   },
   {
     name: 'BOC',
     tempo: 94,
-    code: `// Example: BOC
-//
-// Not much to this one. If you know you know.
-
-main := gen () {
-  loop {
-    yield note [G#2, 2];
-    yield skip 1;
-    yield note [A#2];
-    yield note [B3];
-    yield note [B3];
-    yield note [G#2];
-    yield note [B3];
-    yield note [G#2];
-    yield note [A#3];
-    yield note [F#3];
-    yield note [G#2];
-    yield note [B1, 2];
-    yield note [A#2];
-    yield note [G#2];
-    yield note [C#3, 4];
-    yield note [C#2, 6];
-    yield note [F#3, 4];
-    yield note [G#3, 2];
-    yield note [G#1, 3];
-    yield note [A#2];
-    yield note [D#3];
-    yield note [A#2];
-    yield note [D#3];
-    yield note [A#2];
-    yield note [F#2];
-    yield note [F#3];
-    yield note [F#3];
-    yield note [A#2];
-    yield note [F#3];
-    yield note [G#3];
-    yield note [G#3, 2];
-    yield note [C#2, 2];
-    yield note [D#2];
-    yield note [F3];
-    yield note [D#2, 2];
-    yield note [F3, 2];
-    yield note [B3, 2];
-    yield note [F3];
-    yield note [B3];
-    yield note [F3];
-    yield note [A#3];
-    yield note [F#3, 2];
-  }
-};\n`,
+    code: "// Example: BOC\n//\n// Not much to this one. If you know you know.\n\n// Instruments\nsynth := instr(0);\n\nmain := gen () {\n  loop {\n    yield synth(G#2, n8);\n    yield rest();\n    yield synth(A#2);\n    yield synth(B3);\n    yield synth(B3);\n    yield synth(G#2);\n    yield synth(B3);\n    yield synth(G#2);\n    yield synth(A#3);\n    yield synth(F#3);\n    yield synth(G#2);\n    yield synth(B1, n8);\n    yield synth(A#2);\n    yield synth(G#2);\n    yield synth(C#3, n4);\n    yield synth(C#2, d4);\n    yield synth(F#3, n4);\n    yield synth(G#3, n8);\n    yield synth(G#1, d8);\n    yield synth(A#2);\n    yield synth(D#3);\n    yield synth(A#2);\n    yield synth(D#3);\n    yield synth(A#2);\n    yield synth(F#2);\n    yield synth(F#3);\n    yield synth(F#3);\n    yield synth(A#2);\n    yield synth(F#3);\n    yield synth(G#3);\n    yield synth(G#3, n8);\n    yield synth(C#2, n8);\n    yield synth(D#2);\n    yield synth(F3);\n    yield synth(D#2, n8);\n    yield synth(F3, n8);\n    yield synth(B3, n8);\n    yield synth(F3);\n    yield synth(B3);\n    yield synth(F3);\n    yield synth(A#3);\n    yield synth(F#3, n8);\n  }\n};\n",
   },
 ];
 
-},{}],3:[function(require,module,exports){
+},{"path":30}],3:[function(require,module,exports){
 /**
  * Imports
  */
@@ -655,6 +400,7 @@ const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
 const { createSynth } = require('./synth');
 const createTempoComponent = require('./tempo');
+const { TONE_FREQ } = require('./time');
 const { $$, noop } = require('./utils');
 
 /**
@@ -754,16 +500,17 @@ Tone.Transport.scheduleRepeat((time) => {
   const results = ui.clock();
   if (!results) return;
   results.off.forEach((off) => {
-    delete runningNotes[off];
+    delete runningNotes[off.pitch];
   });
   results.on.forEach((result) => {
     if (result instanceof obj.MidiNote && synth) {
       if (!runningNotes[result.pitch]) {
         const sciNote = result.scientificNotation();
-        console.log(result.duration);
+        const dur = {};
+        dur[TONE_FREQ] = result.duration;
         synth.triggerAttackRelease(
           [sciNote],
-          `0:0:${result.duration}`,
+          dur,
           time,
           result.velocity / 127.0,
         );
@@ -772,7 +519,7 @@ Tone.Transport.scheduleRepeat((time) => {
     }
   });
   if (results.done) stop(false, true);
-}, '16n');
+}, TONE_FREQ);
 
 playBtn.addEventListener('click', () => {
   ui.lock();
@@ -788,7 +535,6 @@ playBtn.addEventListener('click', () => {
 pauseBtn.addEventListener('click', () => {
   webControls.classList.remove('playing');
   Object.values(runningNotes).forEach((note) => {
-    console.log(note);
     synth.triggerRelease(note, Tone.now());
   });
   runningNotes = {};
@@ -804,7 +550,7 @@ setTimeout(async () => {
   ui.initialize()
 }, 250);
 
-},{"../../dist":13,"./editor":1,"./examples":2,"./synth":5,"./tempo":6,"./utils":7}],4:[function(require,module,exports){
+},{"../../dist":15,"./editor":1,"./examples":2,"./synth":5,"./tempo":6,"./time":7,"./utils":8}],4:[function(require,module,exports){
 /**
  * Imports
  */
@@ -945,7 +691,7 @@ module.exports = (CodeMirror) => {
   CodeMirror.defineMIME('text/x-melee', 'melee');
 };
 
-},{"../../dist":13}],5:[function(require,module,exports){
+},{"../../dist":15}],5:[function(require,module,exports){
 /**
  * Constants
  */
@@ -1033,7 +779,28 @@ module.exports = () => {
   };
 };
 
-},{"./utils":7}],7:[function(require,module,exports){
+},{"./utils":8}],7:[function(require,module,exports){
+/**
+ * Imports
+ */
+const { CLOCKS_PER_MEASURE } = require('../../dist');
+
+let TONE_FREQ = '16t';
+if (CLOCKS_PER_MEASURE === 384) {
+  TONE_FREQ = '256t';
+} else if (CLOCKS_PER_MEASURE === 192) {
+  TONE_FREQ = '128t';
+} else if (CLOCKS_PER_MEASURE === 96) {
+  TONE_FREQ = '64t';
+} else if (CLOCKS_PER_MEASURE === 48) {
+  TONE_FREQ = '32t';
+}
+
+module.exports = {
+  TONE_FREQ,
+};
+
+},{"../../dist":15}],8:[function(require,module,exports){
 /**
  * Shortcut for document.getElementById(id).
  *
@@ -1097,13 +864,13 @@ module.exports = {
   clampWithDefault,
 };
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 "use strict";
 /**
  * Abstract syntax tree mechanisms and node types.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CCExpression = exports.SkipExpression = exports.NoteExpression = exports.CallExpression = exports.IndexExpression = exports.NextExpression = exports.GeneratorLiteral = exports.FunctionLiteral = exports.IfExpression = exports.InfixExpression = exports.PrefixExpression = exports.ArrayLiteral = exports.BooleanLiteral = exports.IntegerLiteral = exports.CompoundAssignExpression = exports.AssignExpression = exports.Identifier = exports.WhileStatement = exports.ForStatement = exports.BreakStatement = exports.ContinueStatement = exports.BlockStatement = exports.ExpressionStatement = exports.YieldStatement = exports.ReturnStatement = exports.DeclareStatement = exports.Program = void 0;
+exports.CCExpression = exports.RestExpression = exports.NoteExpression = exports.CallExpression = exports.IndexExpression = exports.NextExpression = exports.GeneratorLiteral = exports.FunctionLiteral = exports.IfExpression = exports.InfixExpression = exports.PrefixExpression = exports.ArrayLiteral = exports.BooleanLiteral = exports.IntegerLiteral = exports.CompoundAssignExpression = exports.AssignExpression = exports.Identifier = exports.WhileStatement = exports.ForStatement = exports.BreakStatement = exports.ContinueStatement = exports.BlockStatement = exports.ExpressionStatement = exports.YieldStatement = exports.ReturnStatement = exports.DeclareStatement = exports.Program = void 0;
 /**
  * Root-level program node encapsulating the full abstract syntax tree.
  *
@@ -1549,32 +1316,36 @@ exports.CallExpression = CallExpression;
  * @public
  */
 class NoteExpression {
-    constructor(token, note) {
+    constructor(token, args) {
         this.token = token;
-        this.note = note;
+        this.args = args;
         this.nodeType = 'expression';
     }
     toString() {
-        return `${this.token.literal} ${this.note ? this.note.toString() : ''}`;
+        return `${this.token.literal}(${this.args
+            ? this.args.map((arg) => arg.toString()).join(', ')
+            : ''})`;
     }
 }
 exports.NoteExpression = NoteExpression;
 /**
- * AST node type representing a MIDI skip expression.
+ * AST node type representing a MIDI rest expression.
  *
  * @public
  */
-class SkipExpression {
-    constructor(token, duration) {
+class RestExpression {
+    constructor(token, args) {
         this.token = token;
-        this.duration = duration;
+        this.args = args;
         this.nodeType = 'expression';
     }
     toString() {
-        return `${this.token.literal} ${this.duration ? this.duration.toString() : ''}`;
+        return `${this.token.literal}(${this.args
+            ? this.args.map((arg) => arg.toString()).join(', ')
+            : ''})`;
     }
 }
-exports.SkipExpression = SkipExpression;
+exports.RestExpression = RestExpression;
 /**
  * AST node type representing a MIDI CC message expression.
  *
@@ -1592,10 +1363,11 @@ class CCExpression {
 }
 exports.CCExpression = CCExpression;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KNOWN_LABELS = exports.NATIVE_FN_KEYS = exports.BUILTIN_KEYS = exports.BUILTINS = exports.NATIVE_FNS = void 0;
+const constants_1 = require("./constants");
 const object_1 = require("./object");
 const NULL = new object_1.Null();
 /**
@@ -1606,8 +1378,8 @@ const NULL = new object_1.Null();
  */
 exports.NATIVE_FNS = [
     /**
-     * chord(Note, Arr, Int): Arr
-     * (alternatively: chord(Int, Arr, Int): Arr)
+     * chord(Int, Note, Arr, Int): Arr
+     * (alternatively: chord(Int, Int, Arr, Int): Arr)
      * Creates a chord of notes or pitches either with an existing
      * root note or root pitch value.
      */
@@ -1621,10 +1393,10 @@ exports.NATIVE_FNS = [
             rootPitch = root.value;
         }
         else {
-            throw new Error('The first argument to `chord` must be an Int pitch or a MIDI note object');
+            throw new Error('The second argument to `chord` must be an Int pitch or a MIDI note object');
         }
         if (!(chord instanceof object_1.Arr)) {
-            throw new Error('Chord requires second argument to be an existing chord variable or an array of note intervals');
+            throw new Error('Chord requires third argument to be an existing chord variable or an array of note intervals');
         }
         let inversionValue = 0;
         if (inversion) {
@@ -1641,15 +1413,9 @@ exports.NATIVE_FNS = [
             }
             return item.value + 12 * (inversionOcts + (i % len));
         });
-        // while (inversionValue-- > 0) {
-        //   const interval = intervals.shift();
-        //   if (interval !== undefined) {
-        //     intervals.push(interval + 12);
-        //   }
-        // }
         const items = intervals.map((interval) => {
             if (root instanceof object_1.MidiNote) {
-                return new object_1.MidiNote(rootPitch + interval, root.duration, root.velocity);
+                return new object_1.MidiNote(root.channel, rootPitch + interval, root.duration, root.velocity);
             }
             return object_1.Int.from(rootPitch + interval);
         });
@@ -1743,6 +1509,38 @@ exports.NATIVE_FNS = [
             return object_1.isTruthy(res);
         });
         return new object_1.Arr(items);
+    }),
+    /**
+     * inst(Int): Fn
+     * Create a new instrument on a single MIDI channel.
+     */
+    new object_1.NativeFn('instr', (_, ...args) => {
+        const [channel] = args;
+        if (args.length !== 1 || !(channel instanceof object_1.Int)) {
+            throw new Error('Function `inst` requires a single MIDI channel argument');
+        }
+        const ch = channel.value;
+        return new object_1.NativeFn(`instr<CH${ch}>`, (_, ...innerArgs) => {
+            const [pitch, duration, velocity] = innerArgs;
+            if (!(pitch instanceof object_1.Int)) {
+                throw new Error('MIDI note pitch must be an integer or a pitch literal like Eb4');
+            }
+            let velocityValue = 64;
+            if (velocity) {
+                if (!(velocity instanceof object_1.Int)) {
+                    throw new Error('MIDI note velocity must be an integer');
+                }
+                velocityValue = Math.min(127, Math.max(0, velocity.value));
+            }
+            let durationValue = constants_1.DEFAULT_NOTE_DURATION;
+            if (duration) {
+                if (!(duration instanceof object_1.Int)) {
+                    throw new Error('MIDI note duration must be an integer');
+                }
+                durationValue = Math.max(1, duration.value);
+            }
+            return new object_1.MidiNote(channel.value, pitch.value, durationValue, velocityValue);
+        });
     }),
     /**
      * len(Arr): Int
@@ -2001,7 +1799,7 @@ exports.NATIVE_FNS = [
         }
         quantized += rootPitch + octave * 12;
         if (note instanceof object_1.MidiNote) {
-            return new object_1.MidiNote(quantized, note.duration, note.velocity);
+            return new object_1.MidiNote(note.channel, quantized, note.duration, note.velocity);
         }
         return object_1.Int.from(quantized);
     }),
@@ -2099,7 +1897,7 @@ exports.NATIVE_FNS = [
         const octave = Math.floor(interval.value / scale.items.length);
         const pitch = rootPitch + octave * 12 + offset.value;
         if (root instanceof object_1.MidiNote) {
-            return new object_1.MidiNote(pitch, root.duration, root.velocity);
+            return new object_1.MidiNote(root.channel, pitch, root.duration, root.velocity);
         }
         return object_1.Int.from(pitch);
     }),
@@ -2241,6 +2039,52 @@ function createScaleMap() {
     }), {});
 }
 /**
+ * Create note lengths. To support triplets, clocksPerMeasure should ideally be set
+ * to a multiple of 24 (24, 48, 96, 192, or 384).
+ *
+ * @internal
+ */
+function createNoteLengthMap(clocksPerMeasure) {
+    const LENGTH_MAP = {
+        t128: 2,
+        n128: 3,
+        t64: 4,
+        n64: 6,
+        d64: 9,
+        t32: 8,
+        n32: 12,
+        d32: 18,
+        t16: 16,
+        n16: 24,
+        SIXTEENTH: 24,
+        d16: 36,
+        t8: 32,
+        n8: 48,
+        EIGHTH: 48,
+        d8: 72,
+        t4: 64,
+        n4: 96,
+        QUARTER: 96,
+        d4: 144,
+        t2: 128,
+        n2: 192,
+        HALF: 192,
+        d2: 288,
+        n1: 384,
+        WHOLE: 384,
+    };
+    const divisor = 384 / clocksPerMeasure;
+    return Object.keys(LENGTH_MAP).reduce((acc, cur) => {
+        const value = Math.floor(LENGTH_MAP[cur] / divisor);
+        if (value < 2)
+            return acc;
+        return {
+            ...acc,
+            [cur]: object_1.Int.from(value),
+        };
+    }, {});
+}
+/**
  * Default global variables placed in scope on startup.
  *
  * @internal
@@ -2248,13 +2092,14 @@ function createScaleMap() {
 exports.BUILTINS = {
     ...createChordMap(),
     ...object_1.MIDI_VALUES,
+    ...createNoteLengthMap(constants_1.CLOCKS_PER_MEASURE),
     ...createScaleMap(),
 };
 exports.BUILTIN_KEYS = Object.keys(exports.BUILTINS);
 exports.NATIVE_FN_KEYS = exports.NATIVE_FNS.map((fn) => fn.label);
 exports.KNOWN_LABELS = [...exports.BUILTIN_KEYS, ...exports.NATIVE_FN_KEYS];
 
-},{"./object":15}],10:[function(require,module,exports){
+},{"./constants":13,"./object":17}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.disassemble = exports.createInstruction = exports.unpackBigEndian = exports.packBigEndian = exports.OPCODES = exports.Opcode = void 0;
@@ -2299,7 +2144,7 @@ var Opcode;
     Opcode[Opcode["JMP_IF_NOT"] = 111] = "JMP_IF_NOT";
     Opcode[Opcode["NOTE"] = 200] = "NOTE";
     Opcode[Opcode["CC"] = 201] = "CC";
-    Opcode[Opcode["SKIP"] = 202] = "SKIP";
+    Opcode[Opcode["REST"] = 202] = "REST";
     Opcode[Opcode["YIELD"] = 210] = "YIELD";
     Opcode[Opcode["NEXT"] = 211] = "NEXT";
     Opcode[Opcode["POP"] = 253] = "POP";
@@ -2345,9 +2190,9 @@ const operations = [
     [Opcode.SELF, 'SELF'],
     [Opcode.GETC, 'GETC', [1]],
     [Opcode.SETC, 'SETC', [1]],
-    [Opcode.NOTE, 'NOTE'],
+    [Opcode.NOTE, 'NOTE', [1]],
     [Opcode.CC, 'CC'],
-    [Opcode.SKIP, 'SKIP'],
+    [Opcode.REST, 'REST', [1]],
     [Opcode.YIELD, 'YIELD'],
     [Opcode.NEXT, 'NEXT'],
 ];
@@ -2445,7 +2290,7 @@ function disassemble(bytecode) {
 }
 exports.disassemble = disassemble;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Compiler = void 0;
@@ -2932,20 +2777,18 @@ class Compiler {
             this.emit(bytecode_1.Opcode.JMP, this.loopStarts[this.loopStarts.length - 1]);
         }
         else if (node instanceof ast.NoteExpression) {
-            if (!node.note) {
-                throw new errors_1.CompilerError('Cannot use the `note` keyword without an operand', node.token);
+            if (!node.args) {
+                throw new errors_1.CompilerError('Cannot use the `note` keyword without arguments', node.token);
             }
-            this.compile(node.note);
-            this.emit(bytecode_1.Opcode.NOTE);
+            node.args.forEach(this.compile.bind(this));
+            this.emit(bytecode_1.Opcode.NOTE, node.args.length);
         }
-        else if (node instanceof ast.SkipExpression) {
-            if (node.duration) {
-                this.compile(node.duration);
+        else if (node instanceof ast.RestExpression) {
+            if (!node.args) {
+                throw new errors_1.CompilerError('Cannot use the `rest` keyword without arguments', node.token);
             }
-            else {
-                this.emit(bytecode_1.Opcode.CONST, this.addConstant(object_1.Int.from(1)));
-            }
-            this.emit(bytecode_1.Opcode.SKIP);
+            node.args.forEach(this.compile.bind(this));
+            this.emit(bytecode_1.Opcode.REST, node.args.length);
         }
         else if (node instanceof ast.CCExpression) {
             if (!node.message) {
@@ -3083,7 +2926,18 @@ class Compiler {
 }
 exports.Compiler = Compiler;
 
-},{"./ast":8,"./builtins":9,"./bytecode":10,"./errors":12,"./object":15,"./symbols":19}],12:[function(require,module,exports){
+},{"./ast":9,"./builtins":10,"./bytecode":11,"./errors":14,"./object":17,"./symbols":21}],13:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_NOTE_DURATION = exports.CLOCKS_PER_MEASURE = void 0;
+/**
+ * The global clocks per measure value. Can be exposed to the runtime
+ * to allow implementations to know how often to send clock pulses.
+ */
+exports.CLOCKS_PER_MEASURE = 48;
+exports.DEFAULT_NOTE_DURATION = exports.CLOCKS_PER_MEASURE / 16;
+
+},{}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RuntimeError = exports.CompilerError = exports.SynError = exports.MeleeError = void 0;
@@ -3136,7 +2990,7 @@ class RuntimeError extends MeleeError {
 }
 exports.RuntimeError = RuntimeError;
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 /**
  * Melee.js
@@ -3147,7 +3001,7 @@ exports.RuntimeError = RuntimeError;
  * Released under the MIT License.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.obj = exports.errors = exports.ast = exports.KNOWN_LABELS = exports.disassemble = exports.Runtime = exports.Repl = exports.tokenIs = exports.VM = exports.Compiler = exports.Parser = exports.Lexer = void 0;
+exports.obj = exports.errors = exports.ast = exports.CLOCKS_PER_MEASURE = exports.KNOWN_LABELS = exports.disassemble = exports.Runtime = exports.Repl = exports.tokenIs = exports.VM = exports.Compiler = exports.Parser = exports.Lexer = void 0;
 /**
  * Abstract syntax tree mechanisms and node types.
  */
@@ -3181,8 +3035,10 @@ var bytecode_1 = require("./bytecode");
 Object.defineProperty(exports, "disassemble", { enumerable: true, get: function () { return bytecode_1.disassemble; } });
 var builtins_1 = require("./builtins");
 Object.defineProperty(exports, "KNOWN_LABELS", { enumerable: true, get: function () { return builtins_1.KNOWN_LABELS; } });
+var constants_1 = require("./constants");
+Object.defineProperty(exports, "CLOCKS_PER_MEASURE", { enumerable: true, get: function () { return constants_1.CLOCKS_PER_MEASURE; } });
 
-},{"./ast":8,"./builtins":9,"./bytecode":10,"./compiler":11,"./errors":12,"./lexer":14,"./object":15,"./parser":16,"./repl":17,"./runtime":18,"./token":20,"./vm":22}],14:[function(require,module,exports){
+},{"./ast":9,"./builtins":10,"./bytecode":11,"./compiler":12,"./constants":13,"./errors":14,"./lexer":16,"./object":17,"./parser":18,"./repl":19,"./runtime":20,"./token":22,"./vm":24}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Lexer = void 0;
@@ -3502,13 +3358,13 @@ class Lexer {
 }
 exports.Lexer = Lexer;
 
-},{"./token":20}],15:[function(require,module,exports){
+},{"./token":22}],17:[function(require,module,exports){
 "use strict";
 /**
  * Melee object types.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.provisionHold = exports.provisionMidiNote = exports.NOTES = exports.MIDI_VALUES = exports.isTruthy = exports.Hold = exports.MidiCC = exports.MidiNote = exports.VirtualSeq = exports.Seq = exports.Iterable = exports.Closure = exports.NativeFn = exports.Gen = exports.Fn = exports.Callable = exports.Arr = exports.Bool = exports.Int = exports.Yield = exports.Return = exports.Err = exports.Null = exports.Frame = void 0;
+exports.provisionHold = exports.provisionMidiNote = exports.NOTES = exports.MIDI_VALUES = exports.isTruthy = exports.Rest = exports.Hold = exports.MidiCC = exports.MidiNote = exports.VirtualSeq = exports.Seq = exports.Iterable = exports.Closure = exports.NativeFn = exports.Gen = exports.Fn = exports.Callable = exports.VirtualFn = exports.Arr = exports.Bool = exports.Int = exports.Yield = exports.Return = exports.Err = exports.Null = exports.Frame = void 0;
 /**
  * Call "stack" frame (might not be in the call stack) representing
  * a function's execution context.
@@ -3663,6 +3519,18 @@ class Arr {
 }
 exports.Arr = Arr;
 /**
+ * Callable virtual function type.
+ *
+ * @public
+ */
+class VirtualFn {
+    constructor(cb) {
+        this.cb = cb;
+        this.type = 'function';
+    }
+}
+exports.VirtualFn = VirtualFn;
+/**
  * Base callable class for functions and generators.
  *
  * @public
@@ -3789,7 +3657,8 @@ exports.VirtualSeq = VirtualSeq;
  * @public
  */
 class MidiNote {
-    constructor(pitch, duration, velocity) {
+    constructor(channel, pitch, duration, velocity) {
+        this.channel = channel;
         this.pitch = pitch;
         this.duration = duration;
         this.velocity = velocity;
@@ -3797,9 +3666,9 @@ class MidiNote {
     }
     inspectObject() {
         if (this.pitch < 0) {
-            return `{skip ${this.duration}}`;
+            return `{CH${this.channel}: skip ${this.duration}}`;
         }
-        return `{${exports.NOTES[this.pitch]} for ${this.duration} vel=${this.velocity}}`;
+        return `{CH${this.channel}: ${exports.NOTES[this.pitch]} for ${this.duration} vel=${this.velocity}}`;
     }
     midiValue() {
         return {
@@ -3842,16 +3711,33 @@ exports.MidiCC = MidiCC;
  * @public
  */
 class Hold {
-    constructor(pitch, duration) {
+    constructor(channel, pitch, duration) {
+        this.channel = channel;
         this.pitch = pitch;
         this.duration = duration;
         this.type = 'hold';
     }
     inspectObject() {
-        return `{hold ${this.duration}}`;
+        return `{CH${this.channel}: hold ${this.duration}}`;
     }
 }
 exports.Hold = Hold;
+/**
+ * Sentinel used to notify the runtime to rest for a given
+ * number of clock cycles.
+ *
+ * @public
+ */
+class Rest {
+    constructor(duration) {
+        this.duration = duration;
+        this.type = 'rest';
+    }
+    inspectObject() {
+        return `{rest ${this.duration}}`;
+    }
+}
+exports.Rest = Rest;
 /* Utilities */
 const NULL = new Null();
 const FALSE = Bool.from(false);
@@ -3907,14 +3793,15 @@ exports.NOTES = notes.map((n) => n.replace(/_/g, '-'));
 const MIDI_POOL_SIZE = 1000;
 const MIDI_POOL = new Array(MIDI_POOL_SIZE);
 for (let i = 0; i < MIDI_POOL_SIZE; i++) {
-    MIDI_POOL[i] = new MidiNote(-1, 1, 0);
+    MIDI_POOL[i] = new MidiNote(0, -1, 1, 0);
 }
 let MIDI_POOL_INDEX = 0;
-function provisionMidiNote(pitch, duration, velocity) {
+function provisionMidiNote(channel, pitch, duration, velocity) {
     const note = MIDI_POOL[MIDI_POOL_INDEX++];
     if (MIDI_POOL_INDEX >= MIDI_POOL_SIZE) {
         MIDI_POOL_INDEX = 0;
     }
+    note.channel = channel;
     note.pitch = pitch;
     note.duration = duration;
     note.velocity = velocity;
@@ -3924,7 +3811,7 @@ exports.provisionMidiNote = provisionMidiNote;
 const HOLD_POOL_SIZE = 1000;
 const HOLD_POOL = new Array(HOLD_POOL_SIZE);
 for (let i = 0; i < HOLD_POOL_SIZE; i++) {
-    HOLD_POOL[i] = new Hold(-1, 0);
+    HOLD_POOL[i] = new Hold(0, -1, 0);
 }
 let HOLD_POOL_INDEX = 0;
 function provisionHold(pitch, duration) {
@@ -3938,7 +3825,7 @@ function provisionHold(pitch, duration) {
 }
 exports.provisionHold = provisionHold;
 
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -4036,7 +3923,7 @@ class Parser {
             if: this.parseConditional.bind(this),
             next: this.parseNext.bind(this),
             note: this.parseNoteExpression.bind(this),
-            skip: this.parseSkipExpression.bind(this),
+            rest: this.parseRestExpression.bind(this),
             cc: this.parseCCExpression.bind(this),
         };
         this.infixParseFns = {
@@ -4268,18 +4155,17 @@ class Parser {
     }
     parseNoteExpression() {
         const token = this.curr;
-        this.nextToken();
-        const data = this.parseExpression(precedence.NIL);
-        return new ast.NoteExpression(token, data);
+        if (!this.expectPeek('lparen'))
+            return;
+        const args = this.parseExpressionList('rparen');
+        return new ast.NoteExpression(token, args);
     }
-    parseSkipExpression() {
+    parseRestExpression() {
         const token = this.curr;
-        this.nextToken();
-        let duration;
-        if (this.curr.tokenType !== 'semicolon') {
-            duration = this.parseExpression(precedence.NIL);
-        }
-        return new ast.SkipExpression(token, duration);
+        if (!this.expectPeek('lparen'))
+            return;
+        const args = this.parseExpressionList('rparen');
+        return new ast.RestExpression(token, args);
     }
     parseCCExpression() {
         const token = this.curr;
@@ -4500,7 +4386,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"./ast":8,"./errors":12,"./token":20}],17:[function(require,module,exports){
+},{"./ast":9,"./errors":14,"./token":22}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Repl = void 0;
@@ -4561,7 +4447,7 @@ class Repl {
 }
 exports.Repl = Repl;
 
-},{"./compiler":11,"./lexer":14,"./parser":16,"./symbols":19,"./vm":22}],18:[function(require,module,exports){
+},{"./compiler":12,"./lexer":16,"./parser":18,"./symbols":21,"./vm":24}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Runtime = void 0;
@@ -4632,7 +4518,10 @@ class Runtime {
             compiler.compile(program);
         }
         catch (e) {
-            errors.push(e);
+            if (e instanceof errors_1.MeleeError) {
+                errors.push(e);
+            }
+            throw e;
         }
         if (errors.length)
             return errors;
@@ -4667,7 +4556,10 @@ class Runtime {
             compiler.compile(program);
         }
         catch (e) {
-            this.errors.push(e);
+            if (e instanceof errors_1.MeleeError) {
+                this.errors.push(e);
+            }
+            throw e;
             return;
         }
         this.instructions = compiler.instructions();
@@ -4717,16 +4609,18 @@ class Runtime {
         while (this.queue.length) {
             // Grab the next available note.
             const item = this.queue.shift();
-            if (!(item instanceof object_1.MidiNote) && !(item instanceof object_1.Hold))
+            if (!(item instanceof object_1.MidiNote) &&
+                !(item instanceof object_1.Hold) &&
+                !(item instanceof object_1.Rest))
                 break;
             // Decrement remaining note duration.
             item.duration--;
             if (item.duration) {
                 newQueue.push(item);
             }
-            else {
+            else if (!(item instanceof object_1.Rest)) {
                 // Prune if out of remaining note duration.
-                notesOff.push(item.pitch);
+                notesOff.push(item);
             }
         }
         // Update the queue.
@@ -4744,7 +4638,10 @@ class Runtime {
             if (note.pitch >= 0) {
                 playable = true;
             }
-            this.queue.push(object_1.provisionMidiNote(note.pitch, note.duration, note.velocity));
+            this.queue.push(object_1.provisionMidiNote(note.channel, note.pitch, note.duration, note.velocity));
+        }
+        else if (note instanceof object_1.Rest) {
+            this.queue.push(note);
         }
         return playable;
     }
@@ -4764,7 +4661,8 @@ class Runtime {
             if (nextValue instanceof object_1.Arr) {
                 notesOn = nextValue.items.filter((item) => this.noteOn(item));
             }
-            else if (nextValue instanceof object_1.MidiNote) {
+            else if (nextValue instanceof object_1.MidiNote ||
+                nextValue instanceof object_1.Rest) {
                 if (this.noteOn(nextValue)) {
                     notesOn.push(nextValue);
                 }
@@ -4772,7 +4670,12 @@ class Runtime {
         }
         return {
             on: notesOn,
-            off: notesOff.filter((n) => n >= 0),
+            off: notesOff.filter((n) => {
+                if (n instanceof object_1.MidiNote || n instanceof object_1.Hold) {
+                    return n.pitch >= 0;
+                }
+                return false;
+            }),
             done: this.seq ? this.seq.done : true,
         };
     }
@@ -4803,7 +4706,7 @@ class Runtime {
 }
 exports.Runtime = Runtime;
 
-},{"./bytecode":10,"./compiler":11,"./errors":12,"./lexer":14,"./object":15,"./parser":16,"./symbols":19,"./vm":22}],19:[function(require,module,exports){
+},{"./bytecode":11,"./compiler":12,"./errors":14,"./lexer":16,"./object":17,"./parser":18,"./symbols":21,"./vm":24}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SymbolTable = exports.ScopeType = void 0;
@@ -4944,7 +4847,7 @@ class SymbolTable {
 exports.SymbolTable = SymbolTable;
 SymbolTable.iota = 0;
 
-},{"./builtins":9}],20:[function(require,module,exports){
+},{"./builtins":10}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.tokenIs = exports.lookupIdentifier = void 0;
@@ -4974,7 +4877,7 @@ function isKeyword(str) {
         'yield',
         'next',
         'note',
-        'skip',
+        'rest',
         'cc',
     ].indexOf(str) !== -1);
 }
@@ -5005,7 +4908,7 @@ function tokenIs(token, tokenType) {
 }
 exports.tokenIs = tokenIs;
 
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.clamp = void 0;
@@ -5022,13 +4925,14 @@ function clamp(n, lo, hi) {
 }
 exports.clamp = clamp;
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VM = exports.createGlobalVariables = exports.MAX_VARIABLES = exports.MAX_STACK_SIZE = exports.MAX_FRAME_SIZE = void 0;
 const assert_1 = require("assert");
 const builtins_1 = require("./builtins");
 const bytecode_1 = require("./bytecode");
+const constants_1 = require("./constants");
 const obj = require("./object");
 const utils_1 = require("./utils");
 /**
@@ -5528,43 +5432,62 @@ class VM {
                     this.push(value);
                     break;
                 }
-                case bytecode_1.Opcode.SKIP: {
-                    const duration = this.pop();
-                    if (!(duration instanceof obj.Int) || duration.value <= 0) {
-                        throw new Error('Cannot use `skip` keyword with a non-integer duration or a duration less than 1');
+                case bytecode_1.Opcode.REST: {
+                    let argLength = this.readOperand(1);
+                    while (argLength > 1) {
+                        this.pop();
+                        argLength--;
                     }
-                    this.push(new obj.MidiNote(-1, duration.value, 0));
+                    let durationValue = constants_1.DEFAULT_NOTE_DURATION;
+                    if (argLength === 1) {
+                        const duration = this.pop();
+                        if (!(duration instanceof obj.Int) ||
+                            duration.value <= 0) {
+                            throw new Error('Cannot use `rest` keyword with a non-integer duration or a duration less than 1');
+                        }
+                        durationValue = duration.value;
+                    }
+                    this.push(new obj.Rest(durationValue));
                     break;
                 }
                 case bytecode_1.Opcode.NOTE: {
-                    const value = this.pop();
-                    if (!value ||
-                        !(value instanceof obj.Arr) ||
-                        !value.items.length ||
-                        value.items.length > 3) {
-                        throw new Error('Notes must be created with an array containing one to three integer arguments');
+                    let argLength = this.readOperand(1);
+                    if (argLength < 2) {
+                        throw new Error('`note()` requires at least two arguments, a MIDI channel, and a pitch value');
                     }
-                    const pitch = value.items[0];
-                    if (!(pitch instanceof obj.Int)) {
-                        throw new Error('MIDI note pitch must be an integer or a pitch literal like Eb4');
+                    while (argLength > 4) {
+                        this.pop();
+                        argLength--;
                     }
-                    const duration = value.items[1];
-                    let durationValue = 1;
-                    if (duration) {
-                        if (!(duration instanceof obj.Int)) {
-                            throw new Error('MIDI note duration must be an integer');
-                        }
-                        durationValue = Math.max(1, duration.value);
-                    }
-                    const velocity = value.items[2];
                     let velocityValue = 64;
-                    if (velocity) {
+                    if (argLength === 4) {
+                        const velocity = this.pop();
                         if (!(velocity instanceof obj.Int)) {
                             throw new Error('MIDI note velocity must be an integer');
                         }
                         velocityValue = Math.min(127, Math.max(0, velocity.value));
+                        argLength--;
                     }
-                    this.push(new obj.MidiNote(pitch.value, durationValue, velocityValue));
+                    let durationValue = constants_1.DEFAULT_NOTE_DURATION;
+                    if (argLength === 3) {
+                        const duration = this.pop();
+                        if (duration) {
+                            if (!(duration instanceof obj.Int)) {
+                                throw new Error('MIDI note duration must be an integer');
+                            }
+                            durationValue = Math.max(1, duration.value);
+                        }
+                    }
+                    const channel = this.stack[this.sp - 2];
+                    const pitch = this.stack[this.sp - 1];
+                    this.sp -= 2;
+                    if (!(channel instanceof obj.Int)) {
+                        throw new Error('MIDI channel must be an integer');
+                    }
+                    if (!(pitch instanceof obj.Int)) {
+                        throw new Error('MIDI note pitch must be an integer or a pitch literal like Eb4');
+                    }
+                    this.push(new obj.MidiNote(channel.value, pitch.value, durationValue, velocityValue));
                     break;
                 }
                 case bytecode_1.Opcode.CC: {
@@ -5866,7 +5789,7 @@ class VM {
 }
 exports.VM = VM;
 
-},{"./builtins":9,"./bytecode":10,"./object":15,"./utils":21,"assert":23}],23:[function(require,module,exports){
+},{"./builtins":10,"./bytecode":11,"./constants":13,"./object":17,"./utils":23,"assert":25}],25:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -6376,7 +6299,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"object-assign":27,"util/":26}],24:[function(require,module,exports){
+},{"object-assign":29,"util/":28}],26:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -6401,14 +6324,14 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 (function (process,global){(function (){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6998,7 +6921,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":25,"_process":28,"inherits":24}],27:[function(require,module,exports){
+},{"./support/isBuffer":27,"_process":31,"inherits":26}],29:[function(require,module,exports){
 /*
 object-assign
 (c) Sindre Sorhus
@@ -7090,7 +7013,540 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
+(function (process){(function (){
+// 'path' module extracted from Node.js v8.11.1 (only the posix part)
+// transplited with Babel
+
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+'use strict';
+
+function assertPath(path) {
+  if (typeof path !== 'string') {
+    throw new TypeError('Path must be a string. Received ' + JSON.stringify(path));
+  }
+}
+
+// Resolves . and .. elements in a path with directory names
+function normalizeStringPosix(path, allowAboveRoot) {
+  var res = '';
+  var lastSegmentLength = 0;
+  var lastSlash = -1;
+  var dots = 0;
+  var code;
+  for (var i = 0; i <= path.length; ++i) {
+    if (i < path.length)
+      code = path.charCodeAt(i);
+    else if (code === 47 /*/*/)
+      break;
+    else
+      code = 47 /*/*/;
+    if (code === 47 /*/*/) {
+      if (lastSlash === i - 1 || dots === 1) {
+        // NOOP
+      } else if (lastSlash !== i - 1 && dots === 2) {
+        if (res.length < 2 || lastSegmentLength !== 2 || res.charCodeAt(res.length - 1) !== 46 /*.*/ || res.charCodeAt(res.length - 2) !== 46 /*.*/) {
+          if (res.length > 2) {
+            var lastSlashIndex = res.lastIndexOf('/');
+            if (lastSlashIndex !== res.length - 1) {
+              if (lastSlashIndex === -1) {
+                res = '';
+                lastSegmentLength = 0;
+              } else {
+                res = res.slice(0, lastSlashIndex);
+                lastSegmentLength = res.length - 1 - res.lastIndexOf('/');
+              }
+              lastSlash = i;
+              dots = 0;
+              continue;
+            }
+          } else if (res.length === 2 || res.length === 1) {
+            res = '';
+            lastSegmentLength = 0;
+            lastSlash = i;
+            dots = 0;
+            continue;
+          }
+        }
+        if (allowAboveRoot) {
+          if (res.length > 0)
+            res += '/..';
+          else
+            res = '..';
+          lastSegmentLength = 2;
+        }
+      } else {
+        if (res.length > 0)
+          res += '/' + path.slice(lastSlash + 1, i);
+        else
+          res = path.slice(lastSlash + 1, i);
+        lastSegmentLength = i - lastSlash - 1;
+      }
+      lastSlash = i;
+      dots = 0;
+    } else if (code === 46 /*.*/ && dots !== -1) {
+      ++dots;
+    } else {
+      dots = -1;
+    }
+  }
+  return res;
+}
+
+function _format(sep, pathObject) {
+  var dir = pathObject.dir || pathObject.root;
+  var base = pathObject.base || (pathObject.name || '') + (pathObject.ext || '');
+  if (!dir) {
+    return base;
+  }
+  if (dir === pathObject.root) {
+    return dir + base;
+  }
+  return dir + sep + base;
+}
+
+var posix = {
+  // path.resolve([from ...], to)
+  resolve: function resolve() {
+    var resolvedPath = '';
+    var resolvedAbsolute = false;
+    var cwd;
+
+    for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+      var path;
+      if (i >= 0)
+        path = arguments[i];
+      else {
+        if (cwd === undefined)
+          cwd = process.cwd();
+        path = cwd;
+      }
+
+      assertPath(path);
+
+      // Skip empty entries
+      if (path.length === 0) {
+        continue;
+      }
+
+      resolvedPath = path + '/' + resolvedPath;
+      resolvedAbsolute = path.charCodeAt(0) === 47 /*/*/;
+    }
+
+    // At this point the path should be resolved to a full absolute path, but
+    // handle relative paths to be safe (might happen when process.cwd() fails)
+
+    // Normalize the path
+    resolvedPath = normalizeStringPosix(resolvedPath, !resolvedAbsolute);
+
+    if (resolvedAbsolute) {
+      if (resolvedPath.length > 0)
+        return '/' + resolvedPath;
+      else
+        return '/';
+    } else if (resolvedPath.length > 0) {
+      return resolvedPath;
+    } else {
+      return '.';
+    }
+  },
+
+  normalize: function normalize(path) {
+    assertPath(path);
+
+    if (path.length === 0) return '.';
+
+    var isAbsolute = path.charCodeAt(0) === 47 /*/*/;
+    var trailingSeparator = path.charCodeAt(path.length - 1) === 47 /*/*/;
+
+    // Normalize the path
+    path = normalizeStringPosix(path, !isAbsolute);
+
+    if (path.length === 0 && !isAbsolute) path = '.';
+    if (path.length > 0 && trailingSeparator) path += '/';
+
+    if (isAbsolute) return '/' + path;
+    return path;
+  },
+
+  isAbsolute: function isAbsolute(path) {
+    assertPath(path);
+    return path.length > 0 && path.charCodeAt(0) === 47 /*/*/;
+  },
+
+  join: function join() {
+    if (arguments.length === 0)
+      return '.';
+    var joined;
+    for (var i = 0; i < arguments.length; ++i) {
+      var arg = arguments[i];
+      assertPath(arg);
+      if (arg.length > 0) {
+        if (joined === undefined)
+          joined = arg;
+        else
+          joined += '/' + arg;
+      }
+    }
+    if (joined === undefined)
+      return '.';
+    return posix.normalize(joined);
+  },
+
+  relative: function relative(from, to) {
+    assertPath(from);
+    assertPath(to);
+
+    if (from === to) return '';
+
+    from = posix.resolve(from);
+    to = posix.resolve(to);
+
+    if (from === to) return '';
+
+    // Trim any leading backslashes
+    var fromStart = 1;
+    for (; fromStart < from.length; ++fromStart) {
+      if (from.charCodeAt(fromStart) !== 47 /*/*/)
+        break;
+    }
+    var fromEnd = from.length;
+    var fromLen = fromEnd - fromStart;
+
+    // Trim any leading backslashes
+    var toStart = 1;
+    for (; toStart < to.length; ++toStart) {
+      if (to.charCodeAt(toStart) !== 47 /*/*/)
+        break;
+    }
+    var toEnd = to.length;
+    var toLen = toEnd - toStart;
+
+    // Compare paths to find the longest common path from root
+    var length = fromLen < toLen ? fromLen : toLen;
+    var lastCommonSep = -1;
+    var i = 0;
+    for (; i <= length; ++i) {
+      if (i === length) {
+        if (toLen > length) {
+          if (to.charCodeAt(toStart + i) === 47 /*/*/) {
+            // We get here if `from` is the exact base path for `to`.
+            // For example: from='/foo/bar'; to='/foo/bar/baz'
+            return to.slice(toStart + i + 1);
+          } else if (i === 0) {
+            // We get here if `from` is the root
+            // For example: from='/'; to='/foo'
+            return to.slice(toStart + i);
+          }
+        } else if (fromLen > length) {
+          if (from.charCodeAt(fromStart + i) === 47 /*/*/) {
+            // We get here if `to` is the exact base path for `from`.
+            // For example: from='/foo/bar/baz'; to='/foo/bar'
+            lastCommonSep = i;
+          } else if (i === 0) {
+            // We get here if `to` is the root.
+            // For example: from='/foo'; to='/'
+            lastCommonSep = 0;
+          }
+        }
+        break;
+      }
+      var fromCode = from.charCodeAt(fromStart + i);
+      var toCode = to.charCodeAt(toStart + i);
+      if (fromCode !== toCode)
+        break;
+      else if (fromCode === 47 /*/*/)
+        lastCommonSep = i;
+    }
+
+    var out = '';
+    // Generate the relative path based on the path difference between `to`
+    // and `from`
+    for (i = fromStart + lastCommonSep + 1; i <= fromEnd; ++i) {
+      if (i === fromEnd || from.charCodeAt(i) === 47 /*/*/) {
+        if (out.length === 0)
+          out += '..';
+        else
+          out += '/..';
+      }
+    }
+
+    // Lastly, append the rest of the destination (`to`) path that comes after
+    // the common path parts
+    if (out.length > 0)
+      return out + to.slice(toStart + lastCommonSep);
+    else {
+      toStart += lastCommonSep;
+      if (to.charCodeAt(toStart) === 47 /*/*/)
+        ++toStart;
+      return to.slice(toStart);
+    }
+  },
+
+  _makeLong: function _makeLong(path) {
+    return path;
+  },
+
+  dirname: function dirname(path) {
+    assertPath(path);
+    if (path.length === 0) return '.';
+    var code = path.charCodeAt(0);
+    var hasRoot = code === 47 /*/*/;
+    var end = -1;
+    var matchedSlash = true;
+    for (var i = path.length - 1; i >= 1; --i) {
+      code = path.charCodeAt(i);
+      if (code === 47 /*/*/) {
+          if (!matchedSlash) {
+            end = i;
+            break;
+          }
+        } else {
+        // We saw the first non-path separator
+        matchedSlash = false;
+      }
+    }
+
+    if (end === -1) return hasRoot ? '/' : '.';
+    if (hasRoot && end === 1) return '//';
+    return path.slice(0, end);
+  },
+
+  basename: function basename(path, ext) {
+    if (ext !== undefined && typeof ext !== 'string') throw new TypeError('"ext" argument must be a string');
+    assertPath(path);
+
+    var start = 0;
+    var end = -1;
+    var matchedSlash = true;
+    var i;
+
+    if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
+      if (ext.length === path.length && ext === path) return '';
+      var extIdx = ext.length - 1;
+      var firstNonSlashEnd = -1;
+      for (i = path.length - 1; i >= 0; --i) {
+        var code = path.charCodeAt(i);
+        if (code === 47 /*/*/) {
+            // If we reached a path separator that was not part of a set of path
+            // separators at the end of the string, stop now
+            if (!matchedSlash) {
+              start = i + 1;
+              break;
+            }
+          } else {
+          if (firstNonSlashEnd === -1) {
+            // We saw the first non-path separator, remember this index in case
+            // we need it if the extension ends up not matching
+            matchedSlash = false;
+            firstNonSlashEnd = i + 1;
+          }
+          if (extIdx >= 0) {
+            // Try to match the explicit extension
+            if (code === ext.charCodeAt(extIdx)) {
+              if (--extIdx === -1) {
+                // We matched the extension, so mark this as the end of our path
+                // component
+                end = i;
+              }
+            } else {
+              // Extension does not match, so our result is the entire path
+              // component
+              extIdx = -1;
+              end = firstNonSlashEnd;
+            }
+          }
+        }
+      }
+
+      if (start === end) end = firstNonSlashEnd;else if (end === -1) end = path.length;
+      return path.slice(start, end);
+    } else {
+      for (i = path.length - 1; i >= 0; --i) {
+        if (path.charCodeAt(i) === 47 /*/*/) {
+            // If we reached a path separator that was not part of a set of path
+            // separators at the end of the string, stop now
+            if (!matchedSlash) {
+              start = i + 1;
+              break;
+            }
+          } else if (end === -1) {
+          // We saw the first non-path separator, mark this as the end of our
+          // path component
+          matchedSlash = false;
+          end = i + 1;
+        }
+      }
+
+      if (end === -1) return '';
+      return path.slice(start, end);
+    }
+  },
+
+  extname: function extname(path) {
+    assertPath(path);
+    var startDot = -1;
+    var startPart = 0;
+    var end = -1;
+    var matchedSlash = true;
+    // Track the state of characters (if any) we see before our first dot and
+    // after any path separator we find
+    var preDotState = 0;
+    for (var i = path.length - 1; i >= 0; --i) {
+      var code = path.charCodeAt(i);
+      if (code === 47 /*/*/) {
+          // If we reached a path separator that was not part of a set of path
+          // separators at the end of the string, stop now
+          if (!matchedSlash) {
+            startPart = i + 1;
+            break;
+          }
+          continue;
+        }
+      if (end === -1) {
+        // We saw the first non-path separator, mark this as the end of our
+        // extension
+        matchedSlash = false;
+        end = i + 1;
+      }
+      if (code === 46 /*.*/) {
+          // If this is our first dot, mark it as the start of our extension
+          if (startDot === -1)
+            startDot = i;
+          else if (preDotState !== 1)
+            preDotState = 1;
+      } else if (startDot !== -1) {
+        // We saw a non-dot and non-path separator before our dot, so we should
+        // have a good chance at having a non-empty extension
+        preDotState = -1;
+      }
+    }
+
+    if (startDot === -1 || end === -1 ||
+        // We saw a non-dot character immediately before the dot
+        preDotState === 0 ||
+        // The (right-most) trimmed path component is exactly '..'
+        preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+      return '';
+    }
+    return path.slice(startDot, end);
+  },
+
+  format: function format(pathObject) {
+    if (pathObject === null || typeof pathObject !== 'object') {
+      throw new TypeError('The "pathObject" argument must be of type Object. Received type ' + typeof pathObject);
+    }
+    return _format('/', pathObject);
+  },
+
+  parse: function parse(path) {
+    assertPath(path);
+
+    var ret = { root: '', dir: '', base: '', ext: '', name: '' };
+    if (path.length === 0) return ret;
+    var code = path.charCodeAt(0);
+    var isAbsolute = code === 47 /*/*/;
+    var start;
+    if (isAbsolute) {
+      ret.root = '/';
+      start = 1;
+    } else {
+      start = 0;
+    }
+    var startDot = -1;
+    var startPart = 0;
+    var end = -1;
+    var matchedSlash = true;
+    var i = path.length - 1;
+
+    // Track the state of characters (if any) we see before our first dot and
+    // after any path separator we find
+    var preDotState = 0;
+
+    // Get non-dir info
+    for (; i >= start; --i) {
+      code = path.charCodeAt(i);
+      if (code === 47 /*/*/) {
+          // If we reached a path separator that was not part of a set of path
+          // separators at the end of the string, stop now
+          if (!matchedSlash) {
+            startPart = i + 1;
+            break;
+          }
+          continue;
+        }
+      if (end === -1) {
+        // We saw the first non-path separator, mark this as the end of our
+        // extension
+        matchedSlash = false;
+        end = i + 1;
+      }
+      if (code === 46 /*.*/) {
+          // If this is our first dot, mark it as the start of our extension
+          if (startDot === -1) startDot = i;else if (preDotState !== 1) preDotState = 1;
+        } else if (startDot !== -1) {
+        // We saw a non-dot and non-path separator before our dot, so we should
+        // have a good chance at having a non-empty extension
+        preDotState = -1;
+      }
+    }
+
+    if (startDot === -1 || end === -1 ||
+    // We saw a non-dot character immediately before the dot
+    preDotState === 0 ||
+    // The (right-most) trimmed path component is exactly '..'
+    preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+      if (end !== -1) {
+        if (startPart === 0 && isAbsolute) ret.base = ret.name = path.slice(1, end);else ret.base = ret.name = path.slice(startPart, end);
+      }
+    } else {
+      if (startPart === 0 && isAbsolute) {
+        ret.name = path.slice(1, startDot);
+        ret.base = path.slice(1, end);
+      } else {
+        ret.name = path.slice(startPart, startDot);
+        ret.base = path.slice(startPart, end);
+      }
+      ret.ext = path.slice(startDot, end);
+    }
+
+    if (startPart > 0) ret.dir = path.slice(0, startPart - 1);else if (isAbsolute) ret.dir = '/';
+
+    return ret;
+  },
+
+  sep: '/',
+  delimiter: ':',
+  win32: null,
+  posix: null
+};
+
+posix.posix = posix;
+
+module.exports = posix;
+
+}).call(this)}).call(this,require('_process'))
+},{"_process":31}],31:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
