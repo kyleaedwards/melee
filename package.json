@@ -11,8 +11,8 @@
     "lint": "eslint src --ext ts,js && prettier -c src",
     "test": "jest",
     "cov": "jest --coverage",
-    "build-demo": "browserify ./demo/src/index.js -o ./demo/public/js/index.js",
-    "watch-demo": "watchify ./demo/src/index.js -o ./demo/public/js/index.js &",
+    "build-demo": "browserify -t brfs ./demo/src/index.js -o ./demo/public/js/index.js",
+    "watch-demo": "watchify -t brfs ./demo/src/index.js -o ./demo/public/js/index.js &",
     "start-demo": "yarn watch-demo && serve demo/public"
   },
   "typings": "./dist/melee.d.ts",
@@ -25,6 +25,7 @@
     "@types/jest": "26.0.23",
     "@typescript-eslint/eslint-plugin": "4.27.0",
     "@typescript-eslint/parser": "4.27.0",
+    "brfs": "^2.0.2",
     "browserify": "17.0.0",
     "eslint": "7.28.0",
     "jest": "27.0.4",

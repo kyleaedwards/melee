@@ -724,42 +724,41 @@ describe('Compiler.compile', () => {
     const index = Object.keys(BUILTINS).indexOf('C3');
     const inputs: CompilerTestCase[] = [
       [
-        `note [C3]`,
-        [],
+        `note(0, C3)`,
+        [0],
         [
+          createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.GETG, index),
-          createInstruction(Opcode.ARRAY, 1),
-          createInstruction(Opcode.NOTE),
+          createInstruction(Opcode.NOTE, 2),
           createInstruction(Opcode.POP),
         ],
       ],
       [
-        `note [C3, 4]`,
-        [4],
+        `note(0, C3, 4)`,
+        [0, 4],
         [
-          createInstruction(Opcode.GETG, index),
           createInstruction(Opcode.CONST, 0),
-          createInstruction(Opcode.ARRAY, 2),
-          createInstruction(Opcode.NOTE),
-          createInstruction(Opcode.POP),
-        ],
-      ],
-      [
-        `note [C3, 4, 64]`,
-        [4, 64],
-        [
           createInstruction(Opcode.GETG, index),
-          createInstruction(Opcode.CONST, 0),
           createInstruction(Opcode.CONST, 1),
-          createInstruction(Opcode.ARRAY, 3),
-          createInstruction(Opcode.NOTE),
+          createInstruction(Opcode.NOTE, 3),
+          createInstruction(Opcode.POP),
+        ],
+      ],
+      [
+        `note(1, C3, 4, 64)`,
+        [1, 4, 64],
+        [
+          createInstruction(Opcode.CONST, 0),
+          createInstruction(Opcode.GETG, index),
+          createInstruction(Opcode.CONST, 1),
+          createInstruction(Opcode.CONST, 2),
+          createInstruction(Opcode.NOTE, 4),
           createInstruction(Opcode.POP),
         ],
       ],
     ];
 
     testCompilerResult(inputs);
-    testCompilerError(`note`);
   });
 
   test('should compile midi cc keywords', () => {

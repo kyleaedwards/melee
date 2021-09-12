@@ -4,6 +4,9 @@
 // sequences together to create polyphonic sequences that
 // play independently of one another.
 
+// Instruments
+synth := instr(0);
+
 // Here we have a bassline generator that plays notes
 // for a full half note.
 bass := gen () {
@@ -11,7 +14,7 @@ bass := gen () {
     notePitch := scale(SCALE_PENT_MAJOR, G1, rand(6));
 
     // Double up the octaves
-    yield [note [notePitch, HALF], note [notePitch + 12, HALF]];
+    yield [synth(notePitch, HALF), synth(notePitch + 12, HALF)];
   }
 };
 
@@ -21,7 +24,7 @@ melody := gen () {
   loop {
     noteDuration := n16 * rrand(1, 4);
     notePitch := scale(SCALE_MAJOR, G3, 4 + rand(10));
-    yield note [notePitch, noteDuration];
+    yield synth(notePitch, noteDuration);
   }
 };
 

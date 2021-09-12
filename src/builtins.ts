@@ -1,4 +1,8 @@
-import { CLOCKS_PER_MEASURE, CPM } from './constants';
+import {
+  CLOCKS_PER_MEASURE,
+  CPM,
+  DEFAULT_NOTE_DURATION,
+} from './constants';
 import {
   Arr,
   BaseObject,
@@ -27,8 +31,8 @@ const NULL = new Null();
  */
 export const NATIVE_FNS: NativeFn[] = [
   /**
-   * chord(Note, Arr, Int): Arr
-   * (alternatively: chord(Int, Arr, Int): Arr)
+   * chord(Int, Note, Arr, Int): Arr
+   * (alternatively: chord(Int, Int, Arr, Int): Arr)
    * Creates a chord of notes or pitches either with an existing
    * root note or root pitch value.
    */
@@ -44,13 +48,13 @@ export const NATIVE_FNS: NativeFn[] = [
         rootPitch = root.value;
       } else {
         throw new Error(
-          'The first argument to `chord` must be an Int pitch or a MIDI note object',
+          'The second argument to `chord` must be an Int pitch or a MIDI note object',
         );
       }
 
       if (!(chord instanceof Arr)) {
         throw new Error(
-          'Chord requires second argument to be an existing chord variable or an array of note intervals',
+          'Chord requires third argument to be an existing chord variable or an array of note intervals',
         );
       }
 
@@ -74,16 +78,10 @@ export const NATIVE_FNS: NativeFn[] = [
         return item.value + 12 * (inversionOcts + (i % len));
       });
 
-      // while (inversionValue-- > 0) {
-      //   const interval = intervals.shift();
-      //   if (interval !== undefined) {
-      //     intervals.push(interval + 12);
-      //   }
-      // }
-
       const items = intervals.map((interval) => {
         if (root instanceof MidiNote) {
           return new MidiNote(
+            root.channel,
             rootPitch + interval,
             root.duration,
             root.velocity,
@@ -207,6 +205,65 @@ export const NATIVE_FNS: NativeFn[] = [
         return isTruthy(res);
       });
       return new Arr(items);
+    },
+  ),
+
+  /**
+   * inst(Int): Fn
+   * Create a new instrument on a single MIDI channel.
+   */
+  new NativeFn(
+    'instr',
+    (_: VM, ...args: BaseObject[]): BaseObject => {
+      const [channel] = args;
+      if (args.length !== 1 || !(channel instanceof Int)) {
+        throw new Error(
+          'Function `inst` requires a single MIDI channel argument',
+        );
+      }
+      const ch = channel.value;
+      return new NativeFn(
+        `instr<CH${ch}>`,
+        (_: VM, ...innerArgs: BaseObject[]): BaseObject => {
+          const [pitch, duration, velocity] = innerArgs;
+
+          if (!(pitch instanceof Int)) {
+            throw new Error(
+              'MIDI note pitch must be an integer or a pitch literal like Eb4',
+            );
+          }
+
+          let velocityValue = 64;
+          if (velocity) {
+            if (!(velocity instanceof Int)) {
+              throw new Error(
+                'MIDI note velocity must be an integer',
+              );
+            }
+            velocityValue = Math.min(
+              127,
+              Math.max(0, velocity.value),
+            );
+          }
+
+          let durationValue = DEFAULT_NOTE_DURATION;
+          if (duration) {
+            if (!(duration instanceof Int)) {
+              throw new Error(
+                'MIDI note duration must be an integer',
+              );
+            }
+            durationValue = Math.max(1, duration.value);
+          }
+
+          return new MidiNote(
+            channel.value,
+            pitch.value,
+            durationValue,
+            velocityValue,
+          );
+        },
+      );
     },
   ),
 
@@ -513,7 +570,12 @@ export const NATIVE_FNS: NativeFn[] = [
       quantized += rootPitch + octave * 12;
 
       if (note instanceof MidiNote) {
-        return new MidiNote(quantized, note.duration, note.velocity);
+        return new MidiNote(
+          note.channel,
+          quantized,
+          note.duration,
+          note.velocity,
+        );
       }
       return Int.from(quantized);
     },
@@ -641,7 +703,12 @@ export const NATIVE_FNS: NativeFn[] = [
       const octave = Math.floor(interval.value / scale.items.length);
       const pitch = rootPitch + octave * 12 + offset.value;
       if (root instanceof MidiNote) {
-        return new MidiNote(pitch, root.duration, root.velocity);
+        return new MidiNote(
+          root.channel,
+          pitch,
+          root.duration,
+          root.velocity,
+        );
       }
       return Int.from(pitch);
     },

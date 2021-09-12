@@ -7,8 +7,8 @@
 // simply looping indefinitely.
 
 main := gen () {
-  yield note [C3];
-  yield note [D3];
-  yield note [F3];
-  yield note [G3];
+  yield note(0, C3);
+  yield note(0, D3);
+  yield note(0, F3);
+  yield note(0, G3);
 };

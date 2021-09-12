@@ -106,7 +106,7 @@ Tone.Transport.scheduleRepeat((time) => {
   const results = ui.clock();
   if (!results) return;
   results.off.forEach((off) => {
-    delete runningNotes[off];
+    delete runningNotes[off.pitch];
   });
   results.on.forEach((result) => {
     if (result instanceof obj.MidiNote && synth) {
@@ -141,7 +141,6 @@ playBtn.addEventListener('click', () => {
 pauseBtn.addEventListener('click', () => {
   webControls.classList.remove('playing');
   Object.values(runningNotes).forEach((note) => {
-    console.log(note);
     synth.triggerRelease(note, Tone.now());
   });
   runningNotes = {};

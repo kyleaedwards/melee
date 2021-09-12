@@ -132,7 +132,7 @@ export class Parser {
       if: this.parseConditional.bind(this),
       next: this.parseNext.bind(this),
       note: this.parseNoteExpression.bind(this),
-      skip: this.parseSkipExpression.bind(this),
+      rest: this.parseRestExpression.bind(this),
       cc: this.parseCCExpression.bind(this),
     };
 
@@ -451,25 +451,18 @@ export class Parser {
     return new ast.IndexExpression(token, collection, index);
   }
 
-  private parseNoteExpression(): ast.NoteExpression {
+  private parseNoteExpression(): ast.NoteExpression | undefined {
     const token = this.curr;
-
-    this.nextToken();
-    const data = this.parseExpression(precedence.NIL);
-
-    return new ast.NoteExpression(token, data);
+    if (!this.expectPeek('lparen')) return;
+    const args = this.parseExpressionList('rparen');
+    return new ast.NoteExpression(token, args);
   }
 
-  private parseSkipExpression(): ast.SkipExpression {
+  private parseRestExpression(): ast.RestExpression | undefined {
     const token = this.curr;
-
-    this.nextToken();
-    let duration;
-    if (this.curr.tokenType !== 'semicolon') {
-      duration = this.parseExpression(precedence.NIL);
-    }
-
-    return new ast.SkipExpression(token, duration);
+    if (!this.expectPeek('lparen')) return;
+    const args = this.parseExpressionList('rparen');
+    return new ast.RestExpression(token, args);
   }
 
   private parseCCExpression(): ast.CCExpression {

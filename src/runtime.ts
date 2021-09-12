@@ -13,6 +13,7 @@ import {
   Arr,
   Hold,
   provisionMidiNote,
+  Rest,
 } from './object';
 import { Parser } from './parser';
 import { SymbolTable } from './symbols';
@@ -22,7 +23,7 @@ const NULL = new Null();
 
 export interface ClockUpdate {
   on: BaseObject[];
-  off: number[];
+  off: BaseObject[];
   done: boolean;
 }
 
@@ -96,7 +97,10 @@ export class Runtime {
     try {
       compiler.compile(program);
     } catch (e) {
-      errors.push(e);
+      if (e instanceof MeleeError) {
+        errors.push(e);
+      }
+      throw e;
     }
 
     if (errors.length) return errors;
@@ -141,7 +145,10 @@ export class Runtime {
     try {
       compiler.compile(program);
     } catch (e) {
-      this.errors.push(e);
+      if (e instanceof MeleeError) {
+        this.errors.push(e);
+      }
+      throw e;
       return;
     }
     this.instructions = compiler.instructions();
@@ -201,15 +208,19 @@ export class Runtime {
    *
    * @returns Note pitches to be turned off
    */
-  clearNotes(): number[] {
+  clearNotes(): BaseObject[] {
     const newQueue = [];
-    const notesOff: number[] = [];
+    const notesOff: BaseObject[] = [];
 
     // Iterate over playing notes...
     while (this.queue.length) {
       // Grab the next available note.
       const item = this.queue.shift();
-      if (!(item instanceof MidiNote) && !(item instanceof Hold))
+      if (
+        !(item instanceof MidiNote) &&
+        !(item instanceof Hold) &&
+        !(item instanceof Rest)
+      )
         break;
 
       // Decrement remaining note duration.
@@ -217,9 +228,9 @@ export class Runtime {
 
       if (item.duration) {
         newQueue.push(item);
-      } else {
+      } else if (!(item instanceof Rest)) {
         // Prune if out of remaining note duration.
-        notesOff.push(item.pitch);
+        notesOff.push(item);
       }
     }
 
@@ -240,8 +251,15 @@ export class Runtime {
         playable = true;
       }
       this.queue.push(
-        provisionMidiNote(note.pitch, note.duration, note.velocity),
+        provisionMidiNote(
+          note.channel,
+          note.pitch,
+          note.duration,
+          note.velocity,
+        ),
       );
+    } else if (note instanceof Rest) {
+      this.queue.push(note);
     }
     return playable;
   }
@@ -261,7 +279,10 @@ export class Runtime {
       }
       if (nextValue instanceof Arr) {
         notesOn = nextValue.items.filter((item) => this.noteOn(item));
-      } else if (nextValue instanceof MidiNote) {
+      } else if (
+        nextValue instanceof MidiNote ||
+        nextValue instanceof Rest
+      ) {
         if (this.noteOn(nextValue)) {
           notesOn.push(nextValue);
         }
@@ -269,7 +290,12 @@ export class Runtime {
     }
     return {
       on: notesOn,
-      off: notesOff.filter((n) => n >= 0),
+      off: notesOff.filter((n: BaseObject): boolean => {
+        if (n instanceof MidiNote || n instanceof Hold) {
+          return n.pitch >= 0;
+        }
+        return false;
+      }),
       done: this.seq ? this.seq.done : true,
     };
   }

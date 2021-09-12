@@ -34,6 +34,6 @@ main := gen () {
     position %= len(notes);
 
     // Yield out a note object with a pitch from the list.
-    yield note [notes[position], n8, 127];
+    yield note(0, notes[position], n8, 127);
   }
 };

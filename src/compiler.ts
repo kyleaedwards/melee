@@ -4,7 +4,6 @@ import { BaseObject, Int, Fn, Gen } from './object';
 import { ScopeType, SymbolTable } from './symbols';
 import { NATIVE_FNS } from './builtins';
 import { CompilerError } from './errors';
-import { DEFAULT_NOTE_DURATION } from './constants';
 
 /**
  * Instruction occurence at a given position in the bytecode.
@@ -587,24 +586,23 @@ export class Compiler {
         this.loopStarts[this.loopStarts.length - 1],
       );
     } else if (node instanceof ast.NoteExpression) {
-      if (!node.note) {
+      if (!node.args) {
         throw new CompilerError(
-          'Cannot use the `note` keyword without an operand',
+          'Cannot use the `note` keyword without arguments',
           node.token,
         );
       }
-      this.compile(node.note);
-      this.emit(Opcode.NOTE);
-    } else if (node instanceof ast.SkipExpression) {
-      if (node.duration) {
-        this.compile(node.duration);
-      } else {
-        this.emit(
-          Opcode.CONST,
-          this.addConstant(Int.from(DEFAULT_NOTE_DURATION)),
+      node.args.forEach(this.compile.bind(this));
+      this.emit(Opcode.NOTE, node.args.length);
+    } else if (node instanceof ast.RestExpression) {
+      if (!node.args) {
+        throw new CompilerError(
+          'Cannot use the `rest` keyword without arguments',
+          node.token,
         );
       }
-      this.emit(Opcode.SKIP);
+      node.args.forEach(this.compile.bind(this));
+      this.emit(Opcode.REST, node.args.length);
     } else if (node instanceof ast.CCExpression) {
       if (!node.message) {
         throw new CompilerError(

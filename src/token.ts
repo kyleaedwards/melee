@@ -32,7 +32,7 @@ export type TokenType =
   | 'break'
   | 'yield'
   | 'note'
-  | 'skip'
+  | 'rest'
   | 'cc'
   | 'gen'
   | 'next'
@@ -94,7 +94,7 @@ function isKeyword(str: string): str is TokenType {
       'yield',
       'next',
       'note',
-      'skip',
+      'rest',
       'cc',
     ].indexOf(str) !== -1
   );

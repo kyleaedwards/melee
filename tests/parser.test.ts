@@ -708,9 +708,9 @@ describe('Parser', () => {
   describe('parseNoteExpression', () => {
     test('should parse valid note expression', () => {
       const inputs: [string, (string | boolean | number)[]][] = [
-        ['note []', []],
-        ['note [x, y]', ['x', 'y']],
-        ['note [a, 1, false]', ['a', 1, false]],
+        ['note()', []],
+        ['note(x, y)', ['x', 'y']],
+        ['note(a, 1, false)', ['a', 1, false]],
       ];
 
       inputs.forEach(([input, values]) => {
@@ -723,12 +723,9 @@ describe('Parser', () => {
         const expr = stmt.value;
         assertNodeType(expr, ast.NoteExpression);
 
-        const arr = expr.note;
-        assertNodeType(arr, ast.ArrayLiteral);
-
-        expect(arr.values).toHaveLength(values.length);
+        expect(expr.args).toHaveLength(values.length);
         values.forEach((expected, i) => {
-          testLiteral(arr.values[i], expected);
+          testLiteral(expr.args[i], expected);
         });
       });
     });

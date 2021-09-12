@@ -16,7 +16,7 @@ createNotes := gen (root) { // We've given this generator an
   loop {
     vl := next velocity; // Pull off next item from velocity seq.
     pt := scale(SCALE_PENT_MINOR, root, rand(18));
-    yield note [pt, n16, vl];
+    yield note(0, pt, n16, vl);
   }
 };
 

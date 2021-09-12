@@ -56,6 +56,7 @@ export type Type =
   | 'error'
   | 'note'
   | 'hold'
+  | 'rest'
   | 'cc'
   | 'return'
   | 'yield'
@@ -67,8 +68,7 @@ export type Type =
   | 'native'
   | 'sequence'
   | 'generator'
-  | 'closure'
-  | 'free';
+  | 'closure';
 
 /**
  * Base object type interface.
@@ -241,6 +241,17 @@ export class Arr implements BaseObject {
 }
 
 /**
+ * Callable virtual function type.
+ *
+ * @public
+ */
+export class VirtualFn {
+  type: Type = 'function';
+
+  constructor(public cb: (...args: BaseObject[]) => BaseObject) {}
+}
+
+/**
  * Base callable class for functions and generators.
  *
  * @public
@@ -368,6 +379,7 @@ export class MidiNote implements BaseObject, MidiObject {
   type: Type = 'note';
 
   constructor(
+    public channel: number,
     public pitch: number,
     public duration: number,
     public velocity: number,
@@ -375,11 +387,11 @@ export class MidiNote implements BaseObject, MidiObject {
 
   inspectObject(): string {
     if (this.pitch < 0) {
-      return `{skip ${this.duration}}`;
+      return `{CH${this.channel}: skip ${this.duration}}`;
     }
-    return `{${NOTES[this.pitch]} for ${this.duration} vel=${
-      this.velocity
-    }}`;
+    return `{CH${this.channel}: ${NOTES[this.pitch]} for ${
+      this.duration
+    } vel=${this.velocity}}`;
   }
 
   midiValue(): MidiValue {
@@ -426,10 +438,30 @@ export class MidiCC implements BaseObject, MidiObject {
 export class Hold implements BaseObject {
   type: Type = 'hold';
 
-  constructor(public pitch: number, public duration: number) {}
+  constructor(
+    public channel: number,
+    public pitch: number,
+    public duration: number,
+  ) {}
 
   inspectObject(): string {
-    return `{hold ${this.duration}}`;
+    return `{CH${this.channel}: hold ${this.duration}}`;
+  }
+}
+
+/**
+ * Sentinel used to notify the runtime to rest for a given
+ * number of clock cycles.
+ *
+ * @public
+ */
+export class Rest implements BaseObject {
+  type: Type = 'rest';
+
+  constructor(public duration: number) {}
+
+  inspectObject(): string {
+    return `{rest ${this.duration}}`;
   }
 }
 
@@ -493,11 +525,12 @@ const MIDI_POOL_SIZE = 1000;
 const MIDI_POOL: MidiNote[] = new Array<MidiNote>(MIDI_POOL_SIZE);
 
 for (let i = 0; i < MIDI_POOL_SIZE; i++) {
-  MIDI_POOL[i] = new MidiNote(-1, 1, 0);
+  MIDI_POOL[i] = new MidiNote(0, -1, 1, 0);
 }
 
 let MIDI_POOL_INDEX = 0;
 export function provisionMidiNote(
+  channel: number,
   pitch: number,
   duration: number,
   velocity: number,
@@ -506,6 +539,7 @@ export function provisionMidiNote(
   if (MIDI_POOL_INDEX >= MIDI_POOL_SIZE) {
     MIDI_POOL_INDEX = 0;
   }
+  note.channel = channel;
   note.pitch = pitch;
   note.duration = duration;
   note.velocity = velocity;
@@ -516,7 +550,7 @@ const HOLD_POOL_SIZE = 1000;
 const HOLD_POOL: Hold[] = new Array<Hold>(HOLD_POOL_SIZE);
 
 for (let i = 0; i < HOLD_POOL_SIZE; i++) {
-  HOLD_POOL[i] = new Hold(-1, 0);
+  HOLD_POOL[i] = new Hold(0, -1, 0);
 }
 
 let HOLD_POOL_INDEX = 0;

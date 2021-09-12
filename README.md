@@ -24,24 +24,36 @@ if (isThree(a)) {
 } // 50
 ```
 
-Unlike other general purpose languages, Melee is intended to be used in a runtime environment that can send MIDI messages to a hardware instrument or some other software. Because of that, `note`s are a first-class data type.
+Unlike other general purpose languages, Melee is intended to be used in a runtime environment that can send MIDI messages to a hardware instrument or some other software. Because of that, the `note()` function returns a special MIDI data type.
 
 ```js
-note [C3]
-note [Fb2, 2]
-note [G#7, 4, 64]
+note(0, C3);
+note(0, Fb2, 2);
+note(0, G#7, 4, 64);
 ```
 
-The `note` keyword can receive up to three pieces of data: `[pitch, duration, velocity]`. Velocity is a special value that is commonly used to  determine how hard a key is pressed, or how strongly a note should be played. It ranges from 0 to 127 (that's just a MIDI thing), and if left out, it defaults to the smack-dab in the middle (64). Duration is determined by whoever is using Melee, and is a multiple of the main clock. For example, if the program is grabbing a new value every eighth note, then a duration of 2 would be a quarter note, 4 would be a half note, etc...
+The `note` function can receive up to four pieces of data: `note(channel, pitch, duration, velocity)`. Velocity is a special value that is commonly used to  determine how hard a key is pressed, or how strongly a note should be played. It ranges from 0 to 127 (that's just a MIDI thing), and if left out, it defaults to the smack-dab in the middle (64). Duration is determined by whoever is using Melee, and is a multiple of the main clock. For example, if the program is grabbing a new value every eighth note, then a duration of 2 would be a quarter note, 4 would be a half note, etc...
+
+Adding the channel for each note gets tedious. It can be useful if you want to bounce around from channel to channel, but if you have no need for that, you can use the `instr` function to define new note functions like so:
+
+```js
+trumpet := instr(0);
+bassoon := instr(1);
+drums := instr(2);
+
+trumpet(C4, n4); // Equivalent to note(0, C4, n4)
+bassoon(F2, n8); // Equivalent to note(1, F2, n8)
+drums(B1, n16); // Equivalent to note(2, B1, n16)
+```
 
 Functions and notes aside, the real sweet spot for Melee happens when we start incorporating generator functions to create new sequences.
 
 ```js
 seq := gen () {
-  yield note [C3];
-  yield note [D3];
-  yield note [C3];
-  yield note [G3];
+  yield note(0, C3);
+  yield note(0, D3);
+  yield note(0, C3);
+  yield note(0, G3);
 }
 ```
 
@@ -52,10 +64,10 @@ In this first example, the sequence reaches the G3 note and ends, but this doesn
 ```js
 main := gen () {
   loop {
-    yield note [C3];
-    yield note [D3];
-    yield note [C3];
-    yield note [G3];
+    yield note(0, C3);
+    yield note(0, D3);
+    yield note(0, C3);
+    yield note(0, G3);
   }
 }
 ```
@@ -65,12 +77,12 @@ Now that it loops forever, we can start making the sequence a bit more complex. 
 ```js
 main := gen() {
   loop {
-    yield note [C3];
-    yield note [D3];
+    yield note(0, C3);
+    yield note(0, D3);
     if (rand(3) != 1) {
-      yield note [C3];
+      yield note(0, C3);
     }
-    yield note [G3];
+    yield note(0, G3);
   }
 }
 ```
@@ -98,10 +110,10 @@ duration := subseq();
 
 main := gen() {
   loop {
-    yield note [C3, next duration];
-    yield note [D3, next duration];
-    yield note [C3, next duration];
-    yield note [G3, next duration];
+    yield note(0, C3, next duration);
+    yield note(0, D3, next duration);
+    yield note(0, C3, next duration);
+    yield note(0, G3, next duration);
   }
 }
 ```
@@ -114,7 +126,7 @@ This barely cracks the surface of what's capable with Melee, so check out the [e
 
 ## Note Lengths
 
-By default, any note or skip without an explicit duration lasts for a sixteenth note. When supplying a duration, you may provide an integer value or use a built-in variable. Variables like `n1`, `n2`, `n4`, `n8`, and so on represent whole notes, half notes, quarter notes and eighth notes respectively. There are also the aliases `WHOLE`, `HALF`, `QUARTER`, `EIGHTH` and `SIXTEENTH` for common note lengths. Triplets can be specified by swapping the `n` for a `t` like `t4` for a triple quarter note, and dotted notes can be specified with a `d`, like `d4`.
+By default, any note or rest without an explicit duration lasts for a sixteenth note. When supplying a duration, you may provide an integer value or use a built-in variable. Variables like `n1`, `n2`, `n4`, `n8`, and so on represent whole notes, half notes, quarter notes and eighth notes respectively. There are also the aliases `WHOLE`, `HALF`, `QUARTER`, `EIGHTH` and `SIXTEENTH` for common note lengths. Triplets can be specified by swapping the `n` for a `t` like `t4` for a triple quarter note, and dotted notes can be specified with a `d`, like `d4`.
 
 Under the hood, all these values are integers that are multiples of the number of clock ticks per measure. By default this is set to 48, meaning that the smallest note you make is a 32nd note triplet at one tick. Two ticks is a 16th note triplet, and three ticks is a 16th note. If you were to use a Melee runtime that doubled the amount of ticks per measure, it would support 32nd notes.
 
@@ -157,10 +169,10 @@ chord(A2, MAJ, 1) // A2 Maj triad, first inversion
 > [C#2, E2, A3]
 
 chord(note[A2, 4, 127], MAJ) // A2 Maj triad, for 4 clock cycles, with full velocity
-> [note [A2, 4, 127], note [C#2, 4, 127], note [E2, 4, 127]]
+> [note(0, A2, 4, 127), note(0, C#2, 4, 127), note(0, E2, 4, 127)]
 
 chord(note[A2, 4, 127], MAJ, 2) // A2 Maj triad, second inversion, for 4 clock cycles, with full velocity
-> [note [E2, 4, 127], note [A3, 4, 127], note [C#3, 4, 127]]
+> [note(0, E2, 4, 127), note(0, A3, 4, 127), note(0, C#3, 4, 127)]
 ```
 
 The full list of built-in chords are shown below, but because these chords are just arrays, you can define your own in the Melee code, use scales as chords, chords as scales... whatever you want!
@@ -199,27 +211,27 @@ For example, let's say you want to play two sequences in a sort of two-voice seq
 // Bass    | C2                 | F2                |
 
 melody := gen() {
-  yield note [C5]
-  yield note [A5]
-  yield note [G5]
-  yield note [F#5]
-  yield note [D5]
-  yield note [D5]
-  yield note [G5]
-  yield note [B4]
+  yield note(0, C5)
+  yield note(0, A5)
+  yield note(0, G5)
+  yield note(0, F#5)
+  yield note(0, D5)
+  yield note(0, D5)
+  yield note(0, G5)
+  yield note(0, B4)
 }
 
 bass := gen() {
-  yield note [C2, 4]
-  yield note [F2, 4]
+  yield note(0, C2, 4)
+  yield note(0, F2, 4)
 }
 
 main := merge(melody(), bass())
 ```
 
-If we were to do a plain old `merge` to join these two generators into a single `main` sequence, then on the first beat, the runtime receives the two notes `[note [C5], note [C2, 4]`. The runtime would need to make a choice on whether to the next items after one beat or four. If the runtime pulled another note on the second beat, then the sequence would return `[note [A5], note [F2, 4]]`. That's not what we want.
+If we were to do a plain old `merge` to join these two generators into a single `main` sequence, then on the first beat, the runtime receives the two notes `[note(0, C5), note(0, C2, 4)`. The runtime would need to make a choice on whether to the next items after one beat or four. If the runtime pulled another note on the second beat, then the sequence would return `[note(0, A5), note(0, F2, 4)]`. That's not what we want.
 
-Hence, the `poly` function is available to provide a way to merge sequences that is aware of note duration. If you were to create a `main` sequence using `poly(melody(), bass())`, rather than the second beat returning both a new melody and bass note, we would recieve the array `[note [A5], HOLD]`.
+Hence, the `poly` function is available to provide a way to merge sequences that is aware of note duration. If you were to create a `main` sequence using `poly(melody(), bass())`, rather than the second beat returning both a new melody and bass note, we would recieve the array `[note(0, A5), HOLD]`.
 
 `HOLD` is a special value useful to runtimes to know not to worry about that particular note, and that whatever its currently doing should be fine.
 
@@ -237,10 +249,10 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **fn** | `fn(...args) { ... }` | A function
 | **gen** | `gen(...args) { ... }` | A generator function capable of creating a generator instance
 | **int** | `5` | An integer value; used for math or converting into `note` or `cc` data |
-| **note** | `note [D4, 1, 127]` | MIDI note, must contain the pitch (`note [D4]`), but you can also provide a duration and a velocity; a note with pitch -1 is a rest |
+| **note** | `note(0, D4, 1, 127)` | Returned from the `note` function; represents a MIDI note, must contain the MIDI channel and pitch (`note(0, D4)`), but you can also provide a duration and a velocity; a note with pitch -1 is a rest |
 | **null** | `null` | Nothing at all; if you got this, something probably went wrong |
+| **rest** | `rest(2)` | Returned from the `rest` function; musical rest between notes |
 | **seq** | `N/A` | A sequence object you get by calling a `gen` function. Iterate over it with `next`.
-| **skip** | `skip 2` | Shorthand for a note with a pitch of -1 |
 
 ### Built-in Functions
 
@@ -252,11 +264,13 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **cycle** | `cycle(arr)` | Converts an array into an infinitely looping sequence |
 | **dur** | `dur(note)` | Returns a note's duration |
 | **filter** | `filter(arr, fn)` | Creates a new array of items where `fn(item)` returns *truthy* |
+| **instr** | `instr(int)` | Create a new "instrument" for a static MIDI note | 
 | **len** | `len(arr)` | Returns the length of the array |
 | **map** | `map(arr, fn)` | Creates a new array by performing `fn` on each array item |
 | **max** | `max(arr)` | Returns the maximum value of an array of `int`s |
 | **merge** | `merge(seq1, seq2, ..., seqN)` | Merges multiple sequences together so that `next` returns an array of each next value of the given sequences |
 | **min** | `min(arr)` | Returns the minimum value of an array of `int`s |
+| **note** | `note(int, int, int, int)` | Creates a new MIDI note with the given channel, pitch, duration, and velocity |
 | **pitch** | `pitch(note)` | Returns a note's pitch |
 | **poly** | `poly(seq1, seq2, ..., seqN)` | Polyphony helper; almost identical to `merge`, honors note duration |
 | **pop** | `pop(arr)` | Pulls an element off the end of an array and returns it |
@@ -265,6 +279,7 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **quant** | `scale(scaleArr, root, note)` | Quantizes a note by snapping it to the next highest pitch in the scale |
 | **rand** | `rand(n)` | Generates a random `int` from 0 up to *and not including* `n` |
 | **range** | `range(n)` | Returns an array of length `n` containing the numbers `0` up to *and not including* `n` |
+| **rest** | `rest(int)` | Creates a new rest for the duration provided |
 | **rev** | `rev(arr)` | Returns a reversed array |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
 | **scale** | `scale(scaleArr, root, interval)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)

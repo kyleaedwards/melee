@@ -596,47 +596,42 @@ export class VM {
           this.push(value);
           break;
         }
-        case Opcode.SKIP: {
-          const duration = this.pop();
-          if (!(duration instanceof obj.Int) || duration.value <= 0) {
-            throw new Error(
-              'Cannot use `skip` keyword with a non-integer duration or a duration less than 1',
-            );
+        case Opcode.REST: {
+          let argLength = this.readOperand(1);
+          while (argLength > 1) {
+            this.pop();
+            argLength--;
           }
-          this.push(new obj.MidiNote(-1, duration.value, 0));
+          let durationValue = DEFAULT_NOTE_DURATION;
+          if (argLength === 1) {
+            const duration = this.pop();
+            if (
+              !(duration instanceof obj.Int) ||
+              duration.value <= 0
+            ) {
+              throw new Error(
+                'Cannot use `rest` keyword with a non-integer duration or a duration less than 1',
+              );
+            }
+            durationValue = duration.value;
+          }
+          this.push(new obj.Rest(durationValue));
           break;
         }
         case Opcode.NOTE: {
-          const value = this.pop();
-          if (
-            !value ||
-            !(value instanceof obj.Arr) ||
-            !value.items.length ||
-            value.items.length > 3
-          ) {
+          let argLength = this.readOperand(1);
+          if (argLength < 2) {
             throw new Error(
-              'Notes must be created with an array containing one to three integer arguments',
+              '`note()` requires at least two arguments, a MIDI channel, and a pitch value',
             );
           }
-          const pitch = value.items[0];
-          if (!(pitch instanceof obj.Int)) {
-            throw new Error(
-              'MIDI note pitch must be an integer or a pitch literal like Eb4',
-            );
+          while (argLength > 4) {
+            this.pop();
+            argLength--;
           }
-          const duration = value.items[1];
-          let durationValue = DEFAULT_NOTE_DURATION;
-          if (duration) {
-            if (!(duration instanceof obj.Int)) {
-              throw new Error(
-                'MIDI note duration must be an integer',
-              );
-            }
-            durationValue = Math.max(1, duration.value);
-          }
-          const velocity = value.items[2];
           let velocityValue = 64;
-          if (velocity) {
+          if (argLength === 4) {
+            const velocity = this.pop();
             if (!(velocity instanceof obj.Int)) {
               throw new Error(
                 'MIDI note velocity must be an integer',
@@ -646,9 +641,34 @@ export class VM {
               127,
               Math.max(0, velocity.value),
             );
+            argLength--;
+          }
+          let durationValue = DEFAULT_NOTE_DURATION;
+          if (argLength === 3) {
+            const duration = this.pop();
+            if (duration) {
+              if (!(duration instanceof obj.Int)) {
+                throw new Error(
+                  'MIDI note duration must be an integer',
+                );
+              }
+              durationValue = Math.max(1, duration.value);
+            }
+          }
+          const channel = this.stack[this.sp - 2];
+          const pitch = this.stack[this.sp - 1];
+          this.sp -= 2;
+          if (!(channel instanceof obj.Int)) {
+            throw new Error('MIDI channel must be an integer');
+          }
+          if (!(pitch instanceof obj.Int)) {
+            throw new Error(
+              'MIDI note pitch must be an integer or a pitch literal like Eb4',
+            );
           }
           this.push(
             new obj.MidiNote(
+              channel.value,
               pitch.value,
               durationValue,
               velocityValue,

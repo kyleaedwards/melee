@@ -566,37 +566,41 @@ export class NoteExpression implements Expression {
 
   constructor(
     public token: Token,
-    public note: Expression | undefined,
+    public args: Expression[] | undefined,
   ) {
     this.nodeType = 'expression';
   }
 
   toString(): string {
-    return `${this.token.literal} ${
-      this.note ? this.note.toString() : ''
-    }`;
+    return `${this.token.literal}(${
+      this.args
+        ? this.args.map((arg) => arg.toString()).join(', ')
+        : ''
+    })`;
   }
 }
 
 /**
- * AST node type representing a MIDI skip expression.
+ * AST node type representing a MIDI rest expression.
  *
  * @public
  */
-export class SkipExpression implements Expression {
+export class RestExpression implements Expression {
   nodeType: 'expression';
 
   constructor(
     public token: Token,
-    public duration: Expression | undefined,
+    public args: Expression[] | undefined,
   ) {
     this.nodeType = 'expression';
   }
 
   toString(): string {
-    return `${this.token.literal} ${
-      this.duration ? this.duration.toString() : ''
-    }`;
+    return `${this.token.literal}(${
+      this.args
+        ? this.args.map((arg) => arg.toString()).join(', ')
+        : ''
+    })`;
   }
 }
 

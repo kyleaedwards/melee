@@ -7,11 +7,11 @@ import { VM } from '../src/vm';
 import * as obj from '../src/object';
 import { DEFAULT_NOTE_DURATION } from '../src/constants';
 
-type TestScalar = number | boolean | null | obj.MidiNote | obj.Hold;
+type TestScalar = number | boolean | null | obj.MidiNote | obj.Hold | obj.Rest;
 
 type VMTestCase = [
   input: string,
-  expected: TestScalar | TestScalar[] | obj.MidiNote | obj.MidiCC,
+  expected: TestScalar | TestScalar[] | obj.MidiCC,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -629,16 +629,15 @@ describe('VM', () => {
 
   test('should support MIDI `note` messages', () => {
     testInputs([
-      [`note [C3, 3, 127]`, new obj.MidiNote(48, 3, 127)],
-      [`note [C3]`, new obj.MidiNote(48, DEFAULT_NOTE_DURATION, 64)],
+      [`note(1, C3, 3, 127)`, new obj.MidiNote(1, 48, 3, 127)],
+      [`note(0, C3)`, new obj.MidiNote(0, 48, DEFAULT_NOTE_DURATION, 64)],
     ]);
 
-    testError('note []');
-    testError('note [false]');
-    testError('note true');
-    testError('note 3');
-    testError('note [3, 4, 5, 6, 7]');
-    testError('note [note [60]]');
+    testError('note()');
+    testError('note(false)');
+    testError('note(true)');
+    testError('note(3)');
+    testError('note(0, note(0, 60))');
   });
 
   test('should support MIDI `cc` messages', () => {
@@ -649,7 +648,7 @@ describe('VM', () => {
     testError('cc true');
     testError('cc 3');
     testError('cc [3, 4, 5, 6, 7]');
-    testError('cc [note [60], cc [1, 2]]');
+    testError('cc [note(0, 60), cc [1, 2]]');
   });
 
   test('should support sequence generators', () => {
@@ -750,25 +749,25 @@ describe('VM', () => {
   test('should support `poly` built-in', () => {
     testInputs([
       [
-        `g1 := cycle([note [C3], note[D3], note[G3]]);
-        g2 := cycle([note [C3], note[D3], note[G3]]);
+        `g1 := cycle([note(0, C3), note(0, D3), note(0, G3)]);
+        g2 := cycle([note(0, C3), note(0, D3), note(0, G3)]);
         p := poly(g1, g2);
         next p;
         next p;`,
         [
-          new obj.MidiNote(50, DEFAULT_NOTE_DURATION, 64),
-          new obj.MidiNote(50, DEFAULT_NOTE_DURATION, 64),
+          new obj.MidiNote(0, 50, DEFAULT_NOTE_DURATION, 64),
+          new obj.MidiNote(0, 50, DEFAULT_NOTE_DURATION, 64),
         ],
       ],
       [
-        `g1 := cycle([note [C3, 1], note[D3, 1], note[G3, 1]]);
-        g2 := cycle([note [C3, 2], note[D3, 2], note[G3, 2]]);
+        `g1 := cycle([note(0, C3, 1), note(0, D3, 1), note(0, G3, 1)]);
+        g2 := cycle([note(0, C3, 2), note(0, D3, 2), note(0, G3, 2)]);
         p := poly(g1, g2);
         next p;
         next p;`,
         [
-          new obj.MidiNote(50, 1, 64),
-          new obj.Hold(48, 1),
+          new obj.MidiNote(0, 50, 1, 64),
+          new obj.Hold(0, 48, 1),
         ],
       ],
     ]);
@@ -819,29 +818,29 @@ describe('VM', () => {
   test('should support `pitch`, `dur`, and `vel` built-ins', () => {
     testInputs([
       [
-        `pitch(note [C4, 3, 50])`,
+        `pitch(note(0, C4, 3, 50))`,
         60,
       ],
       [
-        `dur(note [C4, 3, 50])`,
+        `dur(note(0, C4, 3, 50))`,
         3,
       ],
       [
-        `vel(note [C4, 3, 50])`,
+        `vel(note(0, C4, 3, 50))`,
         50,
       ],
     ]);
   });
 
-  test('should support `skip` keyword', () => {
+  test('should support `rest` keyword', () => {
     testInputs([
-      [`skip`, new obj.MidiNote(-1, DEFAULT_NOTE_DURATION, 0)],
-      [`skip 10`, new obj.MidiNote(-1, 10, 0)],
+      [`rest()`, new obj.Rest(DEFAULT_NOTE_DURATION)],
+      [`rest(10)`, new obj.Rest(10)],
     ]);
 
-    testError(`skip 0`);
-    testError(`skip -1`);
-    testError(`skip fn(){}`);
+    testError(`rest(0, 0)`);
+    testError(`rest(0, -1)`);
+    testError(`rest(0, fn(){})`);
   });
 
   test('should support nested sequence generators', () => {

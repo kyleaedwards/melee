@@ -5,19 +5,22 @@
 // F#4 a 1 in 3 chance, G4 a 1 in 4 chance, and B4 a 1
 // in 5.
 
+// Instruments
+synth := instr(0);
+
 main := gen () {
   loop {
     if (rand(2) == 0) {
-      yield note [E4];
+      yield synth(E4);
     }
     if (rand(3) == 0) {
-      yield note [F#4];
+      yield synth(F#4);
     }
     if (rand(4) == 0) {
-      yield note [G4];
+      yield synth(G4);
     }
     if (rand(5) == 0) {
-      yield note [B4];
+      yield synth(B4);
     }
   }
 };

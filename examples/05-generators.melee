@@ -29,6 +29,6 @@ main := gen () {
     // Every time through the loop, we take the next item out
     // of each sequence, but since their loops have different
     // numbers of elements, they quickly get out of sync.
-    yield note [next notePitch, n16 * next noteDuration];
+    yield note(0, next notePitch, n16 * next noteDuration);
   }
 };
