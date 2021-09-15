@@ -6,7 +6,7 @@ const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
 const { cc, instruments } = require('./instruments');
 const createTempoComponent = require('./tempo');
-const { TONE_FREQ } = require('./time');
+const { CLOCKS_PER_MEASURE, TONE_FREQ } = require('./time');
 const { $$, noop } = require('./utils');
 
 /**
@@ -19,12 +19,13 @@ const webControls = $$('webControls');
 const editor = $$('editor');
 const sync = $$('sync');
 const synced = $$('synced');
+const syncing = $$('syncing');
 const syncError = $$('syncError');
 
 const tempo = createTempoComponent();
 let stopped = true;
-let hasErrors = false;
 let isSynced = true;
+let cycles = 0;
 
 const ui = new MeleeEditor({
   editor,
@@ -33,9 +34,11 @@ const ui = new MeleeEditor({
     playBtn.disabled = false;
     pauseBtn.disabled = false;
     stopBtn.disabled = false;
-    hasErrors = false;
     if (isSynced) {
       synced.style.display = 'block';
+      sync.style.display = 'none';
+      syncError.style.display = 'none';
+      syncing.style.display = 'none';
     }
   },
   onSuccess: noop,
@@ -44,31 +47,44 @@ const ui = new MeleeEditor({
     playBtn.disabled = true;
     pauseBtn.disabled = true;
     stopBtn.disabled = true;
-    hasErrors = true;
     if (isSynced) {
       synced.style.display = 'none';
+      sync.style.display = 'none';
+      syncing.style.display = 'none';
     }
   },
   onExample: (example) => {
-    tempo.set(example.tempo ||  120);
+    tempo.set(example.tempo || 120);
     synced.style.display = 'block';
     sync.style.display = 'none';
     syncError.style.display = 'none';
+    syncing.style.display = 'none';
     isSynced = true;
     if (stopped) {
       ui.unlock();
     }
   },
+  onSyncing: () => {
+    synced.style.display = 'none';
+    sync.style.display = 'none';
+    syncError.style.display = 'none';
+    syncing.style.display = 'block';
+  },
   onChangeStaged: () => {
     sync.style.display = ui.hasStageErrors ? 'none' : 'block';
     synced.style.display = 'none';
     syncError.style.display = ui.hasStageErrors ? 'block' : 'none';
+    syncing.style.display = 'none';
     isSynced = false;
+    if (stopped && typeof ui.runSync === 'function') {
+      ui.runSync();
+    }
   },
   onChangeUnstaged: () => {
     synced.style.display = 'block';
     sync.style.display = 'none';
     syncError.style.display = 'none';
+    syncing.style.display = 'none';
     isSynced = true;
     if (stopped) {
       ui.unlock();
@@ -88,6 +104,7 @@ const ui = new MeleeEditor({
 let runningNotes = {};
 
 function stop(skipReset, skipRestage) {
+  cycles = 0;
   webControls.classList.remove('playing');
   Object.values(runningNotes).forEach((note) => {
     instruments[note.channel].off(note, Tone.now());
@@ -104,7 +121,7 @@ function stop(skipReset, skipRestage) {
     if (!skipRestage && !isSynced) ui.stage();
   }
   stopped = true;
-  if (isSynced) ui.unlock();
+  if (isSynced || ui.syncing) ui.unlock();
 }
 
 Tone.Transport.scheduleRepeat((time) => {
@@ -125,6 +142,13 @@ Tone.Transport.scheduleRepeat((time) => {
     }
   });
   if (results.done) stop(false, true);
+  cycles++;
+  if (cycles >= (4 * CLOCKS_PER_MEASURE)) {
+    cycles = 0;
+  }
+  if (cycles === 0 && typeof ui.runSync === 'function') {
+    ui.runSync();
+  }
 }, TONE_FREQ);
 
 playBtn.addEventListener('click', () => {

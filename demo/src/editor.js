@@ -36,11 +36,13 @@ class MeleeEditor {
     this.onExample = opts.onExample || noop;
     this.onChangeStaged = opts.onChangeStaged || noop;
     this.onChangeUnstaged = opts.onChangeUnstaged || noop;
+    this.onSyncing = opts.onSyncing || noop;
 
     this.opts = opts;
     this.locked = false;
     this.changesStaged = false;
     this.hasStageErrors = false;
+    this.syncing = false;
 
     this.debounce = null;
   }
@@ -70,14 +72,22 @@ class MeleeEditor {
   sync() {
     if (!this.changesStaged) return;
     if (this.hasStageErrors) return;
+    if (this.syncing) return;
+    this.syncing = true;
+    this.onSyncing();
     const value = this.ide.getValue();
-    if (this.execute(value)) {
-      this.savedValue = value;
-      this.onChangeUnstaged();
-    }
+    this.runSync = () => {
+      if (this.execute(value)) {
+        this.savedValue = value;
+        this.onChangeUnstaged();
+      }
+      this.syncing = false;
+      this.runSync = null;
+    };
   }
 
   reset() {
+    this.syncing = false;
     this.execute(this.savedValue);
   }
 

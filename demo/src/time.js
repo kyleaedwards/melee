@@ -15,5 +15,6 @@ if (CLOCKS_PER_MEASURE === 384) {
 }
 
 module.exports = {
+  CLOCKS_PER_MEASURE,
   TONE_FREQ,
 };
