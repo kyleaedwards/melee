@@ -10,7 +10,7 @@ In some programming languages, a [generator](https://en.wikipedia.org/wiki/Gener
 
 It's a weird code thing that we're gonna use to make music loopies.
 
-## Show Me The Goods
+## Show me the goods!
 
 While Melee is not the most fully featured language, you can still do things like basic arithmetic, assign variables, and bundle code into functions.
 
@@ -168,11 +168,11 @@ chord(A2, MAJ)    // A2 Maj triad
 chord(A2, MAJ, 1) // A2 Maj triad, first inversion
 > [C#2, E2, A3]
 
-chord(note[A2, 4, 127], MAJ) // A2 Maj triad, for 4 clock cycles, with full velocity
-> [note(0, A2, 4, 127), note(0, C#2, 4, 127), note(0, E2, 4, 127)]
+chord(note[A2, n8, 127], MAJ) // A2 Maj triad, for 4 clock cycles, with full velocity
+> [note(0, A2, n8, 127), note(0, C#2, n8, 127), note(0, E2, n8, 127)]
 
-chord(note[A2, 4, 127], MAJ, 2) // A2 Maj triad, second inversion, for 4 clock cycles, with full velocity
-> [note(0, E2, 4, 127), note(0, A3, 4, 127), note(0, C#3, 4, 127)]
+chord(note[A2, n8, 127], MAJ, 2) // A2 Maj triad, second inversion, for 4 clock cycles, with full velocity
+> [note(0, E2, n8, 127), note(0, A3, n8, 127), note(0, C#3, n8, 127)]
 ```
 
 The full list of built-in chords are shown below, but because these chords are just arrays, you can define your own in the Melee code, use scales as chords, chords as scales... whatever you want!
@@ -222,14 +222,14 @@ melody := gen() {
 }
 
 bass := gen() {
-  yield note(0, C2, 4)
-  yield note(0, F2, 4)
+  yield note(0, C2, n4)
+  yield note(0, F2, n4)
 }
 
 main := merge(melody(), bass())
 ```
 
-If we were to do a plain old `merge` to join these two generators into a single `main` sequence, then on the first beat, the runtime receives the two notes `[note(0, C5), note(0, C2, 4)`. The runtime would need to make a choice on whether to the next items after one beat or four. If the runtime pulled another note on the second beat, then the sequence would return `[note(0, A5), note(0, F2, 4)]`. That's not what we want.
+If we were to do a plain old `merge` to join these two generators into a single `main` sequence, then on the first beat, the runtime receives the two notes `[note(0, C5), note(0, C2, n4)`. The runtime would need to make a choice on whether to the next items after one beat or four. If the runtime pulled another note on the second beat, then the sequence would return `[note(0, A5), note(0, F2, n4)]`. That's not what we want.
 
 Hence, the `poly` function is available to provide a way to merge sequences that is aware of note duration. If you were to create a `main` sequence using `poly(melody(), bass())`, rather than the second beat returning both a new melody and bass note, we would recieve the array `[note(0, A5), HOLD]`.
 
@@ -249,9 +249,9 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **fn** | `fn(...args) { ... }` | A function
 | **gen** | `gen(...args) { ... }` | A generator function capable of creating a generator instance
 | **int** | `5` | An integer value; used for math or converting into `note` or `cc` data |
-| **note** | `note(0, D4, 1, 127)` | Returned from the `note` function; represents a MIDI note, must contain the MIDI channel and pitch (`note(0, D4)`), but you can also provide a duration and a velocity; a note with pitch -1 is a rest |
+| **note** | `note(0, D4, n16, 127)` | Returned from the `note` function; represents a MIDI note, must contain the MIDI channel and pitch (`note(0, D4)`), but you can also provide a duration and a velocity; a note with pitch -1 is a rest |
 | **null** | `null` | Nothing at all; if you got this, something probably went wrong |
-| **rest** | `rest(2)` | Returned from the `rest` function; musical rest between notes |
+| **rest** | `rest(n8)` | Returned from the `rest` function; musical rest between notes |
 | **seq** | `N/A` | A sequence object you get by calling a `gen` function. Iterate over it with `next`.
 
 ### Built-in Functions
@@ -284,6 +284,7 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **rev** | `rev(arr)` | Returns a reversed array |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
 | **scale** | `scale(scaleArr, root, interval)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
+| **send** | `send(note | cc)` | Sends a MIDI message directly to the runtime, primarily for CC or program control messages |
 | **shift** | `shift(arr)` | Pulls an element off the front of an array and returns it |
 | **sort** | `sort(arr)` | Returns a sorted array |
 | **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |

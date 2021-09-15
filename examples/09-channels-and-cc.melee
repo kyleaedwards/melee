@@ -1,0 +1,48 @@
+// Example: Channels and CC Messages
+//
+// But using different MIDI channels and sending CC (control
+// change) messages, we can control multiple instruments and
+// mess with their settings.
+
+// Let's define some MIDI channels as instruments so we
+// don't have to write `note(ch, ...)` for every note.
+synth := instr(0);
+pluck := instr(1);
+perc := instr(2);
+
+// Here we define some functions to mess with CC values.
+// If you're using the web demo, it's not actually sending
+// CC messages, but we're faking it by intercepting the
+// values and tweaking some parameters of the audio effects.
+randomFilterFreq := fn () {
+  send(cc(0, 1, rand(127)));
+};
+setPluckDelay := fn (amt) {
+  send(cc(1, 1, amt));
+};
+setPercDistortion := fn (amt) {
+  send(cc(2, 1, amt));
+};
+
+// Cycle through some notes to make the sequence
+// a bit less repetitive.
+notesA := cycle([A4, A4, G4, D4]);
+notesB := cycle([F4, D4, C4, F4]);
+
+main := gen () {
+  loop {
+    randomFilterFreq();
+    yield [perc(C2, n8), synth(C3, n8)];
+    setPluckDelay(20);
+    yield pluck(D3, n8);
+    setPercDistortion(100);
+    yield [perc(C3, n16), pluck(F3, n16)];
+    yield synth(next notesA, n16);
+    randomFilterFreq();
+    setPercDistortion(0);
+    setPluckDelay(120);
+    yield [perc(F2, n16, 30), pluck(G3, n16)];
+    randomFilterFreq();
+    yield [perc(A2, n16, 60), synth(next notesB, n16)];
+  }
+};

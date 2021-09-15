@@ -23,8 +23,9 @@ class MeleeEditor {
   constructor(opts = {}) {
     this.melee = new Runtime(true, {
       print: (...args) => {
-        this.log(args.map(arg => arg.inspectObject()).join('<br />'));
-      }
+        this.log(args.map(arg => arg.inspectObject()).join(' '));
+      },
+      ...(opts.callbacks || {}),
     });
     this.highlightedErrors = [];
 

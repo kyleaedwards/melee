@@ -56,4 +56,9 @@ module.exports = [
     tempo: 94,
     code: fs.readFileSync(path.join(__dirname, '../../examples/08-boc.melee'), 'utf-8'),
   },
+  {
+    name: 'Channels and CC Messages',
+    tempo: 133,
+    code: fs.readFileSync(path.join(__dirname, '../../examples/09-channels-and-cc.melee'), 'utf-8'),
+  },
 ];

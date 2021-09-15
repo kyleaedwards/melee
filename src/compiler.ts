@@ -361,14 +361,13 @@ export class Compiler {
           this.emit(Opcode.OR);
           break;
       }
-    } else if (node instanceof ast.IfExpression) {
+    } else if (node instanceof ast.IfStatement) {
       this.compile(node.condition);
 
       // Jump to else clause (or outside of conditional statement if else doesn't exist).
       const jumpToElse = this.emit(Opcode.JMP_IF_NOT, 0xffff);
 
       this.compile(node.consequence);
-      this.removeInstructionIf(Opcode.POP);
 
       const jumpOut = this.emit(Opcode.JMP, 0xffff);
 
@@ -376,9 +375,6 @@ export class Compiler {
 
       if (node.alternative) {
         this.compile(node.alternative);
-        this.removeInstructionIf(Opcode.POP);
-      } else {
-        this.emit(Opcode.NULL);
       }
 
       this.replaceInstruction(jumpOut, this.instructions().length);
@@ -677,37 +673,6 @@ export class Compiler {
   private addConstant(obj: BaseObject): number {
     this.constants.push(obj);
     return this.constants.length - 1;
-  }
-
-  /**
-   * Removes the last instruction from the bytecode.
-   *
-   * @internal
-   */
-  private removeInstruction(): void {
-    const position = this.scope().lastInstruction.position;
-    this.scope().lastInstruction.opcode =
-      this.scope().previousInstruction.opcode;
-    this.scope().lastInstruction.position =
-      this.scope().previousInstruction.position;
-
-    const temp = new Uint8Array(position);
-    temp.set(this.instructions().slice(0, position));
-    this.scope().instructions = temp;
-  }
-
-  /**
-   * Removes the last instruction from the bytecode if it matches
-   * the supplied opcode.
-   *
-   * @param op - Opcode
-   *
-   * @internal
-   */
-  private removeInstructionIf(op: Opcode): void {
-    if (this.scope().lastInstruction.opcode === op) {
-      this.removeInstruction();
-    }
   }
 
   /**

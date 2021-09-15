@@ -243,6 +243,32 @@ export class WhileStatement implements Statement {
 }
 
 /**
+ * AST node type representing an `if` or (`if`/`else`) conditional statement.
+ *
+ * @public
+ */
+export class IfStatement implements Statement {
+  nodeType: 'statement';
+
+  constructor(
+    public token: Token,
+    public condition: Expression,
+    public consequence: BlockStatement,
+    public alternative?: BlockStatement,
+  ) {
+    this.nodeType = 'statement';
+  }
+
+  toString(): string {
+    let str = `if (${this.condition.toString()}) ${this.consequence.toString()}`;
+    if (this.alternative) {
+      str += ` else ${this.alternative.toString()}`;
+    }
+    return str;
+  }
+}
+
+/**
  * Expressions
  */
 
@@ -409,32 +435,6 @@ export class InfixExpression implements Expression {
     return `(${this.left ? this.left.toString() : ''} ${
       this.operator
     } ${this.right ? this.right.toString() : ''})`;
-  }
-}
-
-/**
- * AST node type representing an `if` or (`if`/`else`) conditional expression.
- *
- * @public
- */
-export class IfExpression implements Expression {
-  nodeType: 'expression';
-
-  constructor(
-    public token: Token,
-    public condition: Expression,
-    public consequence: BlockStatement,
-    public alternative?: BlockStatement,
-  ) {
-    this.nodeType = 'expression';
-  }
-
-  toString(): string {
-    let str = `if (${this.condition.toString()}) ${this.consequence.toString()}`;
-    if (this.alternative) {
-      str += ` else ${this.alternative.toString()}`;
-    }
-    return str;
   }
 }
 

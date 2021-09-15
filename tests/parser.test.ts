@@ -416,8 +416,8 @@ describe('Parser', () => {
     });
   });
 
-  describe('parseIfExpression', () => {
-    test('should parse valid if expression', () => {
+  describe('parseIfStatement', () => {
+    test('should parse valid if statment', () => {
       const input = `if (y == z) {
         x
       }`;
@@ -425,22 +425,19 @@ describe('Parser', () => {
       expect(stmts).toHaveLength(1);
 
       const stmt = stmts[0];
-      assertNodeType(stmt, ast.ExpressionStatement);
+      assertNodeType(stmt, ast.IfStatement);
 
-      const expr = stmt.value;
-      assertNodeType(expr, ast.IfExpression);
+      testInfixExpression(stmt.condition, 'y', '==', 'z');
 
-      testInfixExpression(expr.condition, 'y', '==', 'z');
+      assertNodeType(stmt.consequence, ast.BlockStatement);
 
-      assertNodeType(expr.consequence, ast.BlockStatement);
-
-      expect(expr.consequence.statements).toHaveLength(1);
-      const subStmt = expr.consequence.statements[0];
+      expect(stmt.consequence.statements).toHaveLength(1);
+      const subStmt = stmt.consequence.statements[0];
 
       assertNodeType(subStmt, ast.ExpressionStatement);
       testLiteral(subStmt.value, 'x');
 
-      expect(expr.alternative).toBeUndefined();
+      expect(stmt.alternative).toBeUndefined();
     });
   });
 
@@ -455,24 +452,21 @@ describe('Parser', () => {
       expect(stmts).toHaveLength(1);
 
       const stmt = stmts[0];
-      assertNodeType(stmt, ast.ExpressionStatement);
+      assertNodeType(stmt, ast.IfStatement);
 
-      const expr = stmt.value;
-      assertNodeType(expr, ast.IfExpression);
+      testInfixExpression(stmt.condition, 'y', '==', 'z');
 
-      testInfixExpression(expr.condition, 'y', '==', 'z');
+      assertNodeType(stmt.consequence, ast.BlockStatement);
 
-      assertNodeType(expr.consequence, ast.BlockStatement);
-
-      expect(expr.consequence.statements).toHaveLength(1);
-      const subStmt = expr.consequence.statements[0];
+      expect(stmt.consequence.statements).toHaveLength(1);
+      const subStmt = stmt.consequence.statements[0];
 
       assertNodeType(subStmt, ast.ExpressionStatement);
       testLiteral(subStmt.value, 'x');
 
-      assertNodeType(expr.alternative, ast.BlockStatement);
-      expect(expr.alternative.statements).toHaveLength(1);
-      const altStmt = expr.alternative.statements[0];
+      assertNodeType(stmt.alternative, ast.BlockStatement);
+      expect(stmt.alternative.statements).toHaveLength(1);
+      const altStmt = stmt.alternative.statements[0];
 
       assertNodeType(altStmt, ast.ExpressionStatement);
       testLiteral(altStmt.value, 0);

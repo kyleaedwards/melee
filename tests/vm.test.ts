@@ -142,7 +142,6 @@ describe('VM', () => {
       ['false', false],
       ['!true', false],
       ['!false', true],
-      ['!(if (false) { 5; })', true],
       ['1 < 100', true],
       ['!(1 < 100)', false],
       ['1 > 100', false],
@@ -168,14 +167,12 @@ describe('VM', () => {
 
   test('should run conditional operations through the virtual machine', () => {
     testInputs([
-      ['if (true) { 50 }', 50],
-      ['if (false) { 50 }', null],
-      ['if (true) { 50 } else { 51 }', 50],
-      ['if (false) { 50 } else { 51 }', 51],
-      ['if (0) { 50 } else { 51 }', 51],
-      ['if (1) { 50 } else { 51 }', 50],
-      ['if (true) { 50; 49 } else { 51 }', 49],
-      ['if ((if (false) { 1 })) { 50 } else { 51 }', 51],
+      ['res := 0; if (true) { res = 50; } res', 50],
+      ['res := 0; if (false) { res = 50; } res', 0],
+      ['res := 0; if (true) { res = 50; } else { res = 51; } res', 50],
+      ['res := 0; if (false) { res = 50; } else { res = 51; } res', 51],
+      ['res := 0; if (0) { res = 50; } else { res = 51; } res', 51],
+      ['res := 0; if (1) { res = 50; } else { res = 51; } res', 50],
     ]);
   });
 

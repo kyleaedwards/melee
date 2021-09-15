@@ -4,7 +4,7 @@
 const { obj } = require('../../dist');
 const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
-const { createSynth } = require('./synth');
+const { cc, instruments } = require('./instruments');
 const createTempoComponent = require('./tempo');
 const { TONE_FREQ } = require('./time');
 const { $$, noop } = require('./utils');
@@ -21,7 +21,6 @@ const sync = $$('sync');
 const synced = $$('synced');
 const syncError = $$('syncError');
 
-let synth = createSynth();
 const tempo = createTempoComponent();
 let stopped = true;
 let hasErrors = false;
@@ -75,18 +74,25 @@ const ui = new MeleeEditor({
       ui.unlock();
     }
   },
+  callbacks: {
+    send(result) {
+      if (result instanceof obj.MidiCC) {
+        if (cc[result.channel]) {
+          cc[result.channel](result.key, result.value, Tone.now());
+        }
+      }
+    }
+  }
 });
 
 let runningNotes = {};
 
 function stop(skipReset, skipRestage) {
   webControls.classList.remove('playing');
-  if (synth) {
-    Object.values(runningNotes).forEach((note) => {
-      synth.triggerRelease(note, Tone.now());
-    });
-    runningNotes = {};
-  }
+  Object.values(runningNotes).forEach((note) => {
+    instruments[note.channel].off(note, Tone.now());
+  });
+  runningNotes = {};
   Tone.Transport.stop();
   tempo.reset();
   if (!skipReset) {
@@ -106,21 +112,15 @@ Tone.Transport.scheduleRepeat((time) => {
   const results = ui.clock();
   if (!results) return;
   results.off.forEach((off) => {
-    delete runningNotes[off.pitch];
+    delete runningNotes[`${off.channel}-${off.pitch}`];
   });
   results.on.forEach((result) => {
-    if (result instanceof obj.MidiNote && synth) {
+    if (result instanceof obj.MidiNote && result.channel < instruments.length) {
       if (!runningNotes[result.pitch]) {
-        const sciNote = result.scientificNotation();
         const dur = {};
         dur[TONE_FREQ] = result.duration;
-        synth.triggerAttackRelease(
-          [sciNote],
-          dur,
-          time,
-          result.velocity / 127.0,
-        );
-        runningNotes[result.pitch] = sciNote;
+        instruments[result.channel].on(result, dur, time);
+        runningNotes[`${result.channel}-${result.pitch}`] = result;
       }
     }
   });
@@ -141,7 +141,7 @@ playBtn.addEventListener('click', () => {
 pauseBtn.addEventListener('click', () => {
   webControls.classList.remove('playing');
   Object.values(runningNotes).forEach((note) => {
-    synth.triggerRelease(note, Tone.now());
+    instruments[note.channel].off(note, Tone.now());
   });
   runningNotes = {};
   Tone.Transport.pause();
@@ -151,7 +151,6 @@ pauseBtn.addEventListener('click', () => {
 stopBtn.addEventListener('click', () => stop());
 
 setTimeout(async () => {
-  Tone.setContext(new Tone.Context({ latencyHint: 'playback' }))
-  // await Tone.start();
-  ui.initialize()
+  Tone.setContext(new Tone.Context({ latencyHint: 'playback' }));
+  ui.initialize();
 }, 250);

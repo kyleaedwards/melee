@@ -390,9 +390,9 @@ export class MidiNote implements BaseObject, MidiObject {
     if (this.pitch < 0) {
       return `{CH${this.channel}: skip ${this.duration}}`;
     }
-    return `{CH${this.channel}: ${NOTES[this.pitch]} for ${
-      this.duration
-    } vel=${this.velocity}}`;
+    return `{CH${this.channel}: ${NOTES[this.pitch]} vel=${
+      this.velocity
+    } for ${this.duration}}`;
   }
 
   midiValue(): MidiValue {

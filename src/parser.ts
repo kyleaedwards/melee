@@ -129,7 +129,6 @@ export class Parser {
       minus: this.parsePrefixExpression.bind(this),
       lparen: this.parseParentheticalExpression.bind(this),
       lbracket: this.parseArrayLiteral.bind(this),
-      if: this.parseConditional.bind(this),
       next: this.parseNext.bind(this),
       note: this.parseNoteExpression.bind(this),
       rest: this.parseRestExpression.bind(this),
@@ -239,6 +238,8 @@ export class Parser {
         }
         return result;
       }
+      case 'if':
+        return this.parseConditional();
       case 'identifier': {
         if (tokenIs(this.peek, 'declare')) {
           return this.parseDeclareStatement();
@@ -533,7 +534,7 @@ export class Parser {
     return new ast.NextExpression(token, right);
   }
 
-  private parseConditional(): ast.IfExpression | undefined {
+  private parseConditional(): ast.IfStatement | undefined {
     const token = this.curr;
     if (!this.expectPeek('lparen')) return;
 
@@ -562,7 +563,7 @@ export class Parser {
       }
     }
 
-    return new ast.IfExpression(
+    return new ast.IfStatement(
       token,
       condition,
       consequence,

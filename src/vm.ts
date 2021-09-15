@@ -459,7 +459,7 @@ export class VM {
         }
         case Opcode.GET: {
           const index = this.readOperand(1);
-          const value = this.stack[this.frame().base + index];
+          const value = this.stack[this.frame().base + index] || NULL;
           assertVariableObject(value);
           this.push(value);
           break;
@@ -473,7 +473,7 @@ export class VM {
         }
         case Opcode.GETC: {
           const index = this.readOperand(1);
-          const value = this.frame().closure.vars[index];
+          const value = this.frame().closure.vars[index] || NULL;
           assertVariableObject(value);
           this.push(value);
           break;
@@ -680,7 +680,7 @@ export class VM {
           let argLength = this.readOperand(1);
           if (argLength < 3) {
             throw new Error(
-              '`cc()` requires exactly three arguments, a MIDI channel, and key and value integer values',
+              '`cc()` requires at least three arguments, a MIDI channel, and key and value integer values',
             );
           }
           while (argLength > 3) {

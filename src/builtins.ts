@@ -733,6 +733,24 @@ export const NATIVE_FNS: NativeFn[] = [
   ),
 
   /**
+   * send(Note | CC): Null
+   * Sends a MIDI note or CC message to the runtime instantly.
+   */
+  new NativeFn(
+    'send',
+    (vm: VM, ...args: BaseObject[]): BaseObject => {
+      const midi = args[0];
+      if (!(midi instanceof MidiNote) && !(midi instanceof MidiCC)) {
+        throw new Error('Function `send` requires a MIDI object');
+      }
+      if (vm.callbacks && vm.callbacks.send) {
+        vm.callbacks.send(...args);
+      }
+      return NULL;
+    },
+  ),
+
+  /**
    * shift(Arr): *
    * Shifts an item off of the beginning of an array.
    */
