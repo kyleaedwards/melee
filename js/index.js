@@ -24,8 +24,9 @@ class MeleeEditor {
   constructor(opts = {}) {
     this.melee = new Runtime(true, {
       print: (...args) => {
-        this.log(args.map(arg => arg.inspectObject()).join('<br />'));
-      }
+        this.log(args.map(arg => arg.inspectObject()).join(' '));
+      },
+      ...(opts.callbacks || {}),
     });
     this.highlightedErrors = [];
 
@@ -330,7 +331,7 @@ class MeleeEditor {
 
 module.exports = MeleeEditor;
 
-},{"../../dist":15,"./syntax":4,"./utils":8}],2:[function(require,module,exports){
+},{"../../dist":15,"./syntax":5,"./utils":8}],2:[function(require,module,exports){
 /**
  * Imports
  */
@@ -352,7 +353,7 @@ module.exports = [
   {
     name: 'One-shot Sequence',
     tempo: 120,
-    code: "// Example: One-shot Sequence\n//\n// Not all sequences need to be loops. This is especially\n// useful in the Max for Live version, as each sequence can\n// be triggered (and repeated) with incoming MIDI notes.\n// This makes sequences more playable and active than\n// simply looping indefinitely.\n\nmain := gen () {\n  yield note(0, C3);\n  yield note(0, D3);\n  yield note(0, F3);\n  yield note(0, G3);\n};\n",
+    code: "// Example: One-shot Sequence\n//\n// Not all sequences need to be loops. This is especially\n// useful in the Max for Live version, as each sequence can\n// be triggered (and repeated) with incoming MIDI notes.\n// This makes sequences more playable and active than\n// simply looping indefinitely.\n\nmain := gen () {\n  yield note(0, C3, n4);\n  yield note(0, C3, n4);\n  yield note(0, D3, t4);\n  yield note(0, D3, t4);\n  yield note(0, D3, t4);\n  yield note(0, F3, n8);\n  yield note(0, F3, n8);\n  yield note(0, G3, t8);\n  yield note(0, G3, t8);\n  yield note(0, G3, t8);\n};\n",
   },
   {
     name: 'Notes in G maj',
@@ -389,6 +390,11 @@ module.exports = [
     tempo: 94,
     code: "// Example: BOC\n//\n// Not much to this one. If you know you know.\n\n// Instruments\nsynth := instr(0);\n\nmain := gen () {\n  loop {\n    yield synth(G#2, n8);\n    yield rest();\n    yield synth(A#2);\n    yield synth(B3);\n    yield synth(B3);\n    yield synth(G#2);\n    yield synth(B3);\n    yield synth(G#2);\n    yield synth(A#3);\n    yield synth(F#3);\n    yield synth(G#2);\n    yield synth(B1, n8);\n    yield synth(A#2);\n    yield synth(G#2);\n    yield synth(C#3, n4);\n    yield synth(C#2, d4);\n    yield synth(F#3, n4);\n    yield synth(G#3, n8);\n    yield synth(G#1, d8);\n    yield synth(A#2);\n    yield synth(D#3);\n    yield synth(A#2);\n    yield synth(D#3);\n    yield synth(A#2);\n    yield synth(F#2);\n    yield synth(F#3);\n    yield synth(F#3);\n    yield synth(A#2);\n    yield synth(F#3);\n    yield synth(G#3);\n    yield synth(G#3, n8);\n    yield synth(C#2, n8);\n    yield synth(D#2);\n    yield synth(F3);\n    yield synth(D#2, n8);\n    yield synth(F3, n8);\n    yield synth(B3, n8);\n    yield synth(F3);\n    yield synth(B3);\n    yield synth(F3);\n    yield synth(A#3);\n    yield synth(F#3, n8);\n  }\n};\n",
   },
+  {
+    name: 'Channels and CC Messages',
+    tempo: 133,
+    code: "// Example: Channels and CC Messages\n//\n// But using different MIDI channels and sending CC (control\n// change) messages, we can control multiple instruments and\n// mess with their settings.\n\n// Let's define some MIDI channels as instruments so we\n// don't have to write `note(ch, ...)` for every note.\nsynth := instr(0);\npluck := instr(1);\nperc := instr(2);\n\n// Here we define some functions to mess with CC values.\n// If you're using the web demo, it's not actually sending\n// CC messages, but we're faking it by intercepting the\n// values and tweaking some parameters of the audio effects.\nrandomFilterFreq := fn () {\n  send(cc(0, 1, rand(127)));\n};\nsetPluckDelay := fn (amt) {\n  send(cc(1, 1, amt));\n};\nsetPercDistortion := fn (amt) {\n  send(cc(2, 1, amt));\n};\n\n// Cycle through some notes to make the sequence\n// a bit less repetitive.\nnotesA := cycle([A4, A4, G4, D4]);\nnotesB := cycle([F4, D4, C4, F4]);\n\nmain := gen () {\n  loop {\n    randomFilterFreq();\n    yield [perc(C2, n8), synth(C3, n8)];\n    setPluckDelay(20);\n    yield pluck(D3, n8);\n    setPercDistortion(100);\n    yield [perc(C3, n16), pluck(F3, n16)];\n    yield synth(next notesA, n16);\n    randomFilterFreq();\n    setPercDistortion(0);\n    setPluckDelay(120);\n    yield [perc(F2, n16, 30), pluck(G3, n16)];\n    randomFilterFreq();\n    yield [perc(A2, n16, 60), synth(next notesB, n16)];\n  }\n};",
+  },
 ];
 
 },{"path":30}],3:[function(require,module,exports){
@@ -398,7 +404,7 @@ module.exports = [
 const { obj } = require('../../dist');
 const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
-const { createSynth } = require('./synth');
+const { cc, instruments } = require('./instruments');
 const createTempoComponent = require('./tempo');
 const { TONE_FREQ } = require('./time');
 const { $$, noop } = require('./utils');
@@ -415,7 +421,6 @@ const sync = $$('sync');
 const synced = $$('synced');
 const syncError = $$('syncError');
 
-let synth = createSynth();
 const tempo = createTempoComponent();
 let stopped = true;
 let hasErrors = false;
@@ -469,18 +474,25 @@ const ui = new MeleeEditor({
       ui.unlock();
     }
   },
+  callbacks: {
+    send(result) {
+      if (result instanceof obj.MidiCC) {
+        if (cc[result.channel]) {
+          cc[result.channel](result.key, result.value, Tone.now());
+        }
+      }
+    }
+  }
 });
 
 let runningNotes = {};
 
 function stop(skipReset, skipRestage) {
   webControls.classList.remove('playing');
-  if (synth) {
-    Object.values(runningNotes).forEach((note) => {
-      synth.triggerRelease(note, Tone.now());
-    });
-    runningNotes = {};
-  }
+  Object.values(runningNotes).forEach((note) => {
+    instruments[note.channel].off(note, Tone.now());
+  });
+  runningNotes = {};
   Tone.Transport.stop();
   tempo.reset();
   if (!skipReset) {
@@ -500,21 +512,15 @@ Tone.Transport.scheduleRepeat((time) => {
   const results = ui.clock();
   if (!results) return;
   results.off.forEach((off) => {
-    delete runningNotes[off.pitch];
+    delete runningNotes[`${off.channel}-${off.pitch}`];
   });
   results.on.forEach((result) => {
-    if (result instanceof obj.MidiNote && synth) {
+    if (result instanceof obj.MidiNote && result.channel < instruments.length) {
       if (!runningNotes[result.pitch]) {
-        const sciNote = result.scientificNotation();
         const dur = {};
         dur[TONE_FREQ] = result.duration;
-        synth.triggerAttackRelease(
-          [sciNote],
-          dur,
-          time,
-          result.velocity / 127.0,
-        );
-        runningNotes[result.pitch] = sciNote;
+        instruments[result.channel].on(result, dur, time);
+        runningNotes[`${result.channel}-${result.pitch}`] = result;
       }
     }
   });
@@ -535,7 +541,7 @@ playBtn.addEventListener('click', () => {
 pauseBtn.addEventListener('click', () => {
   webControls.classList.remove('playing');
   Object.values(runningNotes).forEach((note) => {
-    synth.triggerRelease(note, Tone.now());
+    instruments[note.channel].off(note, Tone.now());
   });
   runningNotes = {};
   Tone.Transport.pause();
@@ -545,12 +551,105 @@ pauseBtn.addEventListener('click', () => {
 stopBtn.addEventListener('click', () => stop());
 
 setTimeout(async () => {
-  Tone.setContext(new Tone.Context({ latencyHint: 'playback' }))
-  // await Tone.start();
-  ui.initialize()
+  Tone.setContext(new Tone.Context({ latencyHint: 'playback' }));
+  ui.initialize();
 }, 250);
 
-},{"../../dist":15,"./editor":1,"./examples":2,"./synth":5,"./tempo":6,"./time":7,"./utils":8}],4:[function(require,module,exports){
+},{"../../dist":15,"./editor":1,"./examples":2,"./instruments":4,"./tempo":6,"./time":7,"./utils":8}],4:[function(require,module,exports){
+/**
+ * Global effects
+ */
+const reverb = new Tone.Reverb();
+reverb.wet.value = 0.4;
+reverb.toDestination();
+
+/**
+ * Instrument #1: Saw Bass
+ */
+const filter = new Tone.Filter(2000, 'lowpass');
+filter.connect(reverb);
+const sawbass = new Tone.PolySynth(Tone.Synth, {
+  oscillator: {
+    type: 'fatsawtooth',
+    count: 2,
+    spread: 10,
+  }
+});
+sawbass.connect(filter);
+
+/**
+ * Instrument #2: Pluck
+ */
+const pingPong = new Tone.PingPongDelay("16n", 0.25);
+pingPong.connect(reverb);
+const pluck = new Tone.PluckSynth().toDestination();
+pluck.connect(pingPong);
+
+/**
+ * Instrument #3: Membrane
+ */
+const dist = new Tone.Distortion(0.5);
+dist.wet.value = 0;
+dist.toDestination();
+const membrane = new Tone.MembraneSynth();
+membrane.connect(dist);
+
+window.instruments = [
+  sawbass,
+  pluck,
+  membrane,
+];
+
+const cc = [
+  (key, value, time) => {
+    if (key !== 1) return;
+    const freq = value * 60 + 500;
+    filter.frequency.exponentialRampToValueAtTime(freq, "+0.01");
+  },
+  (key, value, time) => {
+    if (key !== 1) return;
+    pingPong.wet.exponentialRampToValueAtTime(value / 150, "+0.01");
+  },
+  (key, value, time) => {
+    if (key !== 1) return;
+    dist.wet.exponentialRampToValueAtTime(value / 150, "+0.01");
+  },
+]
+
+const instruments = [
+  {
+    on: (note, duration, time) => {
+      sawbass.triggerAttackRelease(
+        [note.scientificNotation()],
+        duration,
+        time,
+        note.velocity / 127.0,
+      )
+    },
+    off: (note, time) => {
+      sawbass.triggerRelease(note.scientificNotation(), time);
+    },
+  },
+  {
+    on: (note, duration, time) => {
+      pluck.triggerAttackRelease(note.scientificNotation(), duration, time, note.velocity / 127.0);
+    },
+    off: () => {},
+  },
+  {
+    on: (note, duration, time) => {
+      membrane.triggerAttackRelease(note.scientificNotation(), duration, time, note.velocity / 127.0);
+    },
+    off: () => {},
+  },
+];
+
+module.exports = {
+  instruments,
+  cc,
+};
+
+},{}],5:[function(require,module,exports){
 /**
  * Imports
  */
@@ -691,43 +790,7 @@ module.exports = (CodeMirror) => {
   CodeMirror.defineMIME('text/x-melee', 'melee');
 };
 
-},{"../../dist":15}],5:[function(require,module,exports){
-/**
- * Constants
- */
-const REVERB_WET_DRY = 0.5;
-const FILTER_FREQ = 2000;
-const FILTER_TYPE = 'lowpass';
-const OSCILLATOR_OPTS = {
-  type: 'fatsawtooth',
-  count: 2,
-  spread: 10,
-};
-
-/**
- * Global effects
- */
-const filter = new Tone.Filter(FILTER_FREQ, FILTER_TYPE);
-const reverb = new Tone.Reverb();
-
-reverb.wet.value = REVERB_WET_DRY;
-filter.connect(reverb);
-reverb.toDestination();
-
-/**
- * Creates an opinionated synth voice.
- *
- * @returns {Tone.Synth} Synth voice
- */
-const createSynth = () => {
-  const synth = new Tone.PolySynth(Tone.Synth, { oscillator: OSCILLATOR_OPTS });
-  synth.connect(filter);
-  return synth;
-}
-
-module.exports = { createSynth };
-
-},{}],6:[function(require,module,exports){
+},{"../../dist":15}],6:[function(require,module,exports){
 /**
  * Imports
  */
@@ -870,7 +933,7 @@ module.exports = {
  * Abstract syntax tree mechanisms and node types.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CCExpression = exports.RestExpression = exports.NoteExpression = exports.CallExpression = exports.IndexExpression = exports.NextExpression = exports.GeneratorLiteral = exports.FunctionLiteral = exports.IfExpression = exports.InfixExpression = exports.PrefixExpression = exports.ArrayLiteral = exports.BooleanLiteral = exports.IntegerLiteral = exports.CompoundAssignExpression = exports.AssignExpression = exports.Identifier = exports.WhileStatement = exports.ForStatement = exports.BreakStatement = exports.ContinueStatement = exports.BlockStatement = exports.ExpressionStatement = exports.YieldStatement = exports.ReturnStatement = exports.DeclareStatement = exports.Program = void 0;
+exports.CCExpression = exports.RestExpression = exports.NoteExpression = exports.CallExpression = exports.IndexExpression = exports.NextExpression = exports.GeneratorLiteral = exports.FunctionLiteral = exports.InfixExpression = exports.PrefixExpression = exports.ArrayLiteral = exports.BooleanLiteral = exports.IntegerLiteral = exports.CompoundAssignExpression = exports.AssignExpression = exports.Identifier = exports.IfStatement = exports.WhileStatement = exports.ForStatement = exports.BreakStatement = exports.ContinueStatement = exports.BlockStatement = exports.ExpressionStatement = exports.YieldStatement = exports.ReturnStatement = exports.DeclareStatement = exports.Program = void 0;
 /**
  * Root-level program node encapsulating the full abstract syntax tree.
  *
@@ -1051,6 +1114,28 @@ class WhileStatement {
 }
 exports.WhileStatement = WhileStatement;
 /**
+ * AST node type representing an `if` or (`if`/`else`) conditional statement.
+ *
+ * @public
+ */
+class IfStatement {
+    constructor(token, condition, consequence, alternative) {
+        this.token = token;
+        this.condition = condition;
+        this.consequence = consequence;
+        this.alternative = alternative;
+        this.nodeType = 'statement';
+    }
+    toString() {
+        let str = `if (${this.condition.toString()}) ${this.consequence.toString()}`;
+        if (this.alternative) {
+            str += ` else ${this.alternative.toString()}`;
+        }
+        return str;
+    }
+}
+exports.IfStatement = IfStatement;
+/**
  * Expressions
  */
 /**
@@ -1191,28 +1276,6 @@ class InfixExpression {
     }
 }
 exports.InfixExpression = InfixExpression;
-/**
- * AST node type representing an `if` or (`if`/`else`) conditional expression.
- *
- * @public
- */
-class IfExpression {
-    constructor(token, condition, consequence, alternative) {
-        this.token = token;
-        this.condition = condition;
-        this.consequence = consequence;
-        this.alternative = alternative;
-        this.nodeType = 'expression';
-    }
-    toString() {
-        let str = `if (${this.condition.toString()}) ${this.consequence.toString()}`;
-        if (this.alternative) {
-            str += ` else ${this.alternative.toString()}`;
-        }
-        return str;
-    }
-}
-exports.IfExpression = IfExpression;
 /**
  * AST node type representing a function literal (`fn(...params) { ... }`).
  *
@@ -1916,6 +1979,20 @@ exports.NATIVE_FNS = [
         return object_1.Int.from(pitch);
     }),
     /**
+     * send(Note | CC): Null
+     * Sends a MIDI note or CC message to the runtime instantly.
+     */
+    new object_1.NativeFn('send', (vm, ...args) => {
+        const midi = args[0];
+        if (!(midi instanceof object_1.MidiNote) && !(midi instanceof object_1.MidiCC)) {
+            throw new Error('Function `send` requires a MIDI object');
+        }
+        if (vm.callbacks && vm.callbacks.send) {
+            vm.callbacks.send(...args);
+        }
+        return NULL;
+    }),
+    /**
      * shift(Arr): *
      * Shifts an item off of the beginning of an array.
      */
@@ -2602,20 +2679,15 @@ class Compiler {
                     break;
             }
         }
-        else if (node instanceof ast.IfExpression) {
+        else if (node instanceof ast.IfStatement) {
             this.compile(node.condition);
             // Jump to else clause (or outside of conditional statement if else doesn't exist).
             const jumpToElse = this.emit(bytecode_1.Opcode.JMP_IF_NOT, 0xffff);
             this.compile(node.consequence);
-            this.removeInstructionIf(bytecode_1.Opcode.POP);
             const jumpOut = this.emit(bytecode_1.Opcode.JMP, 0xffff);
             this.replaceInstruction(jumpToElse, this.instructions().length);
             if (node.alternative) {
                 this.compile(node.alternative);
-                this.removeInstructionIf(bytecode_1.Opcode.POP);
-            }
-            else {
-                this.emit(bytecode_1.Opcode.NULL);
             }
             this.replaceInstruction(jumpOut, this.instructions().length);
         }
@@ -2872,34 +2944,6 @@ class Compiler {
     addConstant(obj) {
         this.constants.push(obj);
         return this.constants.length - 1;
-    }
-    /**
-     * Removes the last instruction from the bytecode.
-     *
-     * @internal
-     */
-    removeInstruction() {
-        const position = this.scope().lastInstruction.position;
-        this.scope().lastInstruction.opcode =
-            this.scope().previousInstruction.opcode;
-        this.scope().lastInstruction.position =
-            this.scope().previousInstruction.position;
-        const temp = new Uint8Array(position);
-        temp.set(this.instructions().slice(0, position));
-        this.scope().instructions = temp;
-    }
-    /**
-     * Removes the last instruction from the bytecode if it matches
-     * the supplied opcode.
-     *
-     * @param op - Opcode
-     *
-     * @internal
-     */
-    removeInstructionIf(op) {
-        if (this.scope().lastInstruction.opcode === op) {
-            this.removeInstruction();
-        }
     }
     /**
      * Replaces an instruction in the program's bytecode.
@@ -3682,7 +3726,7 @@ class MidiNote {
         if (this.pitch < 0) {
             return `{CH${this.channel}: skip ${this.duration}}`;
         }
-        return `{CH${this.channel}: ${exports.NOTES[this.pitch]} for ${this.duration} vel=${this.velocity}}`;
+        return `{CH${this.channel}: ${exports.NOTES[this.pitch]} vel=${this.velocity} for ${this.duration}}`;
     }
     midiValue() {
         return {
@@ -3937,7 +3981,6 @@ class Parser {
             minus: this.parsePrefixExpression.bind(this),
             lparen: this.parseParentheticalExpression.bind(this),
             lbracket: this.parseArrayLiteral.bind(this),
-            if: this.parseConditional.bind(this),
             next: this.parseNext.bind(this),
             note: this.parseNoteExpression.bind(this),
             rest: this.parseRestExpression.bind(this),
@@ -4029,6 +4072,8 @@ class Parser {
                 }
                 return result;
             }
+            case 'if':
+                return this.parseConditional();
             case 'identifier': {
                 if (token_1.tokenIs(this.peek, 'declare')) {
                     return this.parseDeclareStatement();
@@ -4267,7 +4312,7 @@ class Parser {
                 alternative = this.parseBlockStatement();
             }
         }
-        return new ast.IfExpression(token, condition, consequence, alternative);
+        return new ast.IfStatement(token, condition, consequence, alternative);
     }
     parseFor() {
         const token = this.curr;
@@ -5322,7 +5367,7 @@ class VM {
                 }
                 case bytecode_1.Opcode.GET: {
                     const index = this.readOperand(1);
-                    const value = this.stack[this.frame().base + index];
+                    const value = this.stack[this.frame().base + index] || NULL;
                     assertVariableObject(value);
                     this.push(value);
                     break;
@@ -5336,7 +5381,7 @@ class VM {
                 }
                 case bytecode_1.Opcode.GETC: {
                     const index = this.readOperand(1);
-                    const value = this.frame().closure.vars[index];
+                    const value = this.frame().closure.vars[index] || NULL;
                     assertVariableObject(value);
                     this.push(value);
                     break;
@@ -5511,7 +5556,7 @@ class VM {
                 case bytecode_1.Opcode.CC: {
                     let argLength = this.readOperand(1);
                     if (argLength < 3) {
-                        throw new Error('`cc()` requires exactly three arguments, a MIDI channel, and key and value integer values');
+                        throw new Error('`cc()` requires at least three arguments, a MIDI channel, and key and value integer values');
                     }
                     while (argLength > 3) {
                         this.pop();
