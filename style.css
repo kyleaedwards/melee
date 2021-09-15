@@ -59,6 +59,11 @@
   color: #afb;
 }
 
+#syncing {
+  opacity: 0.5;
+  color: rgb(170, 255, 255);
+}
+
 #tempo {
   position: absolute;
   top: 0;

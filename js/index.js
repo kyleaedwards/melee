@@ -37,11 +37,13 @@ class MeleeEditor {
     this.onExample = opts.onExample || noop;
     this.onChangeStaged = opts.onChangeStaged || noop;
     this.onChangeUnstaged = opts.onChangeUnstaged || noop;
+    this.onSyncing = opts.onSyncing || noop;
 
     this.opts = opts;
     this.locked = false;
     this.changesStaged = false;
     this.hasStageErrors = false;
+    this.syncing = false;
 
     this.debounce = null;
   }
@@ -71,14 +73,22 @@ class MeleeEditor {
   sync() {
     if (!this.changesStaged) return;
     if (this.hasStageErrors) return;
+    if (this.syncing) return;
+    this.syncing = true;
+    this.onSyncing();
     const value = this.ide.getValue();
-    if (this.execute(value)) {
-      this.savedValue = value;
-      this.onChangeUnstaged();
-    }
+    this.runSync = () => {
+      if (this.execute(value)) {
+        this.savedValue = value;
+        this.onChangeUnstaged();
+      }
+      this.syncing = false;
+      this.runSync = null;
+    };
   }
 
   reset() {
+    this.syncing = false;
     this.execute(this.savedValue);
   }
 
@@ -406,7 +416,7 @@ const MeleeEditor = require('./editor');
 const codeExamples = require('./examples');
 const { cc, instruments } = require('./instruments');
 const createTempoComponent = require('./tempo');
-const { TONE_FREQ } = require('./time');
+const { CLOCKS_PER_MEASURE, TONE_FREQ } = require('./time');
 const { $$, noop } = require('./utils');
 
 /**
@@ -419,12 +429,13 @@ const webControls = $$('webControls');
 const editor = $$('editor');
 const sync = $$('sync');
 const synced = $$('synced');
+const syncing = $$('syncing');
 const syncError = $$('syncError');
 
 const tempo = createTempoComponent();
 let stopped = true;
-let hasErrors = false;
 let isSynced = true;
+let cycles = 0;
 
 const ui = new MeleeEditor({
   editor,
@@ -433,9 +444,11 @@ const ui = new MeleeEditor({
     playBtn.disabled = false;
     pauseBtn.disabled = false;
     stopBtn.disabled = false;
-    hasErrors = false;
     if (isSynced) {
       synced.style.display = 'block';
+      sync.style.display = 'none';
+      syncError.style.display = 'none';
+      syncing.style.display = 'none';
     }
   },
   onSuccess: noop,
@@ -444,31 +457,44 @@ const ui = new MeleeEditor({
     playBtn.disabled = true;
     pauseBtn.disabled = true;
     stopBtn.disabled = true;
-    hasErrors = true;
     if (isSynced) {
       synced.style.display = 'none';
+      sync.style.display = 'none';
+      syncing.style.display = 'none';
     }
   },
   onExample: (example) => {
-    tempo.set(example.tempo ||  120);
+    tempo.set(example.tempo || 120);
     synced.style.display = 'block';
     sync.style.display = 'none';
     syncError.style.display = 'none';
+    syncing.style.display = 'none';
     isSynced = true;
     if (stopped) {
       ui.unlock();
     }
   },
+  onSyncing: () => {
+    synced.style.display = 'none';
+    sync.style.display = 'none';
+    syncError.style.display = 'none';
+    syncing.style.display = 'block';
+  },
   onChangeStaged: () => {
     sync.style.display = ui.hasStageErrors ? 'none' : 'block';
     synced.style.display = 'none';
     syncError.style.display = ui.hasStageErrors ? 'block' : 'none';
+    syncing.style.display = 'none';
     isSynced = false;
+    if (stopped && typeof ui.runSync === 'function') {
+      ui.runSync();
+    }
   },
   onChangeUnstaged: () => {
     synced.style.display = 'block';
     sync.style.display = 'none';
     syncError.style.display = 'none';
+    syncing.style.display = 'none';
     isSynced = true;
     if (stopped) {
       ui.unlock();
@@ -488,6 +514,7 @@ const ui = new MeleeEditor({
 let runningNotes = {};
 
 function stop(skipReset, skipRestage) {
+  cycles = 0;
   webControls.classList.remove('playing');
   Object.values(runningNotes).forEach((note) => {
     instruments[note.channel].off(note, Tone.now());
@@ -504,7 +531,7 @@ function stop(skipReset, skipRestage) {
     if (!skipRestage && !isSynced) ui.stage();
   }
   stopped = true;
-  if (isSynced) ui.unlock();
+  if (isSynced || ui.syncing) ui.unlock();
 }
 
 Tone.Transport.scheduleRepeat((time) => {
@@ -525,6 +552,13 @@ Tone.Transport.scheduleRepeat((time) => {
     }
   });
   if (results.done) stop(false, true);
+  cycles++;
+  if (cycles >= (4 * CLOCKS_PER_MEASURE)) {
+    cycles = 0;
+  }
+  if (cycles === 0 && typeof ui.runSync === 'function') {
+    ui.runSync();
+  }
 }, TONE_FREQ);
 
 playBtn.addEventListener('click', () => {
@@ -860,6 +894,7 @@ if (CLOCKS_PER_MEASURE === 384) {
 }
 
 module.exports = {
+  CLOCKS_PER_MEASURE,
   TONE_FREQ,
 };
 
