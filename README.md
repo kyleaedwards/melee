@@ -284,7 +284,7 @@ Hence, the `poly` function is available to provide a way to merge sequences that
 | **rev** | `rev(arr)` | Returns a reversed array |
 | **rrand** | `rrand(lo, hi)` | Generates a random `int` in the provided range from `lo` up to *and not including* `hi` |
 | **scale** | `scale(scaleArr, root, interval)` | Work with intervals of a scale rather than chromatic MIDI pitches (see [Scales](#scales) below for more information)
-| **send** | `send(note | cc)` | Sends a MIDI message directly to the runtime, primarily for CC or program control messages |
+| **send** | `send(note \| cc)` | Sends a MIDI message directly to the runtime, primarily for CC or program control messages |
 | **shift** | `shift(arr)` | Pulls an element off the front of an array and returns it |
 | **sort** | `sort(arr)` | Returns a sorted array |
 | **take** | `take(seq, n)` | Pulls the next `n` elements out of a sequence and puts them in an array |
