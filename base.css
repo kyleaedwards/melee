@@ -2,6 +2,23 @@
   box-sizing: border-box;
 }
 
+::-webkit-scrollbar-corner {
+  opacity: 0;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  opacity: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
 body { 
   width: 100vw;
   height: 100vh;
@@ -44,7 +61,12 @@ h1 {
   height: 100% !important;
   padding: 8px 0;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
-} 
+}
+
+.CodeMirror-vscrollbar,
+.CodeMirror-hscrollbar {
+  margin: 5px;
+}
 
 .cm-s-dracula span.cm-atom {
   color: #79ecff;
