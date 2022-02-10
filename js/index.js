@@ -78,6 +78,7 @@ class MeleeEditor {
     this.onSyncing();
     const value = this.ide.getValue();
     this.runSync = () => {
+      if (!this.syncing) return;
       if (this.execute(value)) {
         this.savedValue = value;
         this.onChangeUnstaged();
@@ -319,6 +320,7 @@ class MeleeEditor {
       li.addEventListener('click', () => {
         this.clearConsole();
         this.ide.setValue(code);
+        this.syncing = false;
         this.execute(code);
         this.onExample(example);
         this.savedValue = code;
@@ -843,7 +845,7 @@ module.exports = () => {
   });
   
   const setTempo = (tempo) => {
-    const t = clampWithDefault(tempo, 20, 300, Tone.Transport.bpm.value);
+    const t = clampWithDefault(tempo, 20, 240, Tone.Transport.bpm.value);
     valueEl.innerText = t;
     Tone.Transport.bpm.value = t;
     store('tempo', t);
@@ -1613,7 +1615,7 @@ exports.NATIVE_FNS = [
         }
         const items = arr.items.filter((item, i) => {
             const res = vm.callAndReturn(fn, [item, object_1.Int.from(i)]);
-            return object_1.isTruthy(res);
+            return (0, object_1.isTruthy)(res);
         });
         return new object_1.Arr(items);
     }),
@@ -1774,7 +1776,7 @@ exports.NATIVE_FNS = [
             const output = new Array(seqs.length);
             seqs.forEach((seq, i) => {
                 if (durations[i] > 0) {
-                    output[i] = object_1.provisionHold(pitches[i], durations[i]);
+                    output[i] = (0, object_1.provisionHold)(pitches[i], durations[i]);
                 }
                 else {
                     const note = vm.takeNext(seq);
@@ -2985,7 +2987,7 @@ class Compiler {
      */
     replaceInstruction(position, ...operands) {
         const op = this.instructions()[position];
-        this.instructions().set(bytecode_1.createInstruction(op, ...operands), position);
+        this.instructions().set((0, bytecode_1.createInstruction)(op, ...operands), position);
     }
     /**
      * Add an instruction to the program's bytecode.
@@ -2997,7 +2999,7 @@ class Compiler {
      * @internal
      */
     emit(op, ...operands) {
-        const instruction = bytecode_1.createInstruction(op, ...operands);
+        const instruction = (0, bytecode_1.createInstruction)(op, ...operands);
         const position = this.instructions().length;
         const temp = new Uint8Array(position + instruction.length);
         temp.set(this.instructions());
@@ -3434,7 +3436,7 @@ class Lexer {
             default:
                 if (isAlpha(this.char)) {
                     const literal = this.readIdentifier();
-                    return this.createToken(token_1.lookupIdentifier(literal), literal, 1);
+                    return this.createToken((0, token_1.lookupIdentifier)(literal), literal, 1);
                 }
                 if (isNumeric(this.char)) {
                     return this.createToken('int', this.readNumber(), 1);
@@ -4066,7 +4068,7 @@ class Parser {
      */
     parse() {
         const program = new ast.Program();
-        while (!token_1.tokenIs(this.curr, 'eof')) {
+        while (!(0, token_1.tokenIs)(this.curr, 'eof')) {
             const stmt = this.parseStatement();
             if (stmt) {
                 program.statements.push(stmt);
@@ -4105,7 +4107,7 @@ class Parser {
             case 'if':
                 return this.parseConditional();
             case 'identifier': {
-                if (token_1.tokenIs(this.peek, 'declare')) {
+                if ((0, token_1.tokenIs)(this.peek, 'declare')) {
                     return this.parseDeclareStatement();
                 }
                 return this.parseExpressionStatement();
@@ -4166,8 +4168,8 @@ class Parser {
     parseBlockStatement() {
         const block = new ast.BlockStatement(this.curr, []);
         this.nextToken();
-        while (!token_1.tokenIs(this.curr, 'rbrace') &&
-            !token_1.tokenIs(this.curr, 'eof')) {
+        while (!(0, token_1.tokenIs)(this.curr, 'rbrace') &&
+            !(0, token_1.tokenIs)(this.curr, 'eof')) {
             const stmt = this.parseStatement();
             if (stmt) {
                 block.statements.push(stmt);
@@ -4185,7 +4187,7 @@ class Parser {
             return;
         }
         let left = prefixFn.call(this);
-        while (!token_1.tokenIs(this.peek, 'semicolon') &&
+        while (!(0, token_1.tokenIs)(this.peek, 'semicolon') &&
             precedence < this.peekPrecedence()) {
             const infixFn = this.infixParseFns[this.peek.tokenType];
             if (!infixFn) {
@@ -4326,9 +4328,9 @@ class Parser {
             return;
         const consequence = this.parseBlockStatement();
         let alternative;
-        if (token_1.tokenIs(this.peek, 'else')) {
+        if ((0, token_1.tokenIs)(this.peek, 'else')) {
             this.nextToken();
-            if (token_1.tokenIs(this.peek, 'if')) {
+            if ((0, token_1.tokenIs)(this.peek, 'if')) {
                 this.nextToken();
                 const stmt = this.parseStatement();
                 if (!stmt) {
@@ -4409,18 +4411,18 @@ class Parser {
     }
     parseFunctionParameters() {
         const parameters = [];
-        if (token_1.tokenIs(this.peek, 'rparen')) {
+        if ((0, token_1.tokenIs)(this.peek, 'rparen')) {
             this.nextToken();
             return parameters;
         }
         this.nextToken();
         parameters.push(this.parseIdentifier());
-        while (token_1.tokenIs(this.peek, 'comma')) {
+        while ((0, token_1.tokenIs)(this.peek, 'comma')) {
             this.nextToken();
             this.nextToken();
             parameters.push(this.parseIdentifier());
         }
-        if (!token_1.tokenIs(this.peek, 'rparen')) {
+        if (!(0, token_1.tokenIs)(this.peek, 'rparen')) {
             return [];
         }
         this.nextToken();
@@ -4428,7 +4430,7 @@ class Parser {
     }
     parseExpressionList(endChar) {
         const args = [];
-        if (token_1.tokenIs(this.peek, endChar)) {
+        if ((0, token_1.tokenIs)(this.peek, endChar)) {
             this.nextToken();
             return args;
         }
@@ -4437,7 +4439,7 @@ class Parser {
         if (expr) {
             args.push(expr);
         }
-        while (token_1.tokenIs(this.peek, 'comma')) {
+        while ((0, token_1.tokenIs)(this.peek, 'comma')) {
             this.nextToken();
             this.nextToken();
             expr = this.parseExpression(precedence.NIL);
@@ -4445,14 +4447,14 @@ class Parser {
                 args.push(expr);
             }
         }
-        if (!token_1.tokenIs(this.peek, endChar)) {
+        if (!(0, token_1.tokenIs)(this.peek, endChar)) {
             return [];
         }
         this.nextToken();
         return args;
     }
     expectPeek(t) {
-        if (token_1.tokenIs(this.peek, t)) {
+        if ((0, token_1.tokenIs)(this.peek, t)) {
             this.nextToken();
             return true;
         }
@@ -4464,7 +4466,7 @@ class Parser {
         }
     }
     skipSemicolon() {
-        if (token_1.tokenIs(this.peek, 'semicolon')) {
+        if ((0, token_1.tokenIs)(this.peek, 'semicolon')) {
             this.nextToken();
         }
     }
@@ -4499,7 +4501,7 @@ class Repl {
     constructor() {
         this.constants = [];
         this.history = [];
-        this.globals = vm_1.createGlobalVariables();
+        this.globals = (0, vm_1.createGlobalVariables)();
         this.symbolTable = symbols_1.SymbolTable.createGlobalSymbolTable();
     }
     /**
@@ -4578,7 +4580,7 @@ class Runtime {
      * Full reset of constants, globals, and the symbol table.
      */
     reset() {
-        this.globals = vm_1.createGlobalVariables();
+        this.globals = (0, vm_1.createGlobalVariables)();
         this.symbolTable = symbols_1.SymbolTable.createGlobalSymbolTable();
         this.constants = [];
         this.errors = [];
@@ -4618,7 +4620,7 @@ class Runtime {
         }
         if (errors.length)
             return errors;
-        const globals = vm_1.createGlobalVariables();
+        const globals = (0, vm_1.createGlobalVariables)();
         const vm = new vm_1.VM(compiler, globals, this.callbacks);
         vm.run();
         const main = symbolTable.get('main');
@@ -4653,7 +4655,6 @@ class Runtime {
                 this.errors.push(e);
             }
             throw e;
-            return;
         }
         this.instructions = compiler.instructions();
         const vm = new vm_1.VM(compiler, this.globals, this.callbacks);
@@ -4731,7 +4732,7 @@ class Runtime {
             if (note.pitch >= 0) {
                 playable = true;
             }
-            this.queue.push(object_1.provisionMidiNote(note.channel, note.pitch, note.duration, note.velocity));
+            this.queue.push((0, object_1.provisionMidiNote)(note.channel, note.pitch, note.duration, note.velocity));
         }
         else if (note instanceof object_1.Rest) {
             this.queue.push(note);
@@ -4785,11 +4786,11 @@ class Runtime {
         });
         if (this.instructions) {
             bytecode += '\n\n';
-            bytecode += bytecode_1.disassemble(this.instructions);
+            bytecode += (0, bytecode_1.disassemble)(this.instructions);
             this.constants.forEach((obj, i) => {
                 if (obj instanceof object_1.Fn || obj instanceof object_1.Gen) {
                     bytecode += `\n\nFn[${i}]\n`;
-                    bytecode += bytecode_1.disassemble(obj.instructions);
+                    bytecode += (0, bytecode_1.disassemble)(obj.instructions);
                 }
             });
             return bytecode;
@@ -5265,7 +5266,7 @@ class VM {
      */
     jump() {
         const frame = this.frame();
-        const destination = bytecode_1.unpackBigEndian(frame.instructions(), frame.ip + 1, 2);
+        const destination = (0, bytecode_1.unpackBigEndian)(frame.instructions(), frame.ip + 1, 2);
         frame.ip = destination - 1;
     }
     /**
@@ -5277,7 +5278,7 @@ class VM {
      */
     readOperand(width) {
         const frame = this.frame();
-        const operand = bytecode_1.unpackBigEndian(frame.instructions(), frame.ip + 1, width);
+        const operand = (0, bytecode_1.unpackBigEndian)(frame.instructions(), frame.ip + 1, width);
         frame.ip += width;
         return operand;
     }
@@ -5604,7 +5605,7 @@ class VM {
                     if (!(channel instanceof obj.Int)) {
                         throw new Error('MIDI CC channel must be an integer');
                     }
-                    this.push(new obj.MidiCC(channel.value, utils_1.clamp(key.value, 0, 127), utils_1.clamp(value.value, 0, 127)));
+                    this.push(new obj.MidiCC(channel.value, (0, utils_1.clamp)(key.value, 0, 127), (0, utils_1.clamp)(value.value, 0, 127)));
                 }
             }
             frame = this.frame();
