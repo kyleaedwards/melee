@@ -393,7 +393,7 @@ export class VM {
           break;
         case Opcode.ARRAY: {
           const size = this.readOperand(2);
-          const arr = new obj.Arr(new Array(size));
+          const arr = new obj.Arr(new Array<obj.BaseObject>(size));
           const start = this.sp - size;
           for (let i = start; i < this.sp; i++) {
             const element = this.stack[i];
