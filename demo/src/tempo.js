@@ -21,7 +21,7 @@ module.exports = () => {
   });
   
   const setTempo = (tempo) => {
-    const t = clampWithDefault(tempo, 20, 300, Tone.Transport.bpm.value);
+    const t = clampWithDefault(tempo, 20, 240, Tone.Transport.bpm.value);
     valueEl.innerText = t;
     Tone.Transport.bpm.value = t;
     store('tempo', t);

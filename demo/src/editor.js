@@ -77,6 +77,7 @@ class MeleeEditor {
     this.onSyncing();
     const value = this.ide.getValue();
     this.runSync = () => {
+      if (!this.syncing) return;
       if (this.execute(value)) {
         this.savedValue = value;
         this.onChangeUnstaged();
@@ -318,6 +319,7 @@ class MeleeEditor {
       li.addEventListener('click', () => {
         this.clearConsole();
         this.ide.setValue(code);
+        this.syncing = false;
         this.execute(code);
         this.onExample(example);
         this.savedValue = code;

@@ -149,7 +149,6 @@ export class Runtime {
         this.errors.push(e);
       }
       throw e;
-      return;
     }
     this.instructions = compiler.instructions();
 
