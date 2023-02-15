@@ -1,8 +1,8 @@
 # Melee
 
-**Melee** is a domain-specific language for defining complex musical sequences using *generators*. This specific repository is a reference implementation written in TypeScript to faciliate an Ableton Max4Live device.
+***[Check out the demo here!](https://kyleaedwards.github.io/melee/)***
 
-[Check out the demo here!](https://kyleaedwards.github.io/melee/)
+**Melee** is a domain-specific language for defining complex musical sequences using *generators*. This specific repository is a reference implementation written in TypeScript to faciliate an Ableton Max4Live device.
 
 ## What is a "generator?"
 
